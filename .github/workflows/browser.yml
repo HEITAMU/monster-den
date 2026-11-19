@@ -2,7 +2,7 @@ name: Cocos WebGL playable acceptance
 
 on:
   push:
-    branches: [main, work/window2-playable]
+    branches: [main, work/window2-playable, work/first-room-rebuild]
   pull_request:
   workflow_dispatch:
 

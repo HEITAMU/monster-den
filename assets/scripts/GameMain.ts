@@ -11,12 +11,13 @@ import {GameAudio} from './platform/GameAudio';
 import type {SoundCue} from './platform/GameAudio';
 import {loadAudioCatalog} from './AudioCatalog';
 import {ModelLibrary,ModelInstance,loadGameJson,loadGameEffects,makeMaterial,meshNode,discMesh,ringMesh} from './ModelLibrary';
+import type {MeshData} from './ModelLibrary';
 import {PALETTE,rgba,uiNode,label,panel,button,separator,joystick,toolIcon} from './GameUI';
 import type {JoystickArt} from './GameUI';
 import {objectiveGuide,toolPresentation,nextRoomAdvice} from './AdventureGuide';
 
 const {ccclass}=_decorator;
-const VERSION='0.3.1';
+const VERSION='0.4.0-alpha';
 const GROUND=.08,GROUND_EFFECT=.105;
 type Page='loading'|'home'|'game'|'tools';
 interface LocalRun {model:GameSnapshot;bonus:number;settled:boolean;bankedRooms:number;}
@@ -25,6 +26,31 @@ interface Spark {node:Node;vx:number;vy:number;vz:number;life:number;max:number;
 interface Trail {node:Node;life:number;}
 interface Impact {node:Node;material:Material;life:number;size:number;}
 const TOOL_COST:Record<string,number>={heavy:300,grip:450,return:450};
+
+/** Sculpted multi-lobed fungal bud, not a billboard or a basic primitive.
+ * Irregular meridians, changing lobe phase and moss-to-amber vertex colour
+ * give the first-room chain a distinct volumetric silhouette. */
+function sporeCrownMesh():MeshData {
+  const sides=40,bands=18,positions:number[]=[],normals:number[]=[],colors:number[]=[],uvs:number[]=[],indices:number[]=[];
+  for(let row=0;row<=bands;row++){
+    const phi=.0001+(Math.PI-.0002)*row/bands,sin=Math.sin(phi),cos=Math.cos(phi);
+    for(let j=0;j<=sides;j++){
+      const a=j/sides*Math.PI*2,lobes=1+.125*Math.cos(a*7+phi*1.8)+.065*Math.sin(a*11-phi*2);
+      const rr=.52*sin*lobes,up=.47+.57*cos+.04*Math.sin(a*5+phi*3)*sin;
+      positions.push(Math.cos(a)*rr,up,Math.sin(a)*rr);
+      const normalLength=Math.hypot(Math.cos(a)*sin,cos,Math.sin(a)*sin)||1;
+      normals.push(Math.cos(a)*sin/normalLength,cos/normalLength,Math.sin(a)*sin/normalLength);
+      const stripe=Math.pow(.5+.5*Math.cos(a*7+phi*.9),4),glow=Math.max(0,cos*.5+.5);
+      colors.push(.34+.55*glow+.1*stripe,.68+.2*stripe,.5+.4*glow,.98);
+      uvs.push(j/sides,row/bands);
+      if(row>0&&j>0){
+        const a0=(row-1)*(sides+1)+j-1,b0=row*(sides+1)+j-1;
+        indices.push(a0,b0,a0+1,a0+1,b0,b0+1);
+      }
+    }
+  }
+  return {positions,normals,colors,uvs,indices};
+}
 
 @ccclass('GameMain')
 export class GameMain extends Component {
@@ -39,9 +65,11 @@ export class GameMain extends Component {
   private treasure:ModelInstance|null=null;private exitRing:Node|null=null;private heroRing:Node|null=null;
   private objectiveRing:Node|null=null;private objectiveLabel:Label|null=null;
   private stashVisuals=new Map<string,{instance:ModelInstance;label:Label}>();
+  private sporeVisuals=new Map<string,{bud:ModelInstance;crown:Node;ring:Node;label:Label}>();
   private aimNodes:Node[]=[];private aimEnd:Node|null=null;private aimCaption:Label|null=null;
   private threatNodes=new Map<string,Node>();private arrowNodes=new Map<string,Node>();
   private matShadow!:Material;private matAim!:Material;private matDanger!:Material;private matGold!:Material;
+  private matSporeCrown!:Material;private matSporeGlow!:Material;
   private sparkMaterials:Material[]=[];private sparks:Spark[]=[];private trails:Trail[]=[];private impacts:Impact[]=[];private trailClock=0;
   private ready=false;private page:Page='loading';private height=1280;private time=0;private phase='';
   private runId='';private runMeta={bonus:0,settled:false,bankedRooms:0};
@@ -120,6 +148,8 @@ export class GameMain extends Component {
     this.matAim=makeMaterial(rgba('#8be3bc'),false,true,true,.6);
     this.matDanger=makeMaterial(new Color(236,105,78,150),false,true,true);
     this.matGold=makeMaterial(rgba('#ffdb7c'),false,true,true,.8);
+    this.matSporeCrown=makeMaterial(rgba('#daf9b9'),true,false,true,.3);
+    this.matSporeGlow=makeMaterial(rgba('#73f8ce',225),false,true,false,.75);
     this.sparkMaterials=['#ffe1a0','#aaead0','#d39b61','#ef9b7d'].map(c=>makeMaterial(rgba(c),false,false,false,.8));
     for(let i=0;i<32;i++){const node=meshNode('AimMark',discMesh(.075,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
     this.aimEnd=meshNode('AimEndpoint',ringMesh(.38,.055),this.matAim,this.effectsWorld);this.aimEnd.active=false;
@@ -140,6 +170,7 @@ export class GameMain extends Component {
     this.tip='';this.tipTimer=0;this.tipPhase=null;this.tipPriority=0;
     this.clear(this.roomWorld);this.clear(this.actorWorld);this.enemies.clear();this.obstacles.clear();
     for(const stash of this.stashVisuals.values())stash.label.node.destroy();this.stashVisuals.clear();
+    for(const spore of this.sporeVisuals.values())spore.label.node.destroy();this.sporeVisuals.clear();
     for(const node of this.threatNodes.values())node.destroy();this.threatNodes.clear();
     for(const node of this.arrowNodes.values())node.destroy();this.arrowNodes.clear();
     this.heroRing?.destroy();this.exitRing?.destroy();this.clearAim();
@@ -153,6 +184,17 @@ export class GameMain extends Component {
       instance.root.active=!stash.taken;
       const text=label(this.floating,`额外 +${stash.value}`,18,0,0,165,32,PALETTE.mint,true);
       text.node.active=false;this.stashVisuals.set(stash.id,{instance,label:text});
+    }
+    // First-room interactive chain: actual organic 3D volumes and a separate ground halo.
+    const crownData=state.spores.length?sporeCrownMesh():null;
+    for(const node of state.spores){
+      const bud=this.instantiate('mushroom',this.roomWorld,node.x,node.y,.73);
+      const crown=meshNode('GlowingFungalCrown',crownData!,this.matSporeCrown,bud.root);
+      crown.setPosition(0,.52,0);crown.setScale(.87,.87,.87);
+      const ring=meshNode('MyceliumPulse',ringMesh(node.radius+.25,.055,48),this.matSporeGlow,bud.root);
+      ring.setPosition(0,.02,0);ring.setScale(1.5,1,1.5);
+      const text=label(this.floating,'菌核 · 连锁',19,0,0,180,38,PALETTE.mint,true);
+      text.node.active=false;this.sporeVisuals.set(node.id,{bud,crown,ring,label:text});
     }
     this.instantiate('exit',this.roomWorld,state.exit.x,state.exit.y,.8);
     this.exitRing=meshNode('ExitGlow',ringMesh(.8,.12),this.matGold,this.roomWorld);this.exitRing.setPosition(state.exit.x,GROUND_EFFECT,-state.exit.y);
@@ -207,6 +249,7 @@ export class GameMain extends Component {
     if(this.homeWorld)this.homeWorld.active=this.page==='home';
     if(this.objectiveLabel)this.objectiveLabel.node.active=active;
     for(const stash of this.stashVisuals.values())stash.label.node.active=false;
+    for(const spore of this.sporeVisuals.values())spore.label.node.active=false;
   }
   private soundButton():void {
     const muted=this.audio.settings.muted;
@@ -460,7 +503,7 @@ export class GameMain extends Component {
     if(end&&this.aimEnd&&this.aimCaption){
       this.aimEnd.active=true;this.aimEnd.setPosition(end.x,GROUND_EFFECT+.016,-end.y);
       this.aimEnd.getComponent(MeshRenderer)!.setMaterial(preview.blocked?this.matGold:this.matAim,0);
-      this.aimCaption.string=preview.blocked?'碰撞点':preview.endpoint==='exit'?'离开房间':'落点';this.aimCaption.color=rgba(preview.blocked?PALETTE.gold:PALETTE.mint);
+      this.aimCaption.string=preview.targetId?.startsWith('heart-')?'点燃菌核':preview.blocked?'碰撞点':preview.endpoint==='exit'?'离开房间':'落点';this.aimCaption.color=rgba(preview.targetId?.startsWith('heart-')?PALETTE.mint:preview.blocked?PALETTE.gold:PALETTE.mint);
       const screen=this.worldCamera.worldToScreen(new Vec3(end.x,.3,-end.y));
       this.aimCaption.node.setPosition(screen.x/view.getScaleX()-360,screen.y/view.getScaleY()-this.height/2+25,0);this.aimCaption.node.active=true;
     }
@@ -537,6 +580,20 @@ export class GameMain extends Component {
       const aimOverlap=this.dragging&&this.aimCaption?.node.active&&Math.hypot(this.objectiveLabel.node.position.x-this.aimCaption.node.position.x,this.objectiveLabel.node.position.y-this.aimCaption.node.position.y)<85;
       this.objectiveLabel.node.active=guideVisible&&projected&&!aimOverlap;
     }
+    for(const node of s.spores){
+      const visual=this.sporeVisuals.get(node.id);if(!visual)continue;
+      const active=!node.spent,priming=node.fuse>=0;
+      visual.bud.root.active=active;
+      if(!active){visual.label.node.active=false;continue;}
+      const pulse=1+Math.sin(this.time*5+node.x*.5)*.045+(priming?.19:0);
+      visual.bud.root.setScale(.73*pulse,.73*pulse,.73*pulse);
+      visual.crown.setScale(.87*(priming?1.16:1),.87*(priming?1.16:1),.87*(priming?1.16:1));
+      visual.ring.setScale((1+Math.sin(this.time*5)*.09)*(priming?1.5:1.1),1,(1+Math.sin(this.time*5)*.09)*(priming?1.5:1.1));
+      visual.label.string=priming?'即将连锁':node.depth>0?'菌核已启动':'菌核 · 连锁';
+      const visibleLabel=guideVisible&&(priming||node.id==='heart-root');
+      const projected=this.placeWorldLabel(visual.label,node.x,node.y,1.5,15);
+      visual.label.node.active=visibleLabel&&projected;
+    }
     for(const stash of s.stashes){const visual=this.stashVisuals.get(stash.id);if(!visual)continue;
       visual.instance.root.active=!stash.taken;
       visual.instance.root.setPosition(stash.x,GROUND+Math.sin(this.time*2.6)*.025,-stash.y);
@@ -564,8 +621,19 @@ export class GameMain extends Component {
     }return Math.max(.2,best);
   }
   private handleEvent(e:GameEvent):void {
-    const sounds:Record<string,SoundCue>={shot:'launch',bounce:'stone_hit',board_hit:'wood_hit',board_break:'wood_break',cabinet_push:'cabinet_push',enemy_hit:'enemy_hit',enemy_down:'enemy_down',arrow:'arrow',arrow_blocked:'arrow_blocked',damage:'danger',treasure:'loot',stash:'loot',victory:'win',game_over:'lose',room_clear:'loot',tool_used:'tool'};
+    const sounds:Record<string,SoundCue>={spore_prime:'tool',spore_burst:'wood_break',shot:'launch',bounce:'stone_hit',board_hit:'wood_hit',board_break:'wood_break',cabinet_push:'cabinet_push',enemy_hit:'enemy_hit',enemy_down:'enemy_down',arrow:'arrow',arrow_blocked:'arrow_blocked',damage:'danger',treasure:'loot',stash:'loot',victory:'win',game_over:'lose',room_clear:'loot',tool_used:'tool'};
     if(sounds[e.type])this.audio.play(sounds[e.type],e.type==='bounce'?.4:1);
+    if(e.type==='spore_prime'){
+      this.burst(e.x,e.y,1,4);
+    }
+    if(e.type==='spore_burst'){
+      this.burst(e.x,e.y,1,18);
+      this.shake=Math.max(this.shake,.24);this.hitStop=Math.max(this.hitStop,.026);
+      const impact=this.impacts.find(i=>i.life<=0);
+      if(impact){impact.life=.24;impact.size=1.1;impact.node.active=true;impact.node.setPosition(e.x,GROUND_EFFECT+.025,-e.y);}
+      this.floatText(e.amount&&e.amount>1?`连锁 ×${e.amount} · +10`:'菌核引爆 · +10',e.x,e.y,PALETTE.mint);
+      if((e.amount||0)>=4)this.showTip('发现了菌核连锁！木栏和守卫都可能被波及',2.2,null,2);
+    }
     if(e.type==='shot'){this.launchKick=1;this.burst(e.x,e.y,1,4);}
     if(['board_break','enemy_hit','enemy_down','cabinet_push','arrow_blocked','treasure','stash','damage'].includes(e.type))this.burst(e.x,e.y,e.type==='damage'?3:['treasure','stash'].includes(e.type)?0:2,e.type==='board_break'?14:8);
     if(['enemy_hit','board_break','cabinet_push','damage'].includes(e.type)){
@@ -620,7 +688,7 @@ export class GameMain extends Component {
     this.inputCanvas=null;this.mouseButtonGuard=null;
     if((globalThis as any).__MONSTER_DEN__?.controller===this)delete (globalThis as any).__MONSTER_DEN__;
     this.env?.dispose();this.characters?.dispose();
-    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,...this.sparkMaterials,...this.impacts.map(i=>i.material)])mat?.destroy();
+    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,this.matSporeCrown,this.matSporeGlow,...this.sparkMaterials,...this.impacts.map(i=>i.material)])mat?.destroy();
     input.off(Input.EventType.TOUCH_START,this.touchStart,this);input.off(Input.EventType.TOUCH_MOVE,this.touchMove,this);input.off(Input.EventType.TOUCH_END,this.touchEnd,this);input.off(Input.EventType.TOUCH_CANCEL,this.touchCancel,this);
     input.off(Input.EventType.MOUSE_DOWN,this.mouseDown,this);input.off(Input.EventType.MOUSE_MOVE,this.mouseMove,this);input.off(Input.EventType.MOUSE_UP,this.mouseUp,this);
     game.off(Game.EVENT_HIDE,this.onHide,this);game.off(Game.EVENT_SHOW,this.onShow,this);

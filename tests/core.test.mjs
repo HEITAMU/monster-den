@@ -539,3 +539,48 @@ test('input and progression calls reject invalid states without corrupting the s
   assert.equal(model.activateTool(), false);
   assert.ok(Number.isFinite(model.state.player.x));
 });
+
+test('optional five-spore first-room chain destroys the board and knocks the guard without unlocking the exit',()=>{
+  const model=new GameModel({rooms:[ROOMS[0]]});
+  assert.equal(model.state.spores.length,5);
+  const preview=model.aim(-3.2,2.5,.55);
+  assert.equal(preview.endpoint,'interaction');assert.equal(preview.targetId,'heart-root');
+  assert.equal(model.state.spores.some(s=>s.spent),false,'Aim preview must not mutate the lattice.');
+  fireAt(model,-3.2,-3,.55);
+  assert.equal(model.state.spores.filter(s=>s.spent).length,5);
+  assert.deepEqual(model.state.spores.map(s=>s.depth),[1,2,3,4,5]);
+  assert.equal(model.state.obstacles.find(o=>o.id==='welcome-board').destroyed,true);
+  assert.equal(model.state.enemies.find(e=>e.id==='court-guard').hp,1);
+  assert.equal(model.state.treasure.taken,false);
+  assert.equal(model.state.score,65,'Five spore pickups + wooden board.');
+  assert.deepEqual(model.drainEvents().filter(e=>e.type==='spore_burst').map(e=>e.amount),[1,2,3,4,5]);
+});
+
+test('spore fuse snapshots restore without changing the chain; invalid data is rejected atomically',()=>{
+  const config=room({start:{x:-3.2,y:-5.2},treasure:{x:4,y:4},exit:{x:-4,y:5},
+    spores:ROOMS[0].spores,obstacles:[{id:'barrier',kind:'board',x:0,y:-1.2,w:2.1,h:.28,hp:2}]});
+  const model=new GameModel({rooms:[config]});
+  model.shoot({x:0,y:1},.55);
+  for(let i=0;i<90&&!model.state.spores.some(s=>s.fuse>=0);i++)model.step(1/60);
+  assert.ok(model.state.spores.some(s=>s.fuse>=0));
+  const restored=new GameModel({rooms:[config],snapshot:model.snapshot()});
+  model.drainEvents();
+  for(let i=0;i<240;i++){model.step(1/60);restored.step(1/60);}
+  assert.deepEqual(restored.snapshot(),model.snapshot());
+  assert.equal(model.state.spores.filter(s=>s.spent).length,5);
+  const corrupt=restored.snapshot();corrupt.state.spores[0].fuse='invalid';
+  const before=restored.snapshot();
+  assert.throws(()=>restored.restore(corrupt),/Invalid Monster Den spore snapshot/);
+  assert.deepEqual(restored.snapshot(),before);
+  const old=restored.snapshot();delete old.state.spores;
+  assert.deepEqual(new GameModel({rooms:[config],snapshot:old}).state.spores,[]);
+});
+
+test('direct first-room path remains playable without igniting optional fungal mechanisms',()=>{
+  const model=new GameModel();
+  fireAt(model,0,1.6,1);
+  assert.equal(model.state.spores.filter(s=>s.spent).length,0);
+  fireAt(model,0,5.6);
+  assert.equal(model.state.phase,'room_clear');
+  assert.equal(model.state.score,165);
+});

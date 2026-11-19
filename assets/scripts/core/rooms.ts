@@ -6,6 +6,7 @@ export const TUNING = {
   cabinetDrag: 2.7, cabinetMaxSpeed: 8.5, restitution: 0.70,
   enemyWindup: 0.34, arrowSpeed: 15, invulnerableTime: 0.85,
   treasureRadius: 0.48, exitRadius: 0.8, maxFlightTime: 5.5,
+  sporeBlast: 2.22, sporeChain: 3.05, sporeFuse: 0.12, sporeScore: 10,
 };
 
 /** Shared design-unit radii. Remap travel after the dead zone to the full 0..1 power range. */
@@ -27,8 +28,17 @@ export const TOOLS: { id: ToolId; name: string; description: string; actionLabel
 /** Authored first expedition. None of the exits requires defeating every enemy. */
 export const ROOMS: RoomConfig[] = [
   {
-    id: 'moss-court', name: '苔门前院', hint: '推动底部摇杆瞄准，松手冲撞。拿到宝物后去发光出口。',
+    id: 'moss-court', name: '苔门前院', hint: '撞木栏过门，也可以试试左侧发光菌核。',
     width: 10, height: 14, start: { x: 0, y: -5.5 }, treasure: { x: 0, y: 1.6 }, exit: { x: 0, y: 5.6 },
+    // Optional alternate solution: touch the leftmost bud to ignite the full fungal lattice.
+    // Buds avoid the straight central launch lane so the original direct route remains valid.
+    spores: [
+      {id:'heart-root',x:-3.2,y:-3.0,radius:0.52},
+      {id:'heart-bridge',x:-2.7,y:-1.05,radius:0.52},
+      {id:'heart-latch',x:-1.45,y:-0.85,radius:0.52},
+      {id:'heart-bloom',x:-1.6,y:1.35,radius:0.52},
+      {id:'heart-guard',x:1.05,y:2.75,radius:0.52},
+    ],
     obstacles: [
       { id: 'welcome-board', kind: 'board', x: 0, y: -1.2, w: 2.1, h: 0.28, hp: 1 },
       { id: 'west-stump', kind: 'pillar', x: -3.1, y: 1.2, w: 1.1, h: 1.4 },
