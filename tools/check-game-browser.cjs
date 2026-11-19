@@ -156,6 +156,7 @@ async function inspect(page) {
       hp: state.player.hp, score: state.score, rescuesUsed: state.rescuesUsed,
       treasureTaken: state.treasure.taken, stashCount: state.stashCount, stashValue: state.stashValue,
       stashes: state.stashes.map(stash => ({ ...stash })),
+      spores: state.spores.map(spore => ({ ...spore })),
       stashVisuals: [...controller.stashVisuals].map(([id, visual]) => ({ id,
         modelVisible: visual.instance.root.activeInHierarchy, label: visual.label.string,
         labelVisible: visual.label.node.activeInHierarchy })),
@@ -254,7 +255,8 @@ async function inputState(page) {
       tutorialText: controller.tutorialText?.string,
       visibleDots: controller.aimNodes.filter(node => node.active).length,
       aim: { x: controller.lastAim.x, y: controller.lastAim.y },
-      thumb: { x: controller.stick.thumb.position.x, y: controller.stick.thumb.position.y } };
+      thumb: { x: controller.stick.thumb.position.x, y: controller.stick.thumb.position.y },
+      heroYaw: controller.hero.instance.root.eulerAngles.y };
   });
 }
 
@@ -292,6 +294,11 @@ async function mouseJoystickBoundaries(page) {
   const pushed = await inputState(page);
   assert.ok(pushed.dragging && pushed.power > .98 && pushed.visibleDots > 0, 'The fixed joystick did not engage before the recenter test.');
   assertDragGuidance(pushed, 'Engaged aim before recentering');
+  assert.ok(pushed.aim.y>0,'Pushing upward must target room north.');
+  await afterFrames(page,24);
+  const oriented=await inputState(page);
+  assert.ok(Math.cos((oriented.heroYaw-180)*Math.PI/180)>.93,
+    'Explorer visibly faces backwards when pushed north: '+oriented.heroYaw);
   await page.mouse.move(input.x, input.y, { steps: 5 });
   await afterFrames(page);
   const recentered = await inputState(page);
@@ -450,6 +457,29 @@ async function optionalStashCheck(url) {
   route.completed = { room: end.room, phase: end.phase, shots: end.shots, hp: end.hp,
     score: end.score, stashCount: end.stashCount, stashValue: end.stashValue, rescuesUsed: end.rescuesUsed };
   await page.waitForLoadState('networkidle'); await context.close(); activePage = null;
+}
+
+async function optionalSporeChainCheck(url) {
+  const context=await browser.newContext({viewport:{width:420,height:780},deviceScaleFactor:1});
+  const page=await context.newPage();activePage=page;observe(page,'first-room-spore-chain');
+  await page.goto(url,{waitUntil:'load'});await ready(page);
+  await clickLabel(page,'潜入怪物窝');
+  await page.waitForFunction(()=>window.__MONSTER_DEN__.controller.page==='game');
+  const initial=await checkpoint(page,'first room has five organic fungal reactors','19-room1-spore-before.png');
+  assert.equal(initial.spores.length,5);
+  assert.ok(initial.spores.every(spore=>!spore.spent));
+  const shots=[];await mouseShot(page,-3.2,-3,.55,false,shots);
+  await page.waitForFunction(()=>window.__MONSTER_DEN__.model.state.spores.every(spore=>spore.spent),undefined,{timeout:12000});
+  const burst=await checkpoint(page,'left fungal bud detonates chain and breaks wood','20-room1-spore-after.png');
+  assert.equal(burst.spores.filter(spore=>spore.spent).length,5,'Joystick failed to trigger the five-bud chain.');
+  assert.equal(burst.treasureTaken,false);
+  assert.equal(burst.exitRingActive,false);
+  assert.equal(await page.evaluate(()=>window.__MONSTER_DEN__.model.state.obstacles.find(x=>x.id==='welcome-board').destroyed),true);
+  assert.equal(burst.score,65);
+  report.spores={method:'Independent real WebGL pointer test; no model-state injection',
+    shots,score:burst.score,budsTriggered:5,woodDestroyed:true,treasureStillRequired:true,
+    screenshots:['19-room1-spore-before.png','20-room1-spore-after.png']};
+  await page.waitForLoadState('networkidle');await context.close();activePage=null;
 }
 
 async function activeToolNameCheck(url) {
@@ -705,6 +735,7 @@ async function mobileInputCheck(url) {
   await context.close(); activePage = null;
   await mobileInputCheck(url);
   await optionalStashCheck(url);
+  await optionalSporeChainCheck(url);
   await activeToolNameCheck(url);
   assert.equal(report.errors.length, 0, 'Browser runtime errors were captured.');
   assert.equal(report.consoleErrors.length, 0, 'Shader or browser console errors were captured.');

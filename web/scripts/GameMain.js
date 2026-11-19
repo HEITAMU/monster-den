@@ -8,6 +8,62 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
     };
     var cc_1, index_1, SaveStore_1, RewardedAds_1, GameAudio_1, AudioCatalog_1, ModelLibrary_1, GameUI_1, AdventureGuide_1, ccclass, VERSION, GROUND, GROUND_EFFECT, TOOL_COST, GameMain;
     var __moduleName = context_1 && context_1.id;
+    /** Sculpted multi-lobed fungal bud, not a billboard or a basic primitive.
+     * Irregular meridians, changing lobe phase and moss-to-amber vertex colour
+     * give the first-room chain a distinct volumetric silhouette. */
+    function sporeCrownMesh() {
+        const sides = 40, bands = 18, positions = [], normals = [], colors = [], uvs = [], indices = [];
+        for (let row = 0; row <= bands; row++) {
+            const phi = .0001 + (Math.PI - .0002) * row / bands, sin = Math.sin(phi), cos = Math.cos(phi);
+            for (let j = 0; j <= sides; j++) {
+                const a = j / sides * Math.PI * 2, lobes = 1 + .125 * Math.cos(a * 7 + phi * 1.8) + .065 * Math.sin(a * 11 - phi * 2);
+                const rr = .52 * sin * lobes, up = .47 + .57 * cos + .04 * Math.sin(a * 5 + phi * 3) * sin;
+                positions.push(Math.cos(a) * rr, up, Math.sin(a) * rr);
+                const normalLength = Math.hypot(Math.cos(a) * sin, cos, Math.sin(a) * sin) || 1;
+                normals.push(Math.cos(a) * sin / normalLength, cos / normalLength, Math.sin(a) * sin / normalLength);
+                const stripe = Math.pow(.5 + .5 * Math.cos(a * 7 + phi * .9), 4), glow = Math.max(0, cos * .5 + .5);
+                colors.push(.36 + .48 * stripe + .09 * glow, .47 + .33 * stripe, .36 + .27 * glow, 1);
+                uvs.push(j / sides, row / bands);
+                if (row > 0 && j > 0) {
+                    const a0 = (row - 1) * (sides + 1) + j - 1, b0 = row * (sides + 1) + j - 1;
+                    indices.push(a0, a0 + 1, b0, a0 + 1, b0 + 1, b0);
+                }
+            }
+        }
+        return { positions, normals, colors, uvs, indices };
+    }
+    /** Braided three-strand mycelium with an irregular surface, laid over the soil
+     * so a new player can visually follow the chain before touching its first bud. */
+    function sporeRootMesh(ax, ay, bx, by) {
+        const positions = [], normals = [], colors = [], uvs = [], indices = [];
+        const count = 18, sides = 9, dx = bx - ax, dz = ay - by, length = Math.hypot(dx, dz) || 1;
+        const acrossX = -dz / length, acrossZ = dx / length;
+        for (let strand = 0; strand < 3; strand++) {
+            const offset = strand * 2.0944;
+            const base = positions.length / 3;
+            for (let i = 0; i <= count; i++) {
+                const t = i / count, twist = offset + t * Math.PI * 3.4;
+                const wiggle = Math.sin(t * Math.PI) * .09;
+                const x = ax + dx * t + acrossX * (wiggle * Math.sin(t * 9 + offset) + Math.cos(twist) * .05);
+                const z = -ay + dz * t + acrossZ * (wiggle * Math.cos(t * 8 + offset) + Math.cos(twist) * .05);
+                const y = .16 + .045 * Math.sin(t * Math.PI) + Math.sin(twist) * .055;
+                const r = (.055 + .017 * Math.cos(t * 23 + offset)) * (.74 + .26 * Math.sin(t * Math.PI));
+                for (let j = 0; j <= sides; j++) {
+                    const a = j / sides * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+                    positions.push(x + acrossX * c * r, y + sn * r, z + acrossZ * c * r);
+                    normals.push(acrossX * c, sn, acrossZ * c);
+                    const shade = .5 + .5 * Math.sin(t * 8 + offset), light = .52 + .2 * shade;
+                    colors.push(.28 + .2 * shade, light + .23 * sn, .37 + .2 * shade, 1);
+                    uvs.push(t, j / sides);
+                    if (i > 0 && j > 0) {
+                        const o = base + (i - 1) * (sides + 1) + j - 1, q = o + sides + 1;
+                        indices.push(o, q, o + 1, o + 1, q, q + 1);
+                    }
+                }
+            }
+        }
+        return { positions, normals, colors, uvs, indices };
+    }
     return {
         setters: [
             function (cc_1_1) {
@@ -40,7 +96,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
         ],
         execute: function () {
             ccclass = cc_1._decorator.ccclass;
-            VERSION = '0.3.1';
+            VERSION = '0.4.0-alpha';
             GROUND = .08, GROUND_EFFECT = .105;
             TOOL_COST = { heavy: 300, grip: 450, return: 450 };
             GameMain = class GameMain extends cc_1.Component {
@@ -60,6 +116,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.objectiveRing = null;
                     this.objectiveLabel = null;
                     this.stashVisuals = new Map();
+                    this.sporeVisuals = new Map();
+                    this.sporeRoots = [];
                     this.aimNodes = [];
                     this.aimEnd = null;
                     this.aimCaption = null;
@@ -229,6 +287,9 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.matAim = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#8be3bc'), false, true, true, .6);
                     this.matDanger = ModelLibrary_1.makeMaterial(new cc_1.Color(236, 105, 78, 150), false, true, true);
                     this.matGold = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#ffdb7c'), false, true, true, .8);
+                    this.matSporeCrown = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#83b49a'), true, false, true, .035);
+                    this.matSporeGlow = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#dab879', 155), false, true, false, .16);
+                    this.matSporeRoot = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#638b74'), true, false, true, .015);
                     this.sparkMaterials = ['#ffe1a0', '#aaead0', '#d39b61', '#ef9b7d'].map(c => ModelLibrary_1.makeMaterial(GameUI_1.rgba(c), false, false, false, .8));
                     for (let i = 0; i < 32; i++) {
                         const node = ModelLibrary_1.meshNode('AimMark', ModelLibrary_1.discMesh(.075, .95, .8, 12), this.matAim, this.effectsWorld);
@@ -278,6 +339,10 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     for (const stash of this.stashVisuals.values())
                         stash.label.node.destroy();
                     this.stashVisuals.clear();
+                    for (const spore of this.sporeVisuals.values())
+                        spore.label.node.destroy();
+                    this.sporeVisuals.clear();
+                    this.sporeRoots = [];
                     for (const node of this.threatNodes.values())
                         node.destroy();
                     this.threatNodes.clear();
@@ -307,6 +372,25 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         const text = GameUI_1.label(this.floating, `额外 +${stash.value}`, 18, 0, 0, 165, 32, GameUI_1.PALETTE.mint, true);
                         text.node.active = false;
                         this.stashVisuals.set(stash.id, { instance, label: text });
+                    }
+                    // First-room interactive chain: actual organic 3D volumes and a separate ground halo.
+                    for (let i = 1; i < state.spores.length; i++) {
+                        const prior = state.spores[i - 1], next = state.spores[i];
+                        const root = ModelLibrary_1.meshNode('BraidedMycelium', sporeRootMesh(prior.x, prior.y, next.x, next.y), this.matSporeRoot, this.roomWorld);
+                        this.sporeRoots.push(root);
+                    }
+                    const crownData = state.spores.length ? sporeCrownMesh() : null;
+                    for (const node of state.spores) {
+                        const bud = this.instantiate('mushroom', this.roomWorld, node.x, node.y, .73);
+                        const crown = ModelLibrary_1.meshNode('GlowingFungalCrown', crownData, this.matSporeCrown, bud.root);
+                        crown.setPosition(0, .46, 0);
+                        crown.setScale(.77, .77, .77);
+                        const ring = ModelLibrary_1.meshNode('MyceliumPulse', ModelLibrary_1.ringMesh(node.radius + .25, .055, 48), this.matSporeGlow, bud.root);
+                        ring.setPosition(0, .02, 0);
+                        ring.setScale(1.5, 1, 1.5);
+                        const text = GameUI_1.label(this.floating, '菌核 · 连锁', 19, 0, 0, 180, 38, GameUI_1.PALETTE.gold, true);
+                        text.node.active = false;
+                        this.sporeVisuals.set(node.id, { bud, crown, ring, label: text });
                     }
                     this.instantiate('exit', this.roomWorld, state.exit.x, state.exit.y, .8);
                     this.exitRing = ModelLibrary_1.meshNode('ExitGlow', ModelLibrary_1.ringMesh(.8, .12), this.matGold, this.roomWorld);
@@ -403,6 +487,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         this.objectiveLabel.node.active = active;
                     for (const stash of this.stashVisuals.values())
                         stash.label.node.active = false;
+                    for (const spore of this.sporeVisuals.values())
+                        spore.label.node.active = false;
                 }
                 soundButton() {
                     const muted = this.audio.settings.muted;
@@ -872,8 +958,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         this.aimEnd.active = true;
                         this.aimEnd.setPosition(end.x, GROUND_EFFECT + .016, -end.y);
                         this.aimEnd.getComponent(cc_1.MeshRenderer).setMaterial(preview.blocked ? this.matGold : this.matAim, 0);
-                        this.aimCaption.string = preview.blocked ? '碰撞点' : preview.endpoint === 'exit' ? '离开房间' : '落点';
-                        this.aimCaption.color = GameUI_1.rgba(preview.blocked ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.mint);
+                        this.aimCaption.string = preview.targetId?.startsWith('heart-') ? '点燃菌核' : preview.blocked ? '碰撞点' : preview.endpoint === 'exit' ? '离开房间' : '落点';
+                        this.aimCaption.color = GameUI_1.rgba(preview.targetId?.startsWith('heart-') ? GameUI_1.PALETTE.mint : preview.blocked ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.mint);
                         const screen = this.worldCamera.worldToScreen(new cc_1.Vec3(end.x, .3, -end.y));
                         this.aimCaption.node.setPosition(screen.x / cc_1.view.getScaleX() - 360, screen.y / cc_1.view.getScaleY() - this.height / 2 + 25, 0);
                         this.aimCaption.node.active = true;
@@ -1049,6 +1135,31 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         const aimOverlap = this.dragging && this.aimCaption?.node.active && Math.hypot(this.objectiveLabel.node.position.x - this.aimCaption.node.position.x, this.objectiveLabel.node.position.y - this.aimCaption.node.position.y) < 85;
                         this.objectiveLabel.node.active = guideVisible && projected && !aimOverlap;
                     }
+                    for (const node of s.spores) {
+                        const visual = this.sporeVisuals.get(node.id);
+                        if (!visual)
+                            continue;
+                        const active = !node.spent, priming = node.fuse >= 0;
+                        // Keep the sculpted husk on the ground after the flash, not a vanishing prop.
+                        visual.bud.root.active = true;
+                        if (!active) {
+                            visual.bud.root.setScale(.38, .35, .38);
+                            visual.crown.active = false;
+                            visual.ring.active = false;
+                            visual.label.node.active = false;
+                            continue;
+                        }
+                        visual.crown.active = true;
+                        visual.ring.active = true;
+                        const pulse = 1 + Math.sin(this.time * 5 + node.x * .5) * .045 + (priming ? .19 : 0);
+                        visual.bud.root.setScale(.73 * pulse, .73 * pulse, .73 * pulse);
+                        visual.crown.setScale(.77 * (priming ? 1.12 : 1), .77 * (priming ? 1.12 : 1), .77 * (priming ? 1.12 : 1));
+                        visual.ring.setScale((1 + Math.sin(this.time * 5) * .09) * (priming ? 1.5 : 1.1), 1, (1 + Math.sin(this.time * 5) * .09) * (priming ? 1.5 : 1.1));
+                        visual.label.string = priming ? '即将连锁' : node.depth > 0 ? '菌核已启动' : '菌核 · 连锁';
+                        const visibleLabel = guideVisible && (priming || node.id === 'heart-root');
+                        const projected = this.placeWorldLabel(visual.label, node.x, node.y, 1.5, 15);
+                        visual.label.node.active = visibleLabel && projected;
+                    }
                     for (const stash of s.stashes) {
                         const visual = this.stashVisuals.get(stash.id);
                         if (!visual)
@@ -1139,9 +1250,27 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     return Math.max(.2, best);
                 }
                 handleEvent(e) {
-                    const sounds = { shot: 'launch', bounce: 'stone_hit', board_hit: 'wood_hit', board_break: 'wood_break', cabinet_push: 'cabinet_push', enemy_hit: 'enemy_hit', enemy_down: 'enemy_down', arrow: 'arrow', arrow_blocked: 'arrow_blocked', damage: 'danger', treasure: 'loot', stash: 'loot', victory: 'win', game_over: 'lose', room_clear: 'loot', tool_used: 'tool' };
+                    const sounds = { spore_prime: 'tool', spore_burst: 'wood_break', shot: 'launch', bounce: 'stone_hit', board_hit: 'wood_hit', board_break: 'wood_break', cabinet_push: 'cabinet_push', enemy_hit: 'enemy_hit', enemy_down: 'enemy_down', arrow: 'arrow', arrow_blocked: 'arrow_blocked', damage: 'danger', treasure: 'loot', stash: 'loot', victory: 'win', game_over: 'lose', room_clear: 'loot', tool_used: 'tool' };
                     if (sounds[e.type])
                         this.audio.play(sounds[e.type], e.type === 'bounce' ? .4 : 1);
+                    if (e.type === 'spore_prime') {
+                        this.burst(e.x, e.y, 1, 4);
+                    }
+                    if (e.type === 'spore_burst') {
+                        this.burst(e.x, e.y, 1, 18);
+                        this.shake = Math.max(this.shake, .24);
+                        this.hitStop = Math.max(this.hitStop, .026);
+                        const impact = this.impacts.find(i => i.life <= 0);
+                        if (impact) {
+                            impact.life = .24;
+                            impact.size = 1.1;
+                            impact.node.active = true;
+                            impact.node.setPosition(e.x, GROUND_EFFECT + .025, -e.y);
+                        }
+                        this.floatText(e.amount && e.amount > 1 ? `连锁 ×${e.amount} · +10` : '菌核引爆 · +10', e.x, e.y, GameUI_1.PALETTE.mint);
+                        if ((e.amount || 0) >= 4)
+                            this.showTip('发现了菌核连锁！木栏和守卫都可能被波及', 2.2, null, 2);
+                    }
                     if (e.type === 'shot') {
                         this.launchKick = 1;
                         this.burst(e.x, e.y, 1, 4);
@@ -1287,7 +1416,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         delete globalThis.__MONSTER_DEN__;
                     this.env?.dispose();
                     this.characters?.dispose();
-                    for (const mat of [this.matShadow, this.matAim, this.matDanger, this.matGold, ...this.sparkMaterials, ...this.impacts.map(i => i.material)])
+                    for (const mat of [this.matShadow, this.matAim, this.matDanger, this.matGold, this.matSporeCrown, this.matSporeGlow, this.matSporeRoot, ...this.sparkMaterials, ...this.impacts.map(i => i.material)])
                         mat?.destroy();
                     cc_1.input.off(cc_1.Input.EventType.TOUCH_START, this.touchStart, this);
                     cc_1.input.off(cc_1.Input.EventType.TOUCH_MOVE, this.touchMove, this);

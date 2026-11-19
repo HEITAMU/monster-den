@@ -1,7 +1,7 @@
 import { ROOMS, TUNING, ACTION_PACING } from './rooms';
 import type {
   AimPreview, Body, EnemyState, GameEvent, GameEventType, GameSnapshot, GameState,
-  ObstacleState, RoomConfig, RuntimeState, ToolId, Vec2,
+  ObstacleState, RoomConfig, RuntimeState, ToolId, Vec2, SporeState,
 } from './types';
 
 const EPS = 0.00001;
@@ -196,6 +196,11 @@ export class GameModel {
       bounced = this.resolveBounds(ghost, restitution) || bounced;
       ghost.vx *= drag; ghost.vy *= drag;
       if (length(ghost.vx, ghost.vy) < 0.08) { ghost.vx = 0; ghost.vy = 0; }
+      for (const spore of this.state.spores) {
+        if (spore.spent || spore.fuse >= 0) continue;
+        if (length(ghost.x - spore.x, ghost.y - spore.y) < ghost.radius + spore.radius)
+          return finish('interaction', spore.id);
+      }
       for (const enemy of this.state.enemies) {
         if (!enemy.alive) continue;
         const ex = ghost.x - enemy.x, ey = ghost.y - enemy.y, distance = length(ex, ey);
@@ -306,6 +311,18 @@ export class GameModel {
         throw new Error('Invalid Monster Den stash totals.');
       }
     }
+    // Keep old saves playable without spawning new interactables under a player.
+    if (state.spores === undefined) state.spores = [];
+    else if (!Array.isArray(state.spores)
+      || new Set(state.spores.map(node => node.id)).size !== state.spores.length
+      || state.spores.some(node => !node || typeof node.id !== 'string' || !node.id
+        || !Number.isFinite(node.x) || !Number.isFinite(node.y)
+        || !Number.isFinite(node.radius) || node.radius <= 0 || node.radius > 2
+        || typeof node.spent !== 'boolean' || !Number.isFinite(node.fuse)
+        || (node.spent && node.fuse >= 0)
+        || !Number.isSafeInteger(node.depth) || node.depth < 0 || node.depth > 64)) {
+      throw new Error('Invalid Monster Den spore snapshot.');
+    }
     this.state = state; this.runtime = runtime; this.events = [];
     // v1 saves written before action pacing have neither field; retain their playable run.
     if (!Number.isFinite(this.runtime.actionAccumulator) || this.runtime.actionAccumulator < 0 || this.runtime.actionAccumulator >= 1) this.runtime.actionAccumulator = 0;
@@ -326,6 +343,7 @@ export class GameModel {
       enemies: room.enemies.map(e => ({ ...copy(e), vx: 0, vy: 0, radius: e.radius || (e.kind === 'charger' ? 0.55 : 0.43),
         hp: e.hp || 2, maxHp: e.hp || 2, alive: true, action: 'idle', actionTime: 0, actionStarted: false, actionDone: false,
         telegraph: { x: e.x, y: e.y, dx: 0, dy: -1, range: 4, width: 0.8 } })),
+      spores: (room.spores || []).map(spore => ({...copy(spore), spent:false, fuse:-1, depth:0})),
       projectiles: [], treasure: { ...room.treasure, taken: false }, exit: { ...room.exit, radius: TUNING.exitRadius },
       stashes: (room.stashes || []).map(stash => ({ ...stash, taken: false })), stashCount, stashValue,
       turn, score, rescuesUsed: rescues, shots, elapsed, enemyTime: 0,
@@ -361,11 +379,13 @@ export class GameModel {
   private tick(dt: number): void {
     const p = this.state.player;
     p.invulnerable = Math.max(0, p.invulnerable - dt);
+    this.updateSpores(dt);
     this.moveCabinets(dt);
     if (this.state.phase === 'moving') {
       this.runtime.flightTime += dt;
       this.moveLooseEnemies(dt);
       this.movePlayer(dt, this.playerDrag());
+      this.primeTouchedSpore();
       this.collidePlayerEnemies();
       this.checkObjectives();
       if (this.state.phase !== 'moving') return;
@@ -434,6 +454,74 @@ export class GameModel {
       if (!overlap) break;
     }
     this.resolveBounds(p, this.restitution());
+  }
+
+  /** A spore is an optional physical-chain starter, not an exit key. */
+  private primeSpore(node: SporeState, depth: number, fuse = TUNING.sporeFuse): void {
+    if (node.spent || node.fuse >= 0) return;
+    node.fuse = fuse; node.depth = depth;
+    this.emit('spore_prime', node.x, node.y, {id:node.id, amount:depth});
+  }
+
+  private primeTouchedSpore(): void {
+    const p = this.state.player;
+    for (const node of this.state.spores) {
+      if (node.spent || node.fuse >= 0) continue;
+      if (length(p.x-node.x,p.y-node.y) <= p.radius+node.radius)
+        this.primeSpore(node,1);
+    }
+  }
+
+  private updateSpores(dt: number): void {
+    for (const node of this.state.spores) {
+      if (node.spent || node.fuse < 0) continue;
+      node.fuse -= dt;
+      if (node.fuse <= 0) this.burstSpore(node);
+    }
+  }
+
+  private burstSpore(node: SporeState): void {
+    node.spent = true; node.fuse = -1;
+    this.state.score += TUNING.sporeScore;
+    this.emit('spore_burst',node.x,node.y,{id:node.id,amount:node.depth});
+    // Nearby wood, enemies and rail-bound cover respond to the same blast.
+    for (const obstacle of this.state.obstacles) {
+      if (obstacle.destroyed) continue;
+      const closeX=clamp(node.x,obstacle.x-obstacle.w/2,obstacle.x+obstacle.w/2);
+      const closeY=clamp(node.y,obstacle.y-obstacle.h/2,obstacle.y+obstacle.h/2);
+      if (length(closeX-node.x,closeY-node.y)>TUNING.sporeBlast) continue;
+      if (obstacle.kind==='board') {
+        obstacle.hp=0;obstacle.destroyed=true;this.state.score+=15;
+        this.emit('board_break',obstacle.x,obstacle.y,{id:obstacle.id,text:'spore'});
+      } else if (obstacle.kind==='cabinet'&&obstacle.rail) {
+        const axis=obstacle.rail.axis,delta=obstacle[axis]-node[axis];
+        const push=(delta>=0?1:-1)*Math.min(4.1,2.6+Math.abs(delta)*.7);
+        if(axis==='x')obstacle.vx=clamp(obstacle.vx+push,-TUNING.cabinetMaxSpeed,TUNING.cabinetMaxSpeed);
+        else obstacle.vy=clamp(obstacle.vy+push,-TUNING.cabinetMaxSpeed,TUNING.cabinetMaxSpeed);
+        this.emit('cabinet_push',obstacle.x,obstacle.y,{id:obstacle.id,amount:Math.abs(push)});
+      }
+    }
+    for (const enemy of this.state.enemies) {
+      if (!enemy.alive) continue;
+      const dx=enemy.x-node.x,dy=enemy.y-node.y,dist=length(dx,dy);
+      if(dist>TUNING.sporeBlast+enemy.radius)continue;
+      const away=normal(dx,dy);
+      enemy.hp=Math.max(0,enemy.hp-1);
+      enemy.vx+=away.x*3.6;enemy.vy+=away.y*3.6;
+      this.emit('enemy_hit',enemy.x,enemy.y,{id:enemy.id,amount:1,text:'spore'});
+      if(enemy.hp===0){
+        enemy.alive=false;enemy.vx=0;enemy.vy=0;
+        this.state.score+=enemy.kind==='boss'?250:35;
+        this.emit('enemy_down',enemy.x,enemy.y,{id:enemy.id,text:'spore'});
+      }
+    }
+    // Stable authored order and a nonzero fuse make the cascade visibly propagate.
+    for (const neighbour of this.state.spores) {
+      if(neighbour===node||neighbour.spent||neighbour.fuse>=0)continue;
+      const distance=length(neighbour.x-node.x,neighbour.y-node.y);
+      if(distance<=TUNING.sporeChain)
+        this.primeSpore(neighbour,node.depth+1,0.14+distance*0.03);
+    }
   }
 
   private moveCabinets(dt: number): void {
