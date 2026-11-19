@@ -41,7 +41,7 @@ function sporeCrownMesh():MeshData {
       const normalLength=Math.hypot(Math.cos(a)*sin,cos,Math.sin(a)*sin)||1;
       normals.push(Math.cos(a)*sin/normalLength,cos/normalLength,Math.sin(a)*sin/normalLength);
       const stripe=Math.pow(.5+.5*Math.cos(a*7+phi*.9),4),glow=Math.max(0,cos*.5+.5);
-      colors.push(.34+.55*glow+.1*stripe,.68+.2*stripe,.5+.4*glow,.98);
+      colors.push(.36+.48*stripe+.09*glow,.47+.33*stripe,.36+.27*glow,1);
       uvs.push(j/sides,row/bands);
       if(row>0&&j>0){
         const a0=(row-1)*(sides+1)+j-1,b0=row*(sides+1)+j-1;
@@ -67,7 +67,7 @@ function sporeRootMesh(ax:number,ay:number,bx:number,by:number):MeshData {
       const x=ax+dx*t+acrossX*(wiggle*Math.sin(t*9+offset)+Math.cos(twist)*.05);
       const z=-ay+dz*t+acrossZ*(wiggle*Math.cos(t*8+offset)+Math.cos(twist)*.05);
       const y=.16+.045*Math.sin(t*Math.PI)+Math.sin(twist)*.055;
-      const r=(.045+.015*Math.cos(t*23+offset))*(.74+.26*Math.sin(t*Math.PI));
+      const r=(.055+.017*Math.cos(t*23+offset))*(.74+.26*Math.sin(t*Math.PI));
       for(let j=0;j<=sides;j++){
         const a=j/sides*Math.PI*2,c=Math.cos(a),sn=Math.sin(a);
         positions.push(x+acrossX*c*r,y+sn*r,z+acrossZ*c*r);
@@ -180,9 +180,9 @@ export class GameMain extends Component {
     this.matAim=makeMaterial(rgba('#8be3bc'),false,true,true,.6);
     this.matDanger=makeMaterial(new Color(236,105,78,150),false,true,true);
     this.matGold=makeMaterial(rgba('#ffdb7c'),false,true,true,.8);
-    this.matSporeCrown=makeMaterial(rgba('#daf9b9'),true,false,true,.3);
-    this.matSporeGlow=makeMaterial(rgba('#73f8ce',225),false,true,false,.75);
-    this.matSporeRoot=makeMaterial(rgba('#d0efc0'),true,false,true,.18);
+    this.matSporeCrown=makeMaterial(rgba('#83b49a'),true,false,true,.035);
+    this.matSporeGlow=makeMaterial(rgba('#dab879',155),false,true,false,.16);
+    this.matSporeRoot=makeMaterial(rgba('#638b74'),true,false,true,.015);
     this.sparkMaterials=['#ffe1a0','#aaead0','#d39b61','#ef9b7d'].map(c=>makeMaterial(rgba(c),false,false,false,.8));
     for(let i=0;i<32;i++){const node=meshNode('AimMark',discMesh(.075,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
     this.aimEnd=meshNode('AimEndpoint',ringMesh(.38,.055),this.matAim,this.effectsWorld);this.aimEnd.active=false;
@@ -228,10 +228,10 @@ export class GameMain extends Component {
     for(const node of state.spores){
       const bud=this.instantiate('mushroom',this.roomWorld,node.x,node.y,.73);
       const crown=meshNode('GlowingFungalCrown',crownData!,this.matSporeCrown,bud.root);
-      crown.setPosition(0,.52,0);crown.setScale(.87,.87,.87);
+      crown.setPosition(0,.46,0);crown.setScale(.77,.77,.77);
       const ring=meshNode('MyceliumPulse',ringMesh(node.radius+.25,.055,48),this.matSporeGlow,bud.root);
       ring.setPosition(0,.02,0);ring.setScale(1.5,1,1.5);
-      const text=label(this.floating,'菌核 · 连锁',19,0,0,180,38,PALETTE.mint,true);
+      const text=label(this.floating,'菌核 · 连锁',19,0,0,180,38,PALETTE.gold,true);
       text.node.active=false;this.sporeVisuals.set(node.id,{bud,crown,ring,label:text});
     }
     this.instantiate('exit',this.roomWorld,state.exit.x,state.exit.y,.8);
@@ -621,11 +621,17 @@ export class GameMain extends Component {
     for(const node of s.spores){
       const visual=this.sporeVisuals.get(node.id);if(!visual)continue;
       const active=!node.spent,priming=node.fuse>=0;
-      visual.bud.root.active=active;
-      if(!active){visual.label.node.active=false;continue;}
+      // Keep the sculpted husk on the ground after the flash, not a vanishing prop.
+      visual.bud.root.active=true;
+      if(!active){
+        visual.bud.root.setScale(.38,.35,.38);
+        visual.crown.active=false;visual.ring.active=false;
+        visual.label.node.active=false;continue;
+      }
+      visual.crown.active=true;visual.ring.active=true;
       const pulse=1+Math.sin(this.time*5+node.x*.5)*.045+(priming?.19:0);
       visual.bud.root.setScale(.73*pulse,.73*pulse,.73*pulse);
-      visual.crown.setScale(.87*(priming?1.16:1),.87*(priming?1.16:1),.87*(priming?1.16:1));
+      visual.crown.setScale(.77*(priming?1.12:1),.77*(priming?1.12:1),.77*(priming?1.12:1));
       visual.ring.setScale((1+Math.sin(this.time*5)*.09)*(priming?1.5:1.1),1,(1+Math.sin(this.time*5)*.09)*(priming?1.5:1.1));
       visual.label.string=priming?'即将连锁':node.depth>0?'菌核已启动':'菌核 · 连锁';
       const visibleLabel=guideVisible&&(priming||node.id==='heart-root');
