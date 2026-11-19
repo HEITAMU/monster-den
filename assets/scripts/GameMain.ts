@@ -45,7 +45,7 @@ function sporeCrownMesh():MeshData {
       uvs.push(j/sides,row/bands);
       if(row>0&&j>0){
         const a0=(row-1)*(sides+1)+j-1,b0=row*(sides+1)+j-1;
-        indices.push(a0,b0,a0+1,a0+1,b0,b0+1);
+        indices.push(a0,a0+1,b0,a0+1,b0+1,b0);
       }
     }
   }
