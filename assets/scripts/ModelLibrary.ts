@@ -12,7 +12,8 @@ const editorEffects:Record<string,EffectAsset>={};
 @_decorator.ccclass('MonsterDenOwnedMesh')
 class OwnedMesh extends Component {
   mesh:Mesh|null=null;
-  onDestroy():void {this.mesh?.destroy();this.mesh=null;}
+  release():void {this.mesh?.destroy();this.mesh=null;}
+  onDestroy():void {this.release();}
 }
 
 export async function loadGameJson(path:string):Promise<any> {
@@ -57,7 +58,10 @@ export function meshNode(name:string,data:MeshData,material:Material,parent?:Nod
   const renderer=node.addComponent(MeshRenderer);
   const mesh=utils.createMesh(data as any);
   renderer.mesh=mesh;
-  node.addComponent(OwnedMesh).mesh=mesh;
+  const owner=node.addComponent(OwnedMesh);owner.mesh=mesh;
+  // Hidden nodes can be destroyed before their components ever load; Cocos
+  // skips their onDestroy hook. Node destruction still releases their buffers.
+  node.once(Node.EventType.NODE_DESTROYED,owner.release,owner);
   renderer.setMaterial(material,0);
   if(parent)node.parent=parent;
   return node;

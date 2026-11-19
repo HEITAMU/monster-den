@@ -303,7 +303,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     if (tool !== undefined && !['none', 'heavy', 'grip', 'return'].includes(tool))
                         return false;
                     const previous = this.state;
-                    this.loadRoom(previous.roomIndex + 1, Math.min(previous.player.maxHp, previous.player.hp + 1), tool || previous.player.tool, previous.score, previous.rescuesUsed, previous.shots, previous.elapsed, previous.turn);
+                    this.loadRoom(previous.roomIndex + 1, Math.min(previous.player.maxHp, previous.player.hp + 1), tool || previous.player.tool, previous.score, previous.rescuesUsed, previous.shots, previous.elapsed, previous.turn, previous.stashCount, previous.stashValue);
                     return true;
                 }
                 /** One rescue per expedition. Caller must grant this only after a verified ad reward or explicit preview action. */
@@ -346,8 +346,36 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         || !Array.isArray(snapshot.state.obstacles) || !Array.isArray(snapshot.state.enemies)) {
                         throw new Error('Invalid or unsupported Monster Den snapshot.');
                     }
-                    this.state = copy(snapshot.state);
-                    this.runtime = copy(snapshot.runtime);
+                    const state = copy(snapshot.state), runtime = copy(snapshot.runtime);
+                    const stashFields = ['stashes', 'stashCount', 'stashValue'];
+                    const oldLootSnapshot = stashFields.every(key => !Object.prototype.hasOwnProperty.call(state, key));
+                    if (oldLootSnapshot) {
+                        // Do not spawn new rewards into an already-running legacy room. Future rooms
+                        // load their current authored stash configuration through nextRoom().
+                        state.stashes = [];
+                        state.stashCount = 0;
+                        state.stashValue = 0;
+                    }
+                    else {
+                        const stashes = state.stashes;
+                        if (!Array.isArray(stashes) || !Number.isSafeInteger(state.stashCount) || state.stashCount < 0
+                            || !Number.isSafeInteger(state.stashValue) || state.stashValue < 0
+                            || !Number.isSafeInteger(state.score) || state.stashValue > state.score
+                            || (state.stashCount === 0) !== (state.stashValue === 0)
+                            || stashes.some(stash => !stash || typeof stash.id !== 'string' || !stash.id
+                                || !Number.isFinite(stash.x) || !Number.isFinite(stash.y)
+                                || !Number.isSafeInteger(stash.value) || stash.value <= 0 || typeof stash.taken !== 'boolean')
+                            || new Set(stashes.map(stash => stash.id)).size !== stashes.length) {
+                            throw new Error('Invalid Monster Den stash snapshot.');
+                        }
+                        const taken = stashes.filter(stash => stash.taken);
+                        const takenValue = taken.reduce((sum, stash) => sum + stash.value, 0);
+                        if (!Number.isSafeInteger(takenValue) || taken.length > state.stashCount || takenValue > state.stashValue) {
+                            throw new Error('Invalid Monster Den stash totals.');
+                        }
+                    }
+                    this.state = state;
+                    this.runtime = runtime;
                     this.events = [];
                     // v1 saves written before action pacing have neither field; retain their playable run.
                     if (!Number.isFinite(this.runtime.actionAccumulator) || this.runtime.actionAccumulator < 0 || this.runtime.actionAccumulator >= 1)
@@ -356,7 +384,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         this.runtime.flightRealTime = Number.isFinite(this.runtime.flightTime) ? Math.max(0, this.runtime.flightTime) : 0;
                     }
                 }
-                loadRoom(index, hp, tool, score, rescues, shots, elapsed, turn) {
+                loadRoom(index, hp, tool, score, rescues, shots, elapsed, turn, stashCount = 0, stashValue = 0) {
                     const room = this.rooms[index];
                     this.state = {
                         version: 1, phase: 'aiming', roomIndex: index, roomCount: this.rooms.length,
@@ -368,6 +396,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                             hp: e.hp || 2, maxHp: e.hp || 2, alive: true, action: 'idle', actionTime: 0, actionStarted: false, actionDone: false,
                             telegraph: { x: e.x, y: e.y, dx: 0, dy: -1, range: 4, width: 0.8 } })),
                         projectiles: [], treasure: { ...room.treasure, taken: false }, exit: { ...room.exit, radius: rooms_1.TUNING.exitRadius },
+                        stashes: (room.stashes || []).map(stash => ({ ...stash, taken: false })), stashCount, stashValue,
                         turn, score, rescuesUsed: rescues, shots, elapsed, enemyTime: 0,
                     };
                     this.runtime.accumulator = 0;
@@ -772,6 +801,15 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     if (this.state.phase === 'game_over')
                         return;
                     const p = this.state.player, treasure = this.state.treasure, exit = this.state.exit;
+                    for (const stash of this.state.stashes) {
+                        if (stash.taken || length(p.x - stash.x, p.y - stash.y) >= p.radius + rooms_1.TUNING.treasureRadius)
+                            continue;
+                        stash.taken = true;
+                        this.state.stashCount++;
+                        this.state.stashValue += stash.value;
+                        this.state.score += stash.value;
+                        this.emit('stash', stash.x, stash.y, { id: stash.id, amount: stash.value });
+                    }
                     if (!treasure.taken && length(p.x - treasure.x, p.y - treasure.y) < p.radius + rooms_1.TUNING.treasureRadius) {
                         treasure.taken = true;
                         this.state.score += 100;

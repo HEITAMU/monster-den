@@ -287,6 +287,97 @@ test('an exit alone does not win and cannot award the treasure', () => {
   assert.ok(model.drainEvents().some(e => e.type === 'exit_locked'));
 });
 
+test('optional stash is collected once without stopping flight or unlocking the exit', () => {
+  const model = new GameModel({ rooms: [room({ exit: { x: 0, y: 3 },
+    stashes: [{ id: 'side-loot', x: 0, y: -1, value: 80 }] })] });
+  const before = model.snapshot();
+  model.aim(0, 1, 0.7);
+  assert.deepEqual(model.snapshot(), before, 'Aiming over optional loot must not collect it.');
+  assertPreviewMatchesFlight(model, { x: 0, y: 1 }, 0.7);
+  assert.ok(model.state.player.y > 2, 'Passing the stash must not terminate the shot.');
+  assert.equal(model.state.phase, 'aiming');
+  assert.equal(model.state.treasure.taken, false, 'Side loot is not the room key.');
+  assert.equal(model.state.stashes[0].taken, true);
+  assert.equal(model.state.stashCount, 1); assert.equal(model.state.stashValue, 80);
+  assert.equal(model.state.score, 80);
+  const events = model.drainEvents();
+  assert.deepEqual(events.filter(e => e.type === 'stash'), [
+    { type: 'stash', x: 0, y: -1, id: 'side-loot', amount: 80 },
+  ]);
+  assert.ok(events.some(e => e.type === 'exit_locked'));
+  fireAt(model, 0, -3);
+  assert.equal(model.state.score, 80, 'Crossing an already collected stash must not award again.');
+  assert.equal(model.drainEvents().some(e => e.type === 'stash'), false);
+});
+
+test('stash pickup survives an in-flight save, accumulates across rooms, and resets with a new expedition', () => {
+  const rooms = [
+    room({ id: 'stash-first', treasure: { x: 0, y: -1 }, exit: { x: 0, y: 3 },
+      stashes: [{ id: 'first-loot', x: 0, y: -2, value: 80 }] }),
+    room({ id: 'stash-second', treasure: { x: 0, y: 1 }, exit: { x: 0, y: 4 },
+      stashes: [{ id: 'second-loot', x: 0, y: -1, value: 120 }] }),
+  ];
+  const original = new GameModel({ rooms });
+  original.shoot({ x: 0, y: 1 }, 1);
+  for (let i = 0; i < 120 && !original.state.stashes[0].taken; i++) original.step(1 / 120);
+  assert.equal(original.state.stashCount, 1); assert.equal(original.state.phase, 'moving');
+  assert.equal(original.state.score, 80);
+  original.drainEvents();
+  const saved = JSON.parse(JSON.stringify(original.snapshot()));
+  const restored = new GameModel({ rooms, snapshot: saved });
+  settle(original); settle(restored);
+  assert.deepEqual(restored.snapshot(), original.snapshot());
+  assert.deepEqual(restored.drainEvents(), original.drainEvents(), 'Restoring must not replay a stash award.');
+  assert.equal(restored.state.phase, 'room_clear'); assert.equal(restored.state.score, 230);
+  assert.equal(restored.nextRoom('return'), true);
+  assert.equal(restored.state.stashCount, 1); assert.equal(restored.state.stashValue, 80);
+  assert.equal(restored.state.stashes[0].id, 'second-loot');
+  assert.equal(restored.state.stashes[0].taken, false);
+  fireAt(restored, 0, 4, 1);
+  assert.equal(restored.state.phase, 'victory');
+  assert.equal(restored.state.stashCount, 2); assert.equal(restored.state.stashValue, 200);
+  assert.equal(restored.state.score, 750);
+  restored.restart();
+  assert.equal(restored.state.stashCount, 0); assert.equal(restored.state.stashValue, 0);
+  assert.equal(restored.state.score, 0); assert.equal(restored.state.stashes[0].taken, false);
+});
+
+test('legacy v1 snapshots keep the current room free of new stash spawns and use new stashes only in the next room', () => {
+  const rooms = [room({ stashes: [{ id: 'not-retroactive', x: 0, y: -1, value: 80 }] }),
+    room({ id: 'next-room', stashes: [{ id: 'new-room-loot', x: 1, y: 1, value: 120 }] })];
+  const legacy = new GameModel({ rooms }).snapshot();
+  delete legacy.state.stashes; delete legacy.state.stashCount; delete legacy.state.stashValue;
+  const restored = new GameModel({ rooms, snapshot: legacy });
+  assert.deepEqual(restored.state.stashes, []);
+  assert.equal(restored.state.stashCount, 0); assert.equal(restored.state.stashValue, 0);
+  assert.equal(restored.state.score, legacy.state.score);
+  fireAt(restored, 0, 2.6);
+  assert.equal(restored.state.score, 0);
+  assert.equal(restored.drainEvents().some(e => e.type === 'stash'), false);
+  fireAt(restored, 4, 5); fireAt(restored, -4, 5);
+  assert.equal(restored.state.phase, 'room_clear');
+  assert.equal(restored.nextRoom(), true);
+  assert.deepEqual(restored.state.stashes, [{ id: 'new-room-loot', x: 1, y: 1, value: 120, taken: false }]);
+  assert.equal(restored.state.stashCount, 0); assert.equal(restored.state.stashValue, 0);
+});
+
+test('malformed stash snapshots are rejected without replacing the current valid game state', () => {
+  const model = new GameModel({ rooms: [room({ stashes: [{ id: 'saved-loot', x: 0, y: 0, value: 80 }] })] });
+  const before = model.snapshot();
+  const corruptions = [
+    state => { state.stashes[0].value = -80; },
+    state => { state.stashes[0].x = Infinity; },
+    state => { state.stashes.push({ ...state.stashes[0] }); },
+    state => { state.stashes[0].taken = true; },
+    state => { delete state.stashCount; },
+  ];
+  for (const corrupt of corruptions) {
+    const saved = JSON.parse(JSON.stringify(before)); corrupt(saved.state);
+    assert.throws(() => model.restore(saved), /stash/);
+    assert.deepEqual(model.snapshot(), before);
+  }
+});
+
 test('maximum launch speed and coarse frame times never tunnel through a thin wall', () => {
   const model = new GameModel({ rooms: [room({ start: { x: 0, y: -5 }, obstacles: [
     { id: 'thin-wall', kind: 'wall', x: 0, y: 0, w: 10, h: 0.14 },
@@ -340,21 +431,27 @@ test('return turns a moving shot towards its launch point exactly once per turn'
 });
 
 test('failure permits one rescue, preserves collected treasure, and rejects a second rescue', () => {
-  const model = new GameModel({ rooms: [room({ start: { x: -3, y: 0 }, treasure: { x: -3, y: 0 }, enemies: [
+  const model = new GameModel({ rooms: [room({ start: { x: -3, y: 0 }, treasure: { x: -3, y: 0 },
+    stashes: [{ id: 'rescued-loot', x: -3, y: 0, value: 80 }], enemies: [
     { id: 'archer', kind: 'archer', x: 4, y: 0, fixedAim: { x: -4, y: 0 } },
   ] })] });
   model.state.player.hp = 1;
   model.shoot({ x: -1, y: 0 }, 0); settle(model);
   assert.equal(model.state.phase, 'game_over');
   assert.equal(model.state.treasure.taken, true);
+  assert.equal(model.state.stashCount, 1); assert.equal(model.state.stashValue, 80);
+  assert.equal(model.state.score, 180);
   assert.equal(model.rescue(), true);
   assert.equal(model.state.phase, 'aiming');
   assert.equal(model.state.player.hp, 3);
   assert.equal(model.state.treasure.taken, true);
+  assert.equal(model.state.stashes[0].taken, true);
   model.state.player.hp = 1;
   model.shoot({ x: -1, y: 0 }, 0); settle(model);
   assert.equal(model.state.phase, 'game_over');
   assert.equal(model.rescue(), false);
+  assert.equal(model.state.stashCount, 1); assert.equal(model.state.stashValue, 80);
+  assert.equal(model.state.score, 180, 'A rescue must preserve loot without making it collectible again.');
 });
 
 test('JSON snapshot restores moving cabinets, flight, future events, and the exact deterministic result', () => {
@@ -397,6 +494,37 @@ test('all five authored rooms are playable in one expedition, retaining live ene
   assert.ok(model.state.player.hp > 0);
   assert.equal(model.state.rescuesUsed, 0);
   assert.equal(model.state.shots, 21);
+  assert.equal(model.state.stashCount, 0, 'Both authored side stashes must be optional on the established route.');
+  assert.equal(model.state.stashValue, 0);
+  assert.equal(model.state.score, 1065, 'Adding side routes must not alter the reward for skipping them.');
+});
+
+test('both authored side stashes are reachable through real shots in a complete expedition', () => {
+  const model = new GameModel();
+  const routes = [
+    [[0, 1.6, 1], [0, 5.6]],
+    [[0, 3, 1], [-3.85, -0.4], [-1.4, -0.4], [-1.4, 4.5], [0, 4.2], [2.9, 5.7]],
+    [[0, -3], [0, 3, 1], [3, 3.6], [3, 5.8]],
+    [[-3.2, -3.6], [-2.35, 0.5], [4.1, 1], [4.1, 4.5], [3.6, 4.5], [-3.5, 5.7]],
+    [[3.8, -4], [4.2, 2], [2, 3.8], [0, 3.8], [0, 5.9]],
+  ];
+  const collected = [];
+  for (let index = 0; index < routes.length; index++) {
+    for (const target of routes[index]) {
+      fireAt(model, ...target);
+      collected.push(...model.drainEvents().filter(e => e.type === 'stash'));
+    }
+    assert.equal(model.state.phase, index === 4 ? 'victory' : 'room_clear');
+    assert.ok(model.state.enemies.some(e => e.alive));
+    if (index < 4) assert.equal(model.nextRoom('heavy'), true);
+  }
+  assert.deepEqual(collected.map(e => [e.id, e.amount]), [['store-side-stash', 80], ['vault-side-stash', 120]]);
+  assert.equal(model.state.stashCount, 2); assert.equal(model.state.stashValue, 200);
+  assert.equal(model.state.shots, 23); assert.equal(model.state.rescuesUsed, 0);
+  assert.equal(model.state.player.hp, 4);
+  // This route skips one ordinary enemy defeat worth 35, so its net increase
+  // over the 1065-point main route is 165, despite collecting 200 in side loot.
+  assert.equal(model.state.score, 1230);
 });
 
 test('input and progression calls reject invalid states without corrupting the simulation', () => {

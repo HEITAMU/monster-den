@@ -37,6 +37,6 @@ test('all shipped articulated models have finite buffers and valid topology',()=
       }
     }
   }
-  // 0.2.0 authored export: 31,308 character + 59,212 environment triangles.
-  assert.equal(prefabs,15);assert.equal(triangles,90520);
+  // 0.3.0 authored export: 31,308 character + 62,470 environment triangles.
+  assert.equal(prefabs,16);assert.equal(triangles,93778);
 });

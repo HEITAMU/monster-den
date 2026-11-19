@@ -18,7 +18,7 @@ const engineOut = path.join(root, '.build/engine-headless');
 fs.mkdirSync(out, { recursive: true });
 const result = { backend: 'Cocos EmptyDevice', engineVersion: '3.8.8',
   pixelValidation: false, gpuShaderCompilation: false, audibleOutputValidation: false,
-  testMethod: 'Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through the rendered fixed joystick and real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.',
+  testMethod: 'Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through the rendered fixed joystick and real DOM mouse input; a separate new run collects the second-room optional stash, then uses grip and immediately relaunches to verify phase-bound guidance. UI choices use the actual Cocos button TOUCH_END handlers. Only the separate game-over UI branch uses a controlled snapshot.',
   errors: [], warnings: [], checkpoints: [], sourceFiles: {}, assetRequests: [] };
 const record = file => {
   const buffer = fs.readFileSync(file);
@@ -115,10 +115,12 @@ process.on('unhandledRejection', onUnhandled);
   } });
   result.actualDevice = cc.director.root.device.constructor.name;
   assert.equal(result.actualDevice, 'EmptyDevice');
-  const initializedMeshes = new Set(), liveMeshes = new Set();
+  const initializedMeshes = new Set(), liveMeshes = new Set(), meshOrigins = new Map(), meshOwners = new Map();
   const initializeMesh = cc.Mesh.prototype.initialize, destroyMesh = cc.Mesh.prototype.destroy;
   cc.Mesh.prototype.initialize = function (...args) {
     initializedMeshes.add(this); liveMeshes.add(this);
+    if (!meshOrigins.has(this)) meshOrigins.set(this, { name: this.name, uuid: this.uuid || this._uuid,
+      initializedAtFrame: cc.director.getTotalFrames(), initializeStack: new Error('Mesh initialization source').stack });
     return initializeMesh.apply(this, args);
   };
   cc.Mesh.prototype.destroy = function (...args) {
@@ -126,6 +128,16 @@ process.on('unhandledRejection', onUnhandled);
     if (destroyed !== false) liveMeshes.delete(this);
     return destroyed;
   };
+  const rendererMesh = Object.getOwnPropertyDescriptor(cc.MeshRenderer.prototype, 'mesh');
+  assert.ok(rendererMesh?.get && rendererMesh?.set && rendererMesh.configurable, 'Mesh ownership diagnostics require the actual renderer mesh accessor.');
+  Object.defineProperty(cc.MeshRenderer.prototype, 'mesh', { ...rendererMesh, set(mesh) {
+    if (mesh) {
+      let owners = meshOwners.get(mesh); if (!owners) { owners = new Map(); meshOwners.set(mesh, owners); }
+      if (!owners.has(this.node)) owners.set(this.node, { name: this.node?.name, uuid: this.node?.uuid,
+        assignedAtFrame: cc.director.getTotalFrames(), assignmentStack: new Error('Mesh renderer assignment source').stack });
+    }
+    rendererMesh.set.call(this, mesh);
+  } });
   const moduleCache = new Map();
   function loadModule(name, importer = path.join(root, 'assets/scripts/_entry.ts')) {
     if (name === 'cc') return cc;
@@ -157,6 +169,30 @@ process.on('unhandledRejection', onUnhandled);
   const controller = api.controller;
   assert.equal(sceneAsset.scene.getComponentInChildren(GameMain), controller);
   assert.equal(controller.page, 'home');
+  const toolNames = { none: '工具未携带', heavy: '重撞拳套', grip: '抓停重瞄', return: '回旋折返' };
+  function presentation() {
+    return { phase: api.model.state.phase, tool: api.model.state.player.tool,
+      toolName: controller.toolNameLabel?.string, toolStatus: controller.toolStatusLabel?.string,
+      toolNameVisible: !!controller.toolNameLabel?.node?.activeInHierarchy,
+      tutorialText: controller.tutorialText?.string, topHint: controller.hintLabel?.string,
+      objective: controller.objectiveLabel?.string,
+      objectiveVisible: !!controller.objectiveLabel?.node.activeInHierarchy,
+      exitRingActive: !!controller.exitRing?.active, treasureTaken: api.model.state.treasure.taken };
+  }
+  function assertToolName(value, label) {
+    assert.equal(value.toolName, toolNames[value.tool], `${label}: tool name changed with its phase.`);
+    assert.equal(value.toolNameVisible, true, `${label}: tool name is hidden.`);
+  }
+  function assertDragGuidance(value, label) {
+    assert.equal(value.dragging, true, `${label}: joystick is not being held.`);
+    assert.match(value.tutorialText, /回中[\s\S]*取消/, `${label}: recenter/cancel instruction disappeared.`);
+    assertToolName(value, label);
+  }
+  function observeToolPhase(phases, label) {
+    const value = presentation(); assertToolName(value, label);
+    phases.set(`${value.phase}:${value.toolStatus}`, { phase: value.phase, tool: value.tool,
+      name: value.toolName, status: value.toolStatus, visible: value.toolNameVisible });
+  }
   const checkpoint = label => {
     const renderers = sceneAsset.scene.getComponentsInChildren(cc.MeshRenderer);
     const labels = sceneAsset.scene.getComponentsInChildren(cc.Label);
@@ -167,6 +203,7 @@ process.on('unhandledRejection', onUnhandled);
       homeActorVisible: controller.homeActor?.instance.root.activeInHierarchy,
       heroVisible: controller.hero?.instance.root.activeInHierarchy,
       cameras: sceneAsset.scene.getComponentsInChildren(cc.Camera).length,
+      presentation: presentation(), stashCount: api.model.state.stashCount, stashValue: api.model.state.stashValue,
       loadedGameModules: moduleCache.size, liveMeshes: liveMeshes.size, totalCocosFrames: cc.director.getTotalFrames() };
     assert.ok(entry.nodeMeshRenderers > 10, `${label}: actual mesh hierarchy absent`);
     assert.ok(entry.labels > 3, `${label}: actual Cocos labels absent`);
@@ -187,13 +224,20 @@ process.on('unhandledRejection', onUnhandled);
   assert.ok(Object.keys(controller.characters.prefabs).length >= 4);
   result.prefabs = { environment: Object.keys(controller.env.prefabs), characters: Object.keys(controller.characters.prefabs) };
   function clickLabel(text) {
-    const label = sceneAsset.scene.getComponentsInChildren(cc.Label).find(label => label.string === text && label.node.activeInHierarchy);
+    const matches = label => label.string === text && label.node.activeInHierarchy;
+    const overlayLabels = controller.overlay.children.length ? controller.overlay.getComponentsInChildren(cc.Label) : [];
+    const label = overlayLabels.find(matches) || sceneAsset.scene.getComponentsInChildren(cc.Label).find(matches);
     assert.ok(label, `UI label not found: ${text}`);
     label.node.parent.emit(cc.Node.EventType.TOUCH_END, { propagationStopped: false });
   }
   clickLabel('潜入怪物窝'); await tick(3);
   assert.equal(controller.page, 'game');
   checkpoint('home button entered first room');
+  result.firstSession = { initial: presentation() };
+  assert.equal(result.firstSession.initial.objective, '撞开木栏');
+  assert.equal(result.firstSession.initial.treasureTaken, false);
+  assert.equal(result.firstSession.initial.exitRingActive, false, 'Exit must remain dark before the main treasure is taken.');
+  assertToolName(result.firstSession.initial, 'Initial room');
   const playerBefore = { x: api.model.state.player.x, y: api.model.state.player.y };
   function mouse(type, x, y, button = 0) {
     const names = { [cc.Input.EventType.MOUSE_DOWN]: 'mousedown', [cc.Input.EventType.MOUSE_MOVE]: 'mousemove', [cc.Input.EventType.MOUSE_UP]: 'mouseup' };
@@ -217,10 +261,38 @@ process.on('unhandledRejection', onUnhandled);
       gameplayTuning: { ...controller.gameplayTuning }, rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
   }
   function inputState() {
-    return { dragging: controller.dragging, power: controller.dragPower, shots: api.model.state.shots,
+    return { ...presentation(), dragging: controller.dragging, power: controller.dragPower, shots: api.model.state.shots,
       visibleDots: controller.aimNodes.filter(node => node.active).length,
       aim: { x: controller.lastAim.x, y: controller.lastAim.y },
       thumb: { x: controller.stick.thumb.position.x, y: controller.stick.thumb.position.y } };
+  }
+  async function fireTarget(targetX, targetY, explicitPower, shotLog) {
+    const room = api.model.state.roomIndex + 1;
+    assert.equal(api.model.state.phase, 'aiming');
+    const player = api.model.state.player, dx = targetX - player.x, dy = targetY - player.y;
+    const input = inputGeometry(), tuning = input.gameplayTuning;
+    const distance = Math.hypot(dx, dy), drag = tuning.drag * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
+    const power = explicitPower ?? Math.max(.01, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - tuning.launchMin) / (tuning.launchMax - tuning.launchMin)));
+    const end = joystickEndpoint(input, dx, dy, power), before = api.model.state.shots;
+    const phases = new Map(); observeToolPhase(phases, `Room ${room} before aiming`);
+    mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+    mouse(cc.Input.EventType.MOUSE_MOVE, end.x, end.y); await tick(2);
+    const aim = inputState(); assertDragGuidance(aim, `Room ${room} shot ${before + 1} aim`);
+    assert.ok(controller.dragging && controller.aimNodes.some(node => node.active) && Math.abs(controller.dragPower - end.effectivePower) < .015,
+      `Room ${room}: joystick did not produce expected power: ${JSON.stringify({ requested: power, actual: controller.dragPower, end })}`);
+    const effectivePower = controller.dragPower;
+    mouse(cc.Input.EventType.MOUSE_UP, end.x, end.y);
+    assert.equal(api.model.state.shots, before + 1, `Room ${room}: DOM joystick push was not accepted`);
+    for (let frame = 0; frame < 1200; frame++) {
+      await tick(); observeToolPhase(phases, `Room ${room} shot ${before + 1}`);
+      if (['aiming', 'room_clear', 'victory', 'game_over'].includes(api.model.state.phase)) break;
+    }
+    assert.ok(['aiming', 'room_clear', 'victory'].includes(api.model.state.phase), `Room ${room}: shot failed to return control.`);
+    shotLog.push({ room, shot: api.model.state.shots, target: { x: targetX, y: targetY }, power,
+      effectivePower, pointer: end, cancelHint: aim.tutorialText, toolPhases: [...phases.values()],
+      phase: api.model.state.phase, hp: api.model.state.player.hp, score: api.model.state.score,
+      stashCount: api.model.state.stashCount, stashValue: api.model.state.stashValue,
+      player: { x: api.model.state.player.x, y: api.model.state.player.y } });
   }
   const input = inputGeometry(), { deadZone, travel } = input.joystickTuning;
   assert.ok(Number.isFinite(input.x) && Number.isFinite(input.y) && deadZone > 0 && travel > deadZone && input.groundProjection > 0,
@@ -241,6 +313,7 @@ process.on('unhandledRejection', onUnhandled);
   await tick(2);
   const insideDeadZone = inputState();
   assert.equal(insideDeadZone.power, 0); assert.equal(insideDeadZone.visibleDots, 0);
+  assertDragGuidance(insideDeadZone, 'Sub-dead-zone aim');
   mouse(cc.Input.EventType.MOUSE_UP, input.x + deadZone * .5 * input.pixelX, input.y);
   const deadZoneRelease = await assertIdle('Sub-dead-zone release');
   mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
@@ -249,9 +322,11 @@ process.on('unhandledRejection', onUnhandled);
   const pushed = inputState();
   assert.ok(pushed.dragging && pushed.power > .98 && pushed.visibleDots > 0,
     `Joystick did not engage before recentering: ${JSON.stringify({ input, pushed })}`);
+  assertDragGuidance(pushed, 'Engaged aim before recentering');
   mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y); await tick(2);
   const recentered = inputState();
   assert.equal(recentered.power, 0); assert.equal(recentered.visibleDots, 0);
+  assertDragGuidance(recentered, 'Recentered aim');
   mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y);
   const recenterRelease = await assertIdle('Recentered joystick release');
   const scenePoint = { x: input.rect.x + input.rect.width * .5, y: input.rect.y + input.rect.height * .42 };
@@ -280,6 +355,8 @@ process.on('unhandledRejection', onUnhandled);
     evidence: { centerTap, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
   mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
   mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y - travel * input.pixelY);
+  await tick(2);
+  const firstAim = inputState(); assertDragGuidance(firstAim, 'First actual shot aim');
   result.inputFixture = { dragging: controller.dragging, dragPower: controller.dragPower, height: controller.height,
     scaleX: cc.view.getScaleX(), scaleY: cc.view.getScaleY(), visibleSize: cc.view.getVisibleSize(),
     joystick: input,
@@ -289,12 +366,19 @@ process.on('unhandledRejection', onUnhandled);
   assert.ok(controller.aimNodes.some(node => node.active), 'Native aim mesh nodes were not shown.');
   mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y - travel * input.pixelY);
   assert.equal(api.model.state.shots, 1);
-  const phases = new Set();
-  for (let i = 0; i < 420; i++) { await tick(); phases.add(api.model.state.phase); if (i > 30 && api.model.state.phase === 'aiming') break; }
+  const phases = new Set(), firstToolPhases = new Map();
+  for (let i = 0; i < 420; i++) {
+    await tick(); phases.add(api.model.state.phase); observeToolPhase(firstToolPhases, 'First actual shot');
+    if (i > 30 && api.model.state.phase === 'aiming') break;
+  }
   assert.ok(Math.hypot(api.model.state.player.x - playerBefore.x, api.model.state.player.y - playerBefore.y) > .5, 'Real shot did not advance the player.');
   assert.ok(api.model.state.obstacles.find(obstacle => obstacle.kind === 'board').destroyed, 'First-room shot did not run the board collision branch.');
   result.realInputShot = { accepted: true, observedPhases: [...phases], shots: api.model.state.shots,
     movedDistance: Math.hypot(api.model.state.player.x - playerBefore.x, api.model.state.player.y - playerBefore.y), boardDestroyed: true };
+  result.firstSession.afterFirstShot = presentation();
+  assert.equal(result.firstSession.afterFirstShot.treasureTaken, true);
+  assert.equal(result.firstSession.afterFirstShot.objective, '前往出口');
+  assert.equal(result.firstSession.afterFirstShot.exitRingActive, true, 'Collecting the main treasure must light the exit.');
   checkpoint('controller fixed joystick aim, launch, board break, and return to aiming');
   // Use the authored core-test route with current launch tuning and fine joystick travel.
   // This establishes controller/render integration, not human fun or balance.
@@ -307,43 +391,30 @@ process.on('unhandledRejection', onUnhandled);
   ];
   result.route = { source: 'Documented 21-shot core regression route; fixed joystick power may be as low as 1%', rooms: [],
     shots: [{ room: 1, shot: 1, target: { x: 0, y: 1.6 }, power: 1, effectivePower: 1,
+      cancelHint: firstAim.tutorialText, toolPhases: [...firstToolPhases.values()],
       phase: api.model.state.phase, hp: api.model.state.player.hp, score: api.model.state.score,
+      stashCount: api.model.state.stashCount, stashValue: api.model.state.stashValue,
       player: { x: api.model.state.player.x, y: api.model.state.player.y } }] };
   for (let room = 0; room < 5; room++) {
     assert.equal(api.model.state.roomIndex, room);
     checkpoint(`room ${room + 1} actual scene, enemy prefabs and animation update`);
     for (const [targetX, targetY, explicitPower] of room === 0 ? routes[room].slice(1) : routes[room]) {
-      assert.equal(api.model.state.phase, 'aiming');
-      const player = api.model.state.player, dx = targetX - player.x, dy = targetY - player.y;
-      const input = inputGeometry(), tuning = input.gameplayTuning;
-      const distance = Math.hypot(dx, dy), drag = tuning.drag * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
-      const power = explicitPower ?? Math.max(.01, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - tuning.launchMin) / (tuning.launchMax - tuning.launchMin)));
-      const end = joystickEndpoint(input, dx, dy, power);
-      const before = api.model.state.shots;
-      mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
-      mouse(cc.Input.EventType.MOUSE_MOVE, end.x, end.y);
-      assert.ok(controller.dragging && controller.aimNodes.some(node => node.active) && Math.abs(controller.dragPower - end.effectivePower) < .015,
-        `Room ${room + 1}: joystick did not produce expected power: ${JSON.stringify({ requested: power, actual: controller.dragPower, end })}`);
-      const effectivePower = controller.dragPower;
-      mouse(cc.Input.EventType.MOUSE_UP, end.x, end.y);
-      assert.equal(api.model.state.shots, before + 1, `Room ${room + 1}: DOM joystick push was not accepted`);
-      for (let frame = 0; frame < 1200; frame++) {
-        await tick();
-        if (['aiming', 'room_clear', 'victory', 'game_over'].includes(api.model.state.phase)) break;
-      }
-      result.route.shots.push({ room: room + 1, shot: api.model.state.shots, target: { x: targetX, y: targetY }, power,
-        effectivePower, pointer: end,
-        phase: api.model.state.phase, hp: api.model.state.player.hp, score: api.model.state.score,
-        player: { x: api.model.state.player.x, y: api.model.state.player.y } });
+      await fireTarget(targetX, targetY, explicitPower, result.route.shots);
     }
     assert.equal(api.model.state.phase, room === 4 ? 'victory' : 'room_clear');
     assert.ok(api.model.state.enemies.some(enemy => enemy.alive));
+    assert.equal(api.model.state.stashCount, 0, `Room ${room + 1}: optional stash was collected on the established main route.`);
+    assert.equal(api.model.state.stashValue, 0);
     result.route.rooms.push({ room: room + 1, phase: api.model.state.phase, shots: api.model.state.shots,
-      hp: api.model.state.player.hp, score: api.model.state.score, livingEnemies: api.model.state.enemies.filter(enemy => enemy.alive).length });
+      hp: api.model.state.player.hp, score: api.model.state.score, livingEnemies: api.model.state.enemies.filter(enemy => enemy.alive).length,
+      stashCount: api.model.state.stashCount, stashValue: api.model.state.stashValue });
     if (room < 4) { clickLabel('重撞拳套'); await tick(3); }
   }
   assert.equal(api.model.state.shots, 21);
+  assert.equal(result.route.shots.length, 21);
   assert.equal(api.model.state.rescuesUsed, 0);
+  result.firstSession.everyMainRouteAimShowsCancel = result.route.shots.every(shot => /回中[\s\S]*取消/.test(shot.cancelHint));
+  assert.equal(result.firstSession.everyMainRouteAimShowsCancel, true);
   checkpoint('victory settlement UI reached by 21 actual controller shots');
   const beforeBonus = controller.save.read().progress.coins;
   clickLabel('看视频 · 加领金币'); await tick(3);
@@ -404,6 +475,95 @@ process.on('unhandledRejection', onUnhandled);
   assert.equal(controller.page, 'game');
   result.boundaries.corruptInnerSnapshot = { cleared: true, returnedToHome: true, newRunAccepted: true,
     assetFailureNotReported: true, expectedRecoveryWarning: true };
+  // This fresh run was entered by the real home button above. Do not inject
+  // a room or collected state: reach the extra reward through DOM input.
+  result.optionalStashRoute = { method: 'Fresh run via home UI, two first-room shots, heavy tool-card choice, six second-room DOM joystick shots', shots: [] };
+  for (const [x, y, power] of routes[0]) await fireTarget(x, y, power, result.optionalStashRoute.shots);
+  assert.equal(api.model.state.phase, 'room_clear');
+  clickLabel('重撞拳套'); await tick(3);
+  assert.equal(api.model.state.roomIndex, 1);
+  const stash = api.model.state.stashes.find(item => item.id === 'store-side-stash');
+  const stashVisual = controller.stashVisuals.get('store-side-stash');
+  assert.ok(stash && !stash.taken && stashVisual?.instance.root.activeInHierarchy, 'Second-room stash model is missing.');
+  assert.equal(stashVisual.label.string, '额外 +80');
+  assert.equal(api.model.state.stashCount, 0);
+  assert.equal(controller.exitRing.active, false);
+  checkpoint('second room optional stash before collection');
+  const stashRoute = [[0, 3, 1], [-3.85, -.4], [-1.4, -.4], [-1.4, 4.5], [0, 4.2], [2.9, 5.7]];
+  for (let index = 0; index < stashRoute.length; index++) {
+    const [x, y, power] = stashRoute[index]; await fireTarget(x, y, power, result.optionalStashRoute.shots);
+    if (index === 1) {
+      assert.equal(api.model.state.stashCount, 1); assert.equal(api.model.state.stashValue, 80);
+      assert.equal(stash.taken, true); assert.equal(stashVisual.instance.root.active, false);
+      assert.equal(stashVisual.label.node.active, false, 'Collected stash label must disappear.');
+      assert.equal(api.model.state.treasure.taken, false, 'Optional stash must not substitute for the main treasure.');
+      assert.equal(controller.exitRing.active, false, 'Optional stash must not light the main exit.');
+      assert.equal(controller.objectiveLabel.string, '拿走宝物');
+      result.optionalStashRoute.collected = { shot: api.model.state.shots, stashCount: api.model.state.stashCount,
+        stashValue: api.model.state.stashValue, mainTreasureStillRequired: true, markerHidden: true };
+    }
+  }
+  assert.equal(api.model.state.phase, 'room_clear'); assert.equal(api.model.state.shots, 8);
+  assert.equal(api.model.state.stashCount, 1); assert.equal(api.model.state.stashValue, 80);
+  assert.equal(api.model.state.rescuesUsed, 0);
+  result.optionalStashRoute.completed = { phase: api.model.state.phase, shots: api.model.state.shots,
+    hp: api.model.state.player.hp, score: api.model.state.score, stashCount: api.model.state.stashCount,
+    stashValue: api.model.state.stashValue, rescuesUsed: api.model.state.rescuesUsed };
+  checkpoint('second-room optional stash and main treasure carried through the exit');
+  // Reproduce the short grip continuation while the 2.5-second stop message
+  // would still be alive. Reach this room and tool through the actual card,
+  // then use DOM joystick input and the real tool-button event handler.
+  clickLabel('壁虎手套'); await tick(2);
+  assert.equal(api.model.state.roomIndex, 2); assert.equal(api.model.state.player.tool, 'grip');
+  assert.equal(api.model.state.phase, 'aiming');
+  const gripPhases = new Map(); observeToolPhase(gripPhases, 'Grip regression initial aim');
+  async function launchSideways(power, label) {
+    const input = inputGeometry(), end = joystickEndpoint(input, 1, 0, power), before = api.model.state.shots;
+    mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+    mouse(cc.Input.EventType.MOUSE_MOVE, end.x, end.y); await tick(1);
+    const aim = inputState(); assertDragGuidance(aim, label);
+    assert.ok(Math.abs(aim.power - end.effectivePower) < .015, `${label}: joystick power did not match its CSS endpoint.`);
+    mouse(cc.Input.EventType.MOUSE_UP, end.x, end.y);
+    assert.equal(api.model.state.shots, before + 1); assert.equal(api.model.state.phase, 'moving');
+    return { shot: api.model.state.shots, requestedPower: power, effectivePower: aim.power, pointer: end, cancelHint: aim.tutorialText };
+  }
+  const firstGripShot = await launchSideways(.15, 'Low-power sideways grip shot');
+  await tick(1); observeToolPhase(gripPhases, 'Grip flight before tool activation');
+  assert.equal(api.model.state.phase, 'moving'); assert.equal(api.model.state.player.toolReady, true);
+  assert.equal(controller.toolStatusLabel.string, '现在可以点按');
+  clickLabel('抓停重瞄'); await tick(1);
+  assert.equal(api.model.state.phase, 'aiming'); assert.equal(api.model.state.player.toolReady, false);
+  const stopped = presentation(), stoppedTurn = api.model.state.turn;
+  observeToolPhase(gripPhases, 'Grip pause before immediate continuation');
+  assert.match(stopped.topHint, /守卫暂不行动/, 'The regression must first display the actual grip-stop instruction.');
+  const remainingTipSeconds = controller.tipTimer, stoppedAtFrame = cc.director.getTotalFrames();
+  assert.ok(remainingTipSeconds > 2, 'The grip-stop instruction expired before its continuation could be tested.');
+  const continuation = await launchSideways(.01, 'Immediate minimum-power grip continuation');
+  let enemyPresentation;
+  for (let frame = 0; frame < 300; frame++) {
+    await tick(1); observeToolPhase(gripPhases, 'Grip continuation and enemy action');
+    if (api.model.state.phase === 'enemies') { enemyPresentation = presentation(); break; }
+  }
+  assert.ok(enemyPresentation, 'The immediate grip continuation never entered the enemy phase.');
+  const elapsedSeconds = (cc.director.getTotalFrames() - stoppedAtFrame) / 60;
+  assert.ok(elapsedSeconds < remainingTipSeconds,
+    'This regression must reach enemy action before the original grip hint would naturally time out.');
+  assert.equal(api.model.state.turn, stoppedTurn, 'The grip continuation should remain part of the same turn.');
+  assert.doesNotMatch(enemyPresentation.topHint, /守卫暂不行动/, 'The top hint falsely claims enemies are waiting while they act.');
+  assert.doesNotMatch(enemyPresentation.tutorialText, /守卫暂不行动/, 'The lower instruction falsely claims enemies are waiting while they act.');
+  assert.equal(enemyPresentation.toolName, '抓停重瞄');
+  assert.equal(enemyPresentation.toolStatus, '等待敌人行动结束');
+  for (let frame = 0; frame < 600 && api.model.state.phase === 'enemies'; frame++) {
+    await tick(1); observeToolPhase(gripPhases, 'Grip regression enemy turn completion');
+  }
+  assert.equal(api.model.state.phase, 'aiming'); assert.equal(api.model.state.player.toolReady, true);
+  assert.equal(controller.toolStatusLabel.string, '冲撞时可用');
+  result.gripTipPhase = { method: 'Room-three grip chosen through the real tool card; DOM sideways joystick launch, Cocos tool-button TOUCH_END, immediate minimum-power DOM continuation. No state injection or direct tool API.',
+    firstShot: firstGripShot, continuation, stopped, enemyPresentation,
+    elapsedSeconds, originalHintSecondsRemaining: remainingTipSeconds,
+    enemyPhaseReachedBeforeOriginalHintTimeout: true, stoppedHintRemovedDuringEnemies: true,
+    sameTurnContinuation: true, toolPhases: [...gripPhases.values()], after: presentation() };
+  checkpoint('grip immediate continuation clears the stopped-enemies hint before its timeout');
   result.save = { backend: controller.save.storage?.kind || 'DOM localStorage fixture',
     stored: win.localStorage.getItem('monster-den.save.v1') !== null };
   assert.equal(result.save.stored, true);
@@ -417,7 +577,9 @@ process.on('unhandledRejection', onUnhandled);
   result.teardown = { destroyed: !controller.isValid, frames: completedFrames };
   assert.equal(result.teardown.destroyed, true);
   result.meshLifecycle = { initialized: initializedMeshes.size, liveAfterSceneDestroy: liveMeshes.size,
-    instrumentation: 'Counters wrap Mesh.initialize/destroy and call the original implementations without changing behavior.' };
+    unfreedMeshes: [...liveMeshes].map(mesh => ({ ...meshOrigins.get(mesh),
+      owners: [...(meshOwners.get(mesh)?.values() || [])] })),
+    instrumentation: 'Counters wrap Mesh.initialize/destroy; read-only creation stacks and renderer-mesh assignment metadata identify leaks. Every original method/accessor is called without changing its behavior.' };
   assert.equal(liveMeshes.size, 0, 'Runtime-created mesh buffers must be released when the owning scene is destroyed.');
   assert.equal(win.__monsterDenRuntime.errors.length, 0);
   assert.equal(result.errors.length, 0, result.errors.join('\n'));

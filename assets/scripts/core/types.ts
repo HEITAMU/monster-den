@@ -26,16 +26,20 @@ export interface EnemyState extends Body {
   actionTime: number; actionStarted: boolean; actionDone: boolean;
 }
 export interface ProjectileState extends Body { id: string; ownerId: string; life: number; damage: number; }
+export interface StashConfig extends Vec2 { id: string; value: number; }
+export interface StashState extends StashConfig { taken: boolean; }
 export interface RoomConfig {
   id: string; name: string; hint: string; width: number; height: number;
   start: Vec2; treasure: Vec2; exit: Vec2;
-  obstacles: ObstacleConfig[]; enemies: EnemyConfig[];
+  obstacles: ObstacleConfig[]; enemies: EnemyConfig[]; stashes?: StashConfig[];
 }
 export interface GameState {
   version: 1; phase: Phase; roomIndex: number; roomCount: number;
   roomId: string; roomName: string; hint: string; width: number; height: number;
   player: PlayerState; obstacles: ObstacleState[]; enemies: EnemyState[];
   projectiles: ProjectileState[]; treasure: Vec2 & { taken: boolean };
+  /** Optional room loot; neither collecting nor skipping it changes the exit requirement. */
+  stashes: StashState[]; stashCount: number; stashValue: number;
   exit: Vec2 & { radius: number }; turn: number; score: number; rescuesUsed: number;
   /** elapsed counts real fixed-clock seconds; enemyTime counts nominal physics seconds. */
   shots: number; elapsed: number; enemyTime: number;
@@ -43,7 +47,7 @@ export interface GameState {
 export type GameEventType =
   | 'room_start' | 'shot' | 'bounce' | 'board_hit' | 'board_break' | 'cabinet_push'
   | 'cabinet_stop' | 'enemy_hit' | 'enemy_down' | 'enemy_windup' | 'enemy_attack'
-  | 'arrow' | 'arrow_blocked' | 'damage' | 'treasure' | 'exit_locked'
+  | 'arrow' | 'arrow_blocked' | 'damage' | 'treasure' | 'stash' | 'exit_locked'
   | 'room_clear' | 'victory' | 'game_over' | 'tool_used' | 'rescue';
 export interface GameEvent {
   type: GameEventType; x: number; y: number; id?: string; amount?: number;

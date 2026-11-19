@@ -87,6 +87,97 @@ System.register(["cc"], function (exports_1, context_1) {
         return n;
     }
     exports_1("separator", separator);
+    /** Small engraved equipment badges, drawn in the same brass/leather UI palette. */
+    function toolIcon(parent, tool, x, y, size = 64) {
+        const n = uiNode('ToolBadge', parent, 64, 64, x, y);
+        n.setScale(size / 64, size / 64, 1);
+        const g = n.addComponent(cc_1.Graphics);
+        g.fillColor = rgba('#0a1b24');
+        g.circle(0, -2, 30);
+        g.fill();
+        g.lineWidth = 2;
+        g.strokeColor = rgba('#d4a466', 210);
+        g.circle(0, 0, 28);
+        g.stroke();
+        g.lineWidth = 1;
+        g.strokeColor = rgba('#91c9bc', 55);
+        g.circle(0, 0, 23);
+        g.stroke();
+        if (tool === 'heavy') {
+            g.fillColor = rgba('#a66b38');
+            g.roundRect(-16, -9, 32, 27, 8);
+            g.fill();
+            g.fillColor = rgba('#f1c078');
+            g.roundRect(-14, -5, 27, 25, 7);
+            g.fill();
+            for (const xx of [-9, 0, 9]) {
+                g.fillColor = rgba('#ffe0a0');
+                g.roundRect(xx - 3, 8, 6, 10, 2);
+                g.fill();
+            }
+            g.fillColor = rgba('#654632');
+            g.roundRect(-13, -18, 26, 11, 3);
+            g.fill();
+            g.fillColor = rgba('#cf9b5a');
+            g.roundRect(-8, -17, 16, 6, 2);
+            g.fill();
+            g.lineWidth = 2;
+            g.strokeColor = rgba('#825b39');
+            g.moveTo(-10, 1);
+            g.lineTo(10, 1);
+            g.stroke();
+        }
+        else if (tool === 'grip') {
+            g.fillColor = rgba('#4b9a89');
+            g.roundRect(-12, -12, 24, 22, 7);
+            g.fill();
+            for (const [xx, yy] of [[-13, 12], [-3, 17], [7, 16]]) {
+                g.lineWidth = 7;
+                g.strokeColor = rgba('#8bd8b7');
+                g.moveTo(xx, -1);
+                g.lineTo(xx, yy);
+                g.stroke();
+                g.fillColor = rgba('#e1b978');
+                g.circle(xx, yy, 3);
+                g.fill();
+            }
+            g.lineWidth = 7;
+            g.strokeColor = rgba('#65bca0');
+            g.moveTo(7, -7);
+            g.lineTo(17, 3);
+            g.stroke();
+            g.fillColor = rgba('#c79555');
+            g.roundRect(-11, -19, 22, 8, 3);
+            g.fill();
+        }
+        else if (tool === 'return') {
+            g.lineWidth = 7;
+            g.strokeColor = rgba('#e1b573');
+            g.arc(0, 0, 16, -.3, Math.PI * 1.48, false);
+            g.stroke();
+            g.fillColor = rgba('#ffe0a0');
+            g.moveTo(0, -21);
+            g.lineTo(2, -7);
+            g.lineTo(-10, -15);
+            g.close();
+            g.fill();
+            g.fillColor = rgba('#83cdb7');
+            g.circle(0, 0, 7);
+            g.fill();
+            g.fillColor = rgba('#18373e');
+            g.circle(0, 0, 3);
+            g.fill();
+        }
+        else {
+            g.lineWidth = 3;
+            g.strokeColor = rgba(PALETTE.muted, 150);
+            g.moveTo(-10, 0);
+            g.lineTo(10, 0);
+            g.stroke();
+        }
+        return n;
+    }
+    exports_1("toolIcon", toolIcon);
     function joystick(parent, x, y) {
         const root = uiNode('Joystick', parent, 244, 244, x, y), g = root.addComponent(cc_1.Graphics);
         const circle = (r, color, alpha = 255, yy = 0) => { g.fillColor = rgba(color, alpha); g.circle(0, yy, r); g.fill(); };

@@ -595,11 +595,112 @@ for side in (-1,1):
     for k in range(4):
         lathe('Moss on rear ruin silhouette',[(.07,0),(.13,.035),(.08,.06),(0,.08)],M['moss'],trim,(side*(4.14+k*.16),7.25,1.35),8,.18,(1,.7,1))
 
+# Optional coin stash: a soft, stitched purse, distinct from the main rigid chest.
+# It is appended after the original environment so its modelling never consumes
+# the seeded random sequence used by those eleven prefabs.
+stash=root('stash');prefabs['stash']=stash
+leather=material('Stash supple russet leather','#b57b47',.82)
+leather_dark=material('Stash gathered leather recess','#75462d',.88)
+leather_edge=material('Stash burnished leather seam','#d2a16c',.77)
+thread=material('Stash waxed flax stitching','#d8c397',.88)
+coin_face=material('Stash bright hammered gold','#f6c876',.35,.58)
+
+# Broad asymmetric belly, flattened foot, pinched neck and an open ruffled lip.
+# Each row is z, x radius, y radius, fold depth and sideways lean.
+stash_rows=[
+    (0,.22,.17,.004,-.018),(.035,.31,.23,.006,-.014),
+    (.14,.382,.282,.008,-.008),(.29,.395,.286,.010,0),
+    (.44,.342,.250,.015,.012),(.54,.245,.193,.023,.020),
+    (.601,.155,.120,.012,.012),(.644,.172,.133,.018,.008),
+    (.697,.215,.158,.021,.004),
+]
+stash_sides=24
+
+def stash_surface(a,row,outward=0):
+    z,rx,ry,fold,lean=row
+    pleat=fold*math.cos(a*8+.34)+fold*.28*math.sin(a*3-.2)
+    edge_wave=.011*math.sin(a*5+.4) if z>.64 else 0
+    return (lean+(rx+pleat+outward)*math.cos(a),
+            (ry+pleat*.72+outward)*math.sin(a),z+edge_wave)
+
+verts=[stash_surface(i*math.tau/stash_sides,row) for row in stash_rows for i in range(stash_sides)]
+faces=[tuple(reversed(range(stash_sides)))]
+for row in range(len(stash_rows)-1):
+    for i in range(stash_sides):
+        j=(i+1)%stash_sides
+        faces.append((row*stash_sides+i,row*stash_sides+j,(row+1)*stash_sides+j,(row+1)*stash_sides+i))
+body=mesh('Stash rounded gathered leather body',verts,faces,[leather,leather_dark],stash,True)
+for polygon in body.data.polygons:
+    if polygon.index>1+6*stash_sides and polygon.index%3==1:polygon.material_index=1
+
+# The mouth is genuinely open; a folded inner wall leads to a shallow dark cup.
+lining=[]
+for row in (stash_rows[-1],(.650,.144,.108,.009,.008),(.614,.105,.078,0,.008)):
+    for i in range(stash_sides):lining.append(stash_surface(i*math.tau/stash_sides,row,-.009))
+lining_faces=[]
+for row in range(2):
+    for i in range(stash_sides):
+        j=(i+1)%stash_sides
+        lining_faces.append((row*stash_sides+j,row*stash_sides+i,(row+1)*stash_sides+i,(row+1)*stash_sides+j))
+lining_faces.append(tuple(2*stash_sides+i for i in range(stash_sides)))
+mesh('Stash visible dark folded mouth',lining,lining_faces,leather_dark,stash,True)
+lip=[stash_surface(i*math.tau/32,stash_rows[-1],-.003) for i in range(33)]
+tube('Stash soft rolled mouth edge',lip,.009,leather_edge,stash,5)
+
+# Two inset stitched seams follow the curved skin instead of floating in a plane.
+for seam,a in enumerate((-2.35,-.80)):
+    path=[stash_surface(a,row,.004) for row in stash_rows[1:6]]
+    tube('Stash inset panel seam '+str(seam),path,.0055,leather_dark,stash,5)
+    for step in range(9):
+        t=(step+.35)/9*(len(stash_rows[1:6])-1);lo=int(t);f=t-lo
+        left,right=stash_rows[1+lo],stash_rows[min(2+lo,5)]
+        row=tuple(a0+(b0-a0)*f for a0,b0 in zip(left,right))
+        tube('Stash short saddle stitch',[
+            stash_surface(a-.029,row,.009),stash_surface(a+.029,row,.009),
+        ],.0042,thread,stash,4)
+
+# A copper-coloured drawcord visibly compresses the neck, with a small side knot.
+neck=[(.012+.173*math.cos(i*math.tau/32),.135*math.sin(i*math.tau/32),.607+.003*math.sin(i*math.tau/16)) for i in range(33)]
+tube('Stash copper drawcord around cinch',neck,.015,M['gold'],stash,6)
+box('Stash copper cord clasp',(.122,-.133,.611),(.067,.043,.048),M['copper'],stash,.016,3,(0,.13,-.16))
+for side in (-1,1):
+    points=[(.13,-.156,.607),(.13+side*.062,-.175,.641),(.13+side*.112,-.173,.641),
+            (.13+side*.128,-.166,.606),(.13+side*.096,-.163,.578),(.13+side*.036,-.164,.593),(.13,-.156,.607)]
+    tube('Stash tied drawcord loop',points,.0115,M['gold'],stash,6)
+cords=[[(.115,-.163,.600),(.074,-.214,.548),(.055,-.258,.475),(.082,-.282,.424)],
+       [(.144,-.163,.600),(.194,-.208,.538),(.209,-.244,.488),(.186,-.265,.460)]]
+for points in cords:
+    tube('Stash loose leather cord tail',points,.010,leather_edge,stash,6)
+    end=Vector(points[-1]);before=Vector(points[-2]);direction=(end-before).normalized()
+    tube('Stash small copper cord tip',[tuple(end-direction*.025),tuple(end+direction*.020)],.014,M['copper'],stash,6)
+
+# A small sewn leather repair and copper seal reinforce the purse silhouette.
+box('Stash soft front repair patch',(-.035,-.291,.275),(.146,.025,.132),leather_dark,stash,.028,3,(.03,-.06,.10))
+for x in (-.089,.020):
+    for z in (.245,.285,.318):
+        tube('Stash repair patch stitches',[(x-.008,-.310,z-.006),(x+.008,-.310,z+.006)],.004,thread,stash,4)
+seal=lathe('Stash small copper purse seal',[(.039,0),(.047,.008),(.045,.018),(.033,.023)],M['copper'],stash,count=12)
+seal.rotation_euler[0]=math.pi/2;seal.location=(-.035,-.310,.277)
+
+# Coin faces, rolled rims and embossed diamonds are all mesh geometry.
+def stash_coin(name,position,rotation,radius):
+    coin=root(name);coin.parent=stash;coin.location=position;coin.rotation_euler=rotation
+    lathe(name+' rolled rim',[(radius*.88,-.012),(radius,-.009),(radius,.009),(radius*.90,.015)],M['gold'],coin,count=16)
+    lathe(name+' hammered face',[(radius*.78,.014),(radius*.79,.019)],coin_face,coin,count=16)
+    rr=radius*.35
+    tube(name+' embossed diamond',[(0,-rr,.022),(rr,0,.022),(0,rr,.022),(-rr,0,.022),(0,-rr,.022)],.006,M['copper'],coin,4)
+
+stash_coin('Stash upright rear coin',(-.025,.062,.713),(math.radians(59),math.radians(-8),.18),.103)
+stash_coin('Stash right overlapping coin',(.096,.010,.707),(math.radians(38),math.radians(23),-.31),.092)
+stash_coin('Stash left overlapping coin',(-.111,.004,.700),(math.radians(24),math.radians(-18),-.25),.083)
+stash_coin('Stash broad front coin',(-.015,-.083,.707),(math.radians(13),math.radians(-9),.48),.102)
+
 # An editable showcase arrangement in the source .blend. Exporter removes root transforms.
 positions={
     'floor':(0,0,0),'trim':(0,0,0),'cabinet':(-2.0,-2.5,.05),'board':(.2,-.7,.05),
     'pillar':(3,1.1,.05),'wall':(-3.3,2.6,.05),'treasure':(.1,4.2,.05),
     'exit':(0,6.1,.05),'fern':(-4.1,4.5,.05),'mushroom':(4.1,-3.7,.05),'lantern':(4.1,4.8,.05),
+    'stash':(2.2,3.8,.05),
 }
 for name,obj in prefabs.items():obj.location=positions[name]
 bpy.context.view_layer.update()
@@ -643,6 +744,9 @@ scene.render.filepath=str(preview/'environment-review.png')
 (ROOT/'art-source').mkdir(exist_ok=True)
 bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'art-source/environment.blend'),compress=True)
+if '--skip-preview' in sys.argv:
+    print('Environment source complete; full-scene preview skipped.')
+    sys.exit(0)
 bpy.ops.render.render(write_still=True)
 # Same tilt and field width as the current game, without UI or gameplay shadows.
 camera.location=(0,-10,24)

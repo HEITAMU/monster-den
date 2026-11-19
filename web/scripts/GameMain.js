@@ -1,4 +1,4 @@
-System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/RewardedAds", "./platform/GameAudio", "./AudioCatalog", "./ModelLibrary", "./GameUI"], function (exports_1, context_1) {
+System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/RewardedAds", "./platform/GameAudio", "./AudioCatalog", "./ModelLibrary", "./GameUI", "./AdventureGuide"], function (exports_1, context_1) {
     "use strict";
     var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
         var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -6,7 +6,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
         else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
         return c > 3 && r && Object.defineProperty(target, key, r), r;
     };
-    var cc_1, index_1, SaveStore_1, RewardedAds_1, GameAudio_1, AudioCatalog_1, ModelLibrary_1, GameUI_1, ccclass, VERSION, GROUND, GROUND_EFFECT, TOOL_COST, HINTS, GameMain;
+    var cc_1, index_1, SaveStore_1, RewardedAds_1, GameAudio_1, AudioCatalog_1, ModelLibrary_1, GameUI_1, AdventureGuide_1, ccclass, VERSION, GROUND, GROUND_EFFECT, TOOL_COST, GameMain;
     var __moduleName = context_1 && context_1.id;
     return {
         setters: [
@@ -33,14 +33,16 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
             },
             function (GameUI_1_1) {
                 GameUI_1 = GameUI_1_1;
+            },
+            function (AdventureGuide_1_1) {
+                AdventureGuide_1 = AdventureGuide_1_1;
             }
         ],
         execute: function () {
             ccclass = cc_1._decorator.ccclass;
-            VERSION = '0.2.0';
+            VERSION = '0.3.0';
             GROUND = .08, GROUND_EFFECT = .105;
             TOOL_COST = { heavy: 300, grip: 450, return: 450 };
-            HINTS = ['先撞开木栏，拿宝物，再去出口', '推柜子挡住箭路，绕到后面拿宝物', '撞开中间的厚木栏，去拿宝物', '拿到宝物后，向左边出口撤离', '看清冲锋方向，带走窝主的宝物'];
             GameMain = class GameMain extends cc_1.Component {
                 constructor() {
                     super(...arguments);
@@ -55,6 +57,9 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.treasure = null;
                     this.exitRing = null;
                     this.heroRing = null;
+                    this.objectiveRing = null;
+                    this.objectiveLabel = null;
+                    this.stashVisuals = new Map();
                     this.aimNodes = [];
                     this.aimEnd = null;
                     this.aimCaption = null;
@@ -95,11 +100,14 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.overlayPhase = '';
                     this.tipTimer = 0;
                     this.tip = '';
+                    this.tipPhase = null;
                     this.toastNode = null;
                     this.toolButton = null;
                     this.toolGlow = null;
                     this.stepDots = [];
                     this.tutorialText = null;
+                    this.toolNameLabel = null;
+                    this.toolStatusLabel = null;
                     this.lastHeight = 0;
                     this.homeHeroRotation = 0;
                     this.saveClock = 0;
@@ -228,6 +236,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.aimEnd.active = false;
                     this.aimCaption = GameUI_1.label(this.floating, '', 20, 0, 0, 180, 35, GameUI_1.PALETTE.mint, true);
                     this.aimCaption.node.active = false;
+                    this.objectiveLabel = GameUI_1.label(this.floating, '', 21, 0, 0, 190, 36, GameUI_1.PALETTE.gold, true);
+                    this.objectiveLabel.node.active = false;
                     for (let i = 0; i < 12; i++) {
                         const node = ModelLibrary_1.meshNode('DashWake', ModelLibrary_1.discMesh(1, .38, 0, 16), this.matAim, this.effectsWorld);
                         node.active = false;
@@ -254,10 +264,16 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     return { instance, shadow, scale, hit: 0, phase: Math.random() * 6 };
                 }
                 renderRoom() {
+                    this.tip = '';
+                    this.tipTimer = 0;
+                    this.tipPhase = null;
                     this.clear(this.roomWorld);
                     this.clear(this.actorWorld);
                     this.enemies.clear();
                     this.obstacles.clear();
+                    for (const stash of this.stashVisuals.values())
+                        stash.label.node.destroy();
+                    this.stashVisuals.clear();
                     for (const node of this.threatNodes.values())
                         node.destroy();
                     this.threatNodes.clear();
@@ -281,9 +297,18 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     }
                     this.treasure = this.instantiate('treasure', this.roomWorld, state.treasure.x, state.treasure.y, .75);
                     this.treasure.root.active = !state.treasure.taken;
+                    for (const stash of state.stashes) {
+                        const instance = this.instantiate('stash', this.roomWorld, stash.x, stash.y, 1);
+                        instance.root.active = !stash.taken;
+                        const text = GameUI_1.label(this.floating, `额外 +${stash.value}`, 18, 0, 0, 165, 32, GameUI_1.PALETTE.mint, true);
+                        text.node.active = false;
+                        this.stashVisuals.set(stash.id, { instance, label: text });
+                    }
                     this.instantiate('exit', this.roomWorld, state.exit.x, state.exit.y, .8);
                     this.exitRing = ModelLibrary_1.meshNode('ExitGlow', ModelLibrary_1.ringMesh(.8, .12), this.matGold, this.roomWorld);
                     this.exitRing.setPosition(state.exit.x, GROUND_EFFECT, -state.exit.y);
+                    this.exitRing.active = state.treasure.taken;
+                    this.objectiveRing = ModelLibrary_1.meshNode('ObjectiveGlow', ModelLibrary_1.ringMesh(.67, .065), this.matGold, this.roomWorld);
                     const decor = [[-5.15, -5.2, 'fern', 1.1], [-5.1, 3.8, 'fern', 1.3], [5.1, 2.8, 'fern', 1.3], [5.1, -4.8, 'mushroom', 1.2], [-5.2, 0, 'mushroom', 1], [-4.6, 6.5, 'lantern', 1], [4.7, 6.4, 'lantern', 1]];
                     for (const [x, y, key, s] of decor)
                         if (this.env.has(key))
@@ -370,6 +395,10 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.effectsWorld.active = active;
                     if (this.homeWorld)
                         this.homeWorld.active = this.page === 'home';
+                    if (this.objectiveLabel)
+                        this.objectiveLabel.node.active = active;
+                    for (const stash of this.stashVisuals.values())
+                        stash.label.node.active = false;
                 }
                 soundButton() {
                     const muted = this.audio.settings.muted;
@@ -394,7 +423,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.clear(this.overlay);
                     const p = GameUI_1.panel(this.overlay, 650, 490, 0, 0, GameUI_1.PALETTE.deep);
                     GameUI_1.label(p, '带着宝物离开', 36, 0, 173, 590, 65, GameUI_1.PALETTE.gold, true);
-                    GameUI_1.label(p, '推动左下摇杆，沿路线瞄准\n推得越远，力度越大；松手冲撞\n回到摇杆中心再松手，可以取消\n\n撞柜子挡箭，撞木栏开路\n拿到宝物后，进入发光出口', 25, 0, 15, 580, 260);
+                    GameUI_1.label(p, '推动左下摇杆，沿路线瞄准\n推得越远，力度越大；松手冲撞\n回到摇杆中心再松手，可以取消\n\n拿主宝箱开门，额外钱袋可以不拿\n停下后，守卫沿红色预告方向行动', 25, 0, 15, 580, 260);
                     GameUI_1.button(p, '明白了', 0, -170, 530, 72, () => { this.clickSound(); this.clear(this.overlay); });
                 }
                 confirmNewRun() {
@@ -516,6 +545,11 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             this.persist();
                         }
                     }, false);
+                    this.toolNameLabel = this.toolButton.getComponentsInChildren(cc_1.Label)[0];
+                    this.toolNameLabel.fontSize = 26;
+                    this.toolNameLabel.node.setPosition(0, 13, 0);
+                    this.toolNameLabel.getComponent(cc_1.UITransform).setContentSize(227, 42);
+                    this.toolStatusLabel = GameUI_1.label(this.toolButton, '', 17, 0, -20, 230, 28, GameUI_1.PALETTE.muted);
                     this.toolButton.addComponent(cc_1.UIOpacity);
                     this.toolGlow = GameUI_1.uiNode('ToolReadyGlow', this.toolButton, 247, 83);
                     const glow = this.toolGlow.addComponent(cc_1.Graphics);
@@ -533,16 +567,24 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const s = this.model.state, p = s.player;
                     this.roomLabel.string = `${s.roomIndex + 1} / 5  ${s.roomName}`;
                     this.hpLabel.string = '♥'.repeat(p.hp) + '♡'.repeat(Math.max(0, p.maxHp - p.hp));
-                    this.lootLabel.string = s.treasure.taken ? '宝物已到手' : '寻找宝物';
+                    this.lootLabel.string = s.treasure.taken ? '出口已开启' : '寻找主宝箱';
                     this.stepDots.forEach((l, i) => { l.color = GameUI_1.rgba(i <= s.roomIndex ? GameUI_1.PALETTE.gold : '#486961'); });
-                    this.hintLabel.string = this.tipTimer > 0 ? this.tip : s.treasure.taken ? '宝物到手，前往发光出口' : HINTS[s.roomIndex];
+                    const guide = AdventureGuide_1.objectiveGuide(s);
+                    if (this.tipPhase && this.tipPhase !== s.phase) {
+                        this.tipTimer = 0;
+                        this.tipPhase = null;
+                    }
+                    this.hintLabel.string = this.tipTimer > 0 ? this.tip : guide.hint;
                     this.phaseLabel.string = this.dragging ? `力度 ${Math.round(this.dragPower * 100)}%` : s.phase === 'moving' ? '正在冲撞' : s.phase === 'enemies' ? '守卫行动' : p.tool === 'grip' && !p.toolReady ? '再次瞄准' : `第 ${s.turn + 1} 次行动`;
-                    const tool = index_1.TOOLS.find(t => t.id === p.tool);
-                    const toolLabel = this.toolButton?.getComponentsInChildren(cc_1.Label)[0];
-                    const activeTool = p.tool === 'grip' || p.tool === 'return', available = activeTool && p.toolReady && s.phase === 'moving';
-                    if (toolLabel) {
-                        toolLabel.string = !tool ? '下间房选工具' : p.tool === 'heavy' ? '重撞 · 持续生效' : s.phase === 'enemies' ? '等待下一回合' : !p.toolReady ? '本回合已使用' : s.phase === 'moving' ? tool.actionLabel : '冲撞时可用';
-                        toolLabel.color = GameUI_1.rgba(available ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.cream);
+                    const tool = AdventureGuide_1.toolPresentation(p.tool, s.phase, p.toolReady);
+                    const activeTool = p.tool === 'grip' || p.tool === 'return', available = tool.active;
+                    if (this.toolNameLabel) {
+                        this.toolNameLabel.string = tool.name;
+                        this.toolNameLabel.color = GameUI_1.rgba(available ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.cream);
+                    }
+                    if (this.toolStatusLabel) {
+                        this.toolStatusLabel.string = tool.status;
+                        this.toolStatusLabel.color = GameUI_1.rgba(available ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.muted);
                     }
                     if (this.toolGlow)
                         this.toolGlow.active = available;
@@ -550,9 +592,9 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (opacity)
                         opacity.opacity = available || p.tool === 'heavy' ? 255 : 170;
                     if (this.tutorialText) {
-                        this.tutorialText.string = s.shots === 0 ? (this.dragging ? (this.stickEngaged ? '松手冲撞\n回中可取消' : '向上推动摇杆') : '推杆瞄准\n松手冲撞') :
-                            s.phase === 'enemies' ? '留意红色攻击区域' : activeTool && available ? '点击工具\n改变这次冲撞' : s.treasure.taken ? '带宝物进出口' : '轻推微调\n推满远冲';
-                        this.tutorialText.color = GameUI_1.rgba(s.shots === 0 ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.muted);
+                        this.tutorialText.string = this.dragging ? (this.stickEngaged ? '松手冲撞\n回中可取消' : '回中后松手\n取消这次冲撞') :
+                            s.phase === 'enemies' ? '守卫正沿\n红区进攻' : activeTool && available ? '点右侧工具\n改变这次冲撞' : p.tool === 'grip' && !p.toolReady && s.phase === 'aiming' ? '再次推杆重瞄\n守卫暂不行动' : s.treasure.taken ? (s.stashes.some(item => !item.taken) ? '可直接进入出口\n钱袋可以不拿' : '带宝物进出口') : s.roomIndex === 0 ? '推杆瞄准\n松手冲撞' : '停下后，守卫\n沿红区行动';
+                        this.tutorialText.color = GameUI_1.rgba(this.dragging || available || s.shots === 0 ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.muted);
                     }
                     if (this.stick) {
                         this.stick.caption.string = this.dragging ? (this.stickEngaged ? '松手冲撞' : '回中取消') : s.phase === 'aiming' ? '推动瞄准' : '等待落定';
@@ -562,16 +604,25 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                 }
                 showRoomClear() {
                     this.clear(this.overlay);
-                    const p = GameUI_1.panel(this.overlay, 665, 720, 0, 0, GameUI_1.PALETTE.deep, '#bfa46c', 28, 252);
-                    GameUI_1.label(p, '宝物带出来了', 38, 0, 294, 610, 72, GameUI_1.PALETTE.gold, true);
-                    GameUI_1.label(p, '挑一件工具，进入下一间', 24, 0, 231, 600, 50, GameUI_1.PALETTE.muted);
+                    const p = GameUI_1.panel(this.overlay, 665, 760, 0, 0, GameUI_1.PALETTE.deep, '#bfa46c', 28, 252);
+                    const next = this.model.state.roomIndex + 1;
+                    GameUI_1.label(p, '宝物带出来了', 36, 0, 318, 610, 62, GameUI_1.PALETTE.gold, true);
+                    GameUI_1.label(p, `下一间 · ${index_1.ROOMS[next]?.name || '继续探索'}`, 26, 0, 258, 600, 45, GameUI_1.PALETTE.cream, true);
+                    GameUI_1.label(p, '选择一件工具，进入下一间', 21, 0, 214, 600, 36, GameUI_1.PALETTE.muted);
                     index_1.TOOLS.forEach((tool, i) => {
-                        const y = 115 - i * 160;
-                        const card = GameUI_1.panel(p, 602, 139, 0, y, '#294647', '#829d7f', 18);
-                        GameUI_1.label(card, tool.name, 28, 0, 37, 560, 45, GameUI_1.PALETTE.cream, true);
-                        GameUI_1.label(card, tool.description, 21, 0, -10, 548, 61, GameUI_1.PALETTE.muted);
+                        const y = 112 - i * 164;
+                        const current = this.model.state.player.tool === tool.id;
+                        const card = GameUI_1.panel(p, 602, 145, 0, y, '#294647', current ? GameUI_1.PALETTE.gold : '#829d7f', 18);
+                        GameUI_1.toolIcon(card, tool.id, -245, 6, 76);
+                        GameUI_1.label(card, tool.name, 28, -30, 40, 365, 42, GameUI_1.PALETTE.cream, true);
+                        if (current)
+                            GameUI_1.label(card, '已携带', 21, 227, 40, 115, 35, GameUI_1.PALETTE.gold, true);
+                        const mechanism = tool.id === 'heavy' ? '撞击更强 · 反弹较弱' : tool.id === 'grip' ? '冲撞中抓停 · 原地重瞄' : '冲撞中转向 · 朝起点折返';
+                        GameUI_1.label(card, mechanism, 20, 44, -1, 480, 32, GameUI_1.PALETTE.muted);
+                        GameUI_1.label(card, AdventureGuide_1.nextRoomAdvice(next, tool.id), 20, 44, -40, 480, 32, GameUI_1.PALETTE.mint);
                         card.on(cc_1.Node.EventType.TOUCH_END, (e) => { e.propagationStopped = true; this.advance(tool.id); });
                     });
+                    GameUI_1.label(p, '过房恢复 1 点生命', 19, 0, -321, 590, 32, GameUI_1.PALETTE.muted);
                 }
                 advance(tool) {
                     if (this.adBusy || this.rewardPending)
@@ -584,6 +635,10 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.renderRoom();
                     this.drawHud();
                     this.clear(this.overlay);
+                    if (tool === 'grip' || tool === 'return')
+                        this.showTip(tool === 'grip' ? '冲出去后，点右侧抓停重瞄' : '冲出去后，点右侧回旋折返', 4);
+                    else if (this.model.state.stashes.length)
+                        this.showTip('额外钱袋可绕路拿，也可以直接过房', 4);
                     this.persist();
                     return true;
                 }
@@ -614,7 +669,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const p = GameUI_1.panel(this.overlay, 650, won ? 570 : 520, 0, 0, GameUI_1.PALETTE.deep, won ? GameUI_1.PALETTE.gold : '#bd8d72', 28, 252);
                     GameUI_1.label(p, won ? '满载而归' : '被守卫拦住了', 40, 0, won ? 215 : 188, 600, 75, won ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.danger, true);
                     GameUI_1.label(p, `带回 ${s.score + this.runMeta.bonus} 金币`, 31, 0, won ? 145 : 115, 600, 58, GameUI_1.PALETTE.cream, true);
-                    GameUI_1.label(p, won ? `${s.shots} 次出手 · 5 处宝物` : '换个落点，或者先挪开挡路的柜子', 23, 0, won ? 88 : 56, 580, 58, GameUI_1.PALETTE.muted);
+                    GameUI_1.label(p, s.stashCount ? `${s.shots} 次出手 · 额外钱袋 ${s.stashCount} 个 +${s.stashValue}` : won ? `${s.shots} 次出手 · 5 处宝物` : '换个落点，或者先挪开挡路的柜子', 23, 0, won ? 88 : 56, 580, 58, GameUI_1.PALETTE.muted);
                     if (won) {
                         GameUI_1.button(p, '再潜入一次', 0, 5, 560, 70, () => this.startRun());
                         GameUI_1.button(p, this.runMeta.bonus ? '额外奖励已领取' : '看视频 · 加领金币', 0, -85, 560, 66, () => void this.requestAd('settlement_bonus'), false);
@@ -963,8 +1018,31 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         this.treasure.root.setPosition(s.treasure.x, .12 + Math.sin(this.time * 2.5) * .08, -s.treasure.y);
                     }
                     if (this.exitRing) {
+                        this.exitRing.active = s.treasure.taken;
                         const size = 1 + Math.sin(this.time * 3) * .07;
                         this.exitRing.setScale(size, 1, size);
+                    }
+                    const guide = AdventureGuide_1.objectiveGuide(s), guideVisible = this.page === 'game' && this.overlay.children.length === 0 && !['room_clear', 'victory', 'game_over'].includes(s.phase);
+                    if (this.objectiveRing) {
+                        this.objectiveRing.active = guideVisible && guide.stage !== 'exit';
+                        this.objectiveRing.setPosition(guide.target.x, GROUND_EFFECT + .006, -guide.target.y);
+                        const size = 1 + Math.sin(this.time * 3) * .055;
+                        this.objectiveRing.setScale(size, 1, size);
+                    }
+                    if (this.objectiveLabel) {
+                        this.objectiveLabel.string = guide.title;
+                        const projected = this.placeWorldLabel(this.objectiveLabel, guide.target.x, guide.target.y, guide.stage === 'exit' ? 2.25 : 1.2, 12);
+                        const aimOverlap = this.dragging && this.aimCaption?.node.active && Math.hypot(this.objectiveLabel.node.position.x - this.aimCaption.node.position.x, this.objectiveLabel.node.position.y - this.aimCaption.node.position.y) < 85;
+                        this.objectiveLabel.node.active = guideVisible && projected && !aimOverlap;
+                    }
+                    for (const stash of s.stashes) {
+                        const visual = this.stashVisuals.get(stash.id);
+                        if (!visual)
+                            continue;
+                        visual.instance.root.active = !stash.taken;
+                        visual.instance.root.setPosition(stash.x, GROUND + Math.sin(this.time * 2.6) * .025, -stash.y);
+                        const projected = this.placeWorldLabel(visual.label, stash.x, stash.y, 1.05, 8);
+                        visual.label.node.active = guideVisible && !stash.taken && projected;
                     }
                     for (const o of s.obstacles) {
                         const visual = this.obstacles.get(o.id);
@@ -1047,15 +1125,15 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     return Math.max(.2, best);
                 }
                 handleEvent(e) {
-                    const sounds = { shot: 'launch', bounce: 'stone_hit', board_hit: 'wood_hit', board_break: 'wood_break', cabinet_push: 'cabinet_push', enemy_hit: 'enemy_hit', enemy_down: 'enemy_down', arrow: 'arrow', arrow_blocked: 'arrow_blocked', damage: 'danger', treasure: 'loot', victory: 'win', game_over: 'lose', room_clear: 'loot', tool_used: 'tool' };
+                    const sounds = { shot: 'launch', bounce: 'stone_hit', board_hit: 'wood_hit', board_break: 'wood_break', cabinet_push: 'cabinet_push', enemy_hit: 'enemy_hit', enemy_down: 'enemy_down', arrow: 'arrow', arrow_blocked: 'arrow_blocked', damage: 'danger', treasure: 'loot', stash: 'loot', victory: 'win', game_over: 'lose', room_clear: 'loot', tool_used: 'tool' };
                     if (sounds[e.type])
                         this.audio.play(sounds[e.type], e.type === 'bounce' ? .4 : 1);
                     if (e.type === 'shot') {
                         this.launchKick = 1;
                         this.burst(e.x, e.y, 1, 4);
                     }
-                    if (['board_break', 'enemy_hit', 'enemy_down', 'cabinet_push', 'arrow_blocked', 'treasure', 'damage'].includes(e.type))
-                        this.burst(e.x, e.y, e.type === 'damage' ? 3 : e.type === 'treasure' ? 0 : 2, e.type === 'board_break' ? 14 : 8);
+                    if (['board_break', 'enemy_hit', 'enemy_down', 'cabinet_push', 'arrow_blocked', 'treasure', 'stash', 'damage'].includes(e.type))
+                        this.burst(e.x, e.y, e.type === 'damage' ? 3 : ['treasure', 'stash'].includes(e.type) ? 0 : 2, e.type === 'board_break' ? 14 : 8);
                     if (['enemy_hit', 'board_break', 'cabinet_push', 'damage'].includes(e.type)) {
                         this.shake = Math.max(this.shake, e.type === 'damage' ? .65 : .34);
                         this.hitStop = Math.max(this.hitStop, e.type === 'damage' ? .04 : .025);
@@ -1066,17 +1144,27 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             impact.node.active = true;
                             impact.node.setPosition(e.x, GROUND_EFFECT + .02, -e.y);
                         }
-                        if (e.id && this.enemies.has(e.id))
+                        if (e.type === 'enemy_hit' && e.id && this.enemies.has(e.id))
                             this.enemies.get(e.id).hit = .3;
                     }
                     if (e.type === 'treasure') {
                         this.showTip('宝物到手！去发光出口', 3);
                         this.floatText('宝物 +100', e.x, e.y, GameUI_1.PALETTE.gold);
                     }
+                    if (e.type === 'stash') {
+                        this.showTip(`额外收获 +${e.amount || 0}，${this.model.state.treasure.taken ? '可以前往出口' : '继续找主宝箱'}`, 2.4);
+                        this.floatText(`额外金币 +${e.amount || 0}`, e.x, e.y, GameUI_1.PALETTE.mint);
+                        this.persist();
+                    }
                     if (e.type === 'damage') {
                         this.hero.hit = .4;
-                        this.floatText(`-${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.danger);
+                        const attacker = this.model.state.enemies.find(enemy => enemy.id === e.id);
+                        const reason = attacker?.kind === 'archer' ? '中箭' : attacker?.kind === 'boss' ? '窝主冲撞' : attacker ? '被冲撞' : '受伤';
+                        this.floatText(`${reason} −${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.danger);
+                        this.showTip(attacker?.kind === 'archer' ? (this.model.state.roomIndex === 1 ? '弩箭命中：试着让柜子挡住箭路' : '弩箭命中：调整落点，避开红色箭路') : '冲撞命中：下次避开红色预告路线', 2.3);
                     }
+                    if (e.type === 'tool_used')
+                        this.showTip(e.tool === 'grip' ? '已经抓停，再次推杆；守卫暂不行动' : '正在向本次出发点折返', 2.5, e.tool === 'grip' ? 'aiming' : 'moving');
                     if (e.type === 'enemy_hit')
                         this.floatText(`-${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.cream);
                     if (e.type === 'board_hit') {
@@ -1092,7 +1180,15 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (e.type === 'room_clear' || e.type === 'victory' || e.type === 'game_over')
                         this.persist();
                 }
-                showTip(text, seconds = 2) { this.tip = text; this.tipTimer = seconds; }
+                showTip(text, seconds = 2, phase = null) { this.tip = text; this.tipTimer = seconds; this.tipPhase = phase; }
+                placeWorldLabel(text, x, y, height, offset = 0) {
+                    const screen = this.worldCamera.worldToScreen(new cc_1.Vec3(x, height, -y));
+                    const xx = screen.x / cc_1.view.getScaleX() - 360, yy = screen.y / cc_1.view.getScaleY() - this.height / 2 + offset;
+                    if (!Number.isFinite(xx) || !Number.isFinite(yy))
+                        return false;
+                    text.node.setPosition(Math.max(-265, Math.min(265, xx)), yy, 0);
+                    return true;
+                }
                 floatText(text, x, y, color) {
                     const screen = this.worldCamera.worldToScreen(new cc_1.Vec3(x, 1.6, -y));
                     const ui = new cc_1.Vec3(screen.x / cc_1.view.getScaleX() - 360, screen.y / cc_1.view.getScaleY() - this.height / 2, 0);

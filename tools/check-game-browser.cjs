@@ -15,8 +15,8 @@ const web = path.join(root, 'web');
 const output = path.join(root, '.build/game-browser');
 fs.mkdirSync(output, { recursive: true });
 const report = {
-  test: 'Actual Cocos 3.8.8 WebGL, native fixed joystick/UI, 21 pointer shots, audio playback state and mobile touch ownership',
-  method: 'Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. Game state is read for targeting and assertions, never rewritten to reach victory.',
+  test: 'Actual Cocos 3.8.8 WebGL, 21-shot main route, optional second-room stash route, persistent guidance/tool names, audio playback state and mobile touch ownership',
+  method: 'Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. A read-only after-update observer samples tool labels during actual shots. Game state is read for targeting and assertions, never rewritten to reach a room, reward or victory.',
   passed: false, audibleOutputValidation: false, phonePerformanceValidation: false,
   errors: [], consoleErrors: [], knownDiagnostics: [], warnings: [], failedRequests: [], checkpoints: [],
   route: { source: 'design/PLAYTEST.md; documented 21-shot route, current launch tuning and fixed joystick travel; fine power may be as low as 1%', rooms: [], shots: [] },
@@ -37,6 +37,18 @@ const routes = [
   [[2, -4], [4.1, 1], [4.1, 4.5], [3.6, 4.5], [-3.5, 5.7]],
   [[3.8, -4], [4.2, 2], [2, 3.8], [0, 3.8], [0, 5.9]],
 ];
+const toolNames = { none: '工具未携带', heavy: '重撞拳套', grip: '抓停重瞄', return: '回旋折返' };
+
+function assertToolName(value, label) {
+  assert.equal(value.toolName, toolNames[value.tool || value.player?.tool], `${label}: tool name changed with its phase.`);
+  assert.equal(value.toolNameVisible, true, `${label}: tool name is hidden.`);
+}
+
+function assertDragGuidance(value, label) {
+  assert.equal(value.dragging, true, `${label}: joystick is not being held.`);
+  assert.match(value.tutorialText, /回中[\s\S]*取消/, `${label}: recenter/cancel instruction disappeared.`);
+  assertToolName(value, label);
+}
 
 function joystickEndpoint(input, dx, dy, power) {
   const { deadZone, travel } = input.joystickTuning;
@@ -142,6 +154,15 @@ async function inspect(page) {
       activeLabels: scene.getComponentsInChildren(c.Label).filter(label => label.node.activeInHierarchy).map(label => label.string),
       page: controller.page, room: state.roomIndex + 1, phase: state.phase, shots: state.shots,
       hp: state.player.hp, score: state.score, rescuesUsed: state.rescuesUsed,
+      treasureTaken: state.treasure.taken, stashCount: state.stashCount, stashValue: state.stashValue,
+      stashes: state.stashes.map(stash => ({ ...stash })),
+      stashVisuals: [...controller.stashVisuals].map(([id, visual]) => ({ id,
+        modelVisible: visual.instance.root.activeInHierarchy, label: visual.label.string,
+        labelVisible: visual.label.node.activeInHierarchy })),
+      objective: controller.objectiveLabel?.string, objectiveVisible: !!controller.objectiveLabel?.node.activeInHierarchy,
+      exitRingActive: !!controller.exitRing?.active,
+      toolName: controller.toolNameLabel?.string, toolStatus: controller.toolStatusLabel?.string,
+      toolNameVisible: !!controller.toolNameLabel?.node?.activeInHierarchy, tutorialText: controller.tutorialText?.string,
       livingEnemies: state.enemies.filter(enemy => enemy.alive).length,
       player: { x: state.player.x, y: state.player.y, tool: state.player.tool },
       visibleSize: { width: c.view.getVisibleSize().width, height: c.view.getVisibleSize().height },
@@ -188,7 +209,9 @@ async function checkpoint(page, label, filename) {
 async function labelPoint(page, text) {
   return page.evaluate(text => {
     const c = window.cc, controller = window.__MONSTER_DEN__.controller;
-    const label = c.director.getScene().getComponentsInChildren(c.Label).find(label => label.string === text && label.node.activeInHierarchy);
+    const matches = label => label.string === text && label.node.activeInHierarchy;
+    const overlayLabels = controller.overlay.children.length ? controller.overlay.getComponentsInChildren(c.Label) : [];
+    const label = overlayLabels.find(matches) || c.director.getScene().getComponentsInChildren(c.Label).find(matches);
     if (!label) throw new Error(`Visible UI label is missing: ${text}`);
     const camera = controller.canvas.getComponent(c.Canvas).cameraComponent;
     const point = camera.worldToScreen(label.node.worldPosition);
@@ -224,8 +247,11 @@ async function inputGeometry(page) {
 
 async function inputState(page) {
   return page.evaluate(() => {
-    const controller = window.__MONSTER_DEN__.controller;
-    return { dragging: controller.dragging, power: controller.dragPower, shots: window.__MONSTER_DEN__.model.state.shots,
+    const controller = window.__MONSTER_DEN__.controller, state = window.__MONSTER_DEN__.model.state;
+    return { dragging: controller.dragging, power: controller.dragPower, shots: state.shots,
+      phase: state.phase, tool: state.player.tool, toolName: controller.toolNameLabel?.string,
+      toolStatus: controller.toolStatusLabel?.string, toolNameVisible: !!controller.toolNameLabel?.node?.activeInHierarchy,
+      tutorialText: controller.tutorialText?.string,
       visibleDots: controller.aimNodes.filter(node => node.active).length,
       aim: { x: controller.lastAim.x, y: controller.lastAim.y },
       thumb: { x: controller.stick.thumb.position.x, y: controller.stick.thumb.position.y } };
@@ -252,6 +278,7 @@ async function mouseJoystickBoundaries(page) {
   const insideDeadZone = await inputState(page);
   assert.equal(insideDeadZone.power, 0, 'Sub-dead-zone motion must have zero power.');
   assert.equal(insideDeadZone.visibleDots, 0, 'Sub-dead-zone motion must not show a launch preview.');
+  assertDragGuidance(insideDeadZone, 'Sub-dead-zone aim');
   await page.mouse.up();
   const deadZoneRelease = await assertIdle('Sub-dead-zone release');
   await page.mouse.move(input.x, input.y); await page.mouse.down();
@@ -259,11 +286,13 @@ async function mouseJoystickBoundaries(page) {
   await afterFrames(page);
   const pushed = await inputState(page);
   assert.ok(pushed.dragging && pushed.power > .98 && pushed.visibleDots > 0, 'The fixed joystick did not engage before the recenter test.');
+  assertDragGuidance(pushed, 'Engaged aim before recentering');
   await page.mouse.move(input.x, input.y, { steps: 5 });
   await afterFrames(page);
   const recentered = await inputState(page);
   assert.equal(recentered.power, 0, 'Returning to joystick center must clear launch power.');
   assert.equal(recentered.visibleDots, 0, 'Returning to joystick center must clear the launch preview.');
+  assertDragGuidance(recentered, 'Recentered aim');
   await page.mouse.up();
   const recenterRelease = await assertIdle('Recentered joystick release');
   const scene = { x: input.rect.x + input.rect.width * .5, y: input.rect.y + input.rect.height * .42 };
@@ -293,9 +322,10 @@ async function mouseJoystickBoundaries(page) {
     evidence: { centerTap, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
 }
 
-async function mouseShot(page, targetX, targetY, explicitPower, captureAim) {
+async function mouseShot(page, targetX, targetY, explicitPower, captureAim = false, shotLog = report.route.shots) {
   const state = await page.evaluate(() => window.__MONSTER_DEN__.model.state);
   assert.equal(state.phase, 'aiming', `Room ${state.roomIndex + 1} is not ready for the next pointer shot.`);
+  assertToolName(await inputState(page), `Room ${state.roomIndex + 1} before aiming`);
   const player = state.player, dx = targetX - player.x, dy = targetY - player.y;
   const input = await inputGeometry(page);
   const tuning = input.gameplayTuning;
@@ -304,18 +334,48 @@ async function mouseShot(page, targetX, targetY, explicitPower, captureAim) {
   const end = joystickEndpoint(input, dx, dy, power);
   await page.mouse.move(input.x, input.y); await page.mouse.down();
   await page.mouse.move(end.x, end.y, { steps: 6 });
+  await afterFrames(page, 1);
   if (captureAim) await checkpoint(page, 'first fixed-joystick push displays native aim meshes', '03-room1-aim.png');
-  const actualAim = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
-    power: window.__MONSTER_DEN__.controller.dragPower, visibleDots: window.__MONSTER_DEN__.controller.aimNodes.filter(node => node.active).length }));
+  const actualAim = await inputState(page);
   assert.ok(actualAim.dragging && actualAim.visibleDots > 0 && Math.abs(actualAim.power - end.effectivePower) < .015,
     `Joystick push did not produce its requested aim: ${JSON.stringify({ power, actualAim, input, end })}`);
+  assertDragGuidance(actualAim, `Room ${state.roomIndex + 1} shot ${state.shots + 1} aim`);
+  // Observe actual rendered HUD updates. This does not call or replace any
+  // game method, advance the simulation, or rewrite the model.
+  await page.evaluate(({ before, expectedName }) => {
+    const c = window.cc, api = window.__MONSTER_DEN__;
+    const trace = { frames: 0, samples: [], mismatches: [], last: '' };
+    trace.listener = () => {
+      if (api.model.state.shots !== before + 1) return;
+      const controller = api.controller;
+      const sample = { phase: api.model.state.phase, name: controller.toolNameLabel?.string,
+        status: controller.toolStatusLabel?.string, visible: !!controller.toolNameLabel?.node?.activeInHierarchy };
+      trace.frames++;
+      const key = JSON.stringify(sample);
+      if (key !== trace.last) { trace.samples.push(sample); trace.last = key; }
+      if ((sample.name !== expectedName || !sample.visible) && trace.mismatches.length < 8) trace.mismatches.push(sample);
+    };
+    window.__acceptanceToolTrace = trace;
+    c.director.on(c.Director.EVENT_AFTER_UPDATE, trace.listener);
+  }, { before: state.shots, expectedName: toolNames[state.player.tool] });
   await page.mouse.up();
   await page.waitForFunction(before => window.__MONSTER_DEN__.model.state.shots === before + 1, state.shots, { timeout: 10000 });
   await page.waitForFunction(() => ['aiming', 'room_clear', 'victory', 'game_over'].includes(window.__MONSTER_DEN__.model.state.phase), undefined, { timeout: 60000 });
   const after = await page.evaluate(() => window.__MONSTER_DEN__.model.state);
-  report.route.shots.push({ room: after.roomIndex + 1, shot: after.shots, target: { x: targetX, y: targetY }, power,
-    effectivePower: actualAim.power, pointer: end,
-    phase: after.phase, hp: after.player.hp, score: after.score, player: { x: after.player.x, y: after.player.y } });
+  const toolTrace = await page.evaluate(() => {
+    const trace = window.__acceptanceToolTrace;
+    window.cc.director.off(window.cc.Director.EVENT_AFTER_UPDATE, trace.listener);
+    delete window.__acceptanceToolTrace;
+    return { frames: trace.frames, samples: trace.samples, mismatches: trace.mismatches };
+  });
+  assert.ok(toolTrace.frames > 0, 'No actual HUD update was sampled during the shot.');
+  assert.deepEqual(toolTrace.mismatches, [], `Tool name disappeared or changed during a shot: ${JSON.stringify(toolTrace)}`);
+  assertToolName(await inputState(page), `Room ${state.roomIndex + 1} after shot`);
+  shotLog.push({ room: after.roomIndex + 1, shot: after.shots, target: { x: targetX, y: targetY }, power,
+    effectivePower: actualAim.power, pointer: end, cancelHint: actualAim.tutorialText,
+    toolNameFrames: toolTrace.frames, toolPhases: toolTrace.samples,
+    phase: after.phase, hp: after.player.hp, score: after.score, stashCount: after.stashCount, stashValue: after.stashValue,
+    player: { x: after.player.x, y: after.player.y } });
   assert.notEqual(after.phase, 'game_over', `Documented route failed after shot ${after.shots}.`);
   return after;
 }
@@ -333,6 +393,85 @@ async function musicState(page, scene) {
   return audio;
 }
 
+async function optionalStashCheck(url) {
+  const context = await browser.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 1 });
+  const page = await context.newPage(); activePage = page; observe(page, 'optional-stash-route');
+  await page.goto(url, { waitUntil: 'load' }); await ready(page);
+  await clickLabel(page, '潜入怪物窝');
+  await page.waitForFunction(() => window.__MONSTER_DEN__.controller.page === 'game');
+  const first = await checkpoint(page, 'first gameplay at 360×640 with initial objective and fixed joystick', '15-short-first-room.png');
+  assert.equal(first.objective, '撞开木栏'); assert.equal(first.objectiveVisible, true);
+  assert.equal(first.exitRingActive, false); assert.equal(first.joystickVisible, true);
+  assertToolName(first, 'Short-portrait first gameplay');
+  report.shortFirstGameplay = { viewport: first.viewport, objective: first.objective, objectiveVisible: first.objectiveVisible,
+    exitRingActive: first.exitRingActive, joystickVisible: first.joystickVisible, screenshot: '15-short-first-room.png' };
+  // Match the main route's CSS input geometry after capturing the small-screen
+  // opening; every shot still computes power from its current actual position.
+  await page.setViewportSize({ width: 420, height: 780 });
+  await page.waitForFunction(() => Math.abs(window.__MONSTER_DEN__.controller.height - 720 * 780 / 420) < 2);
+  await afterFrames(page);
+  const route = report.optionalStashRoute = { method: 'Independent browser context; home UI, first-room exit, heavy tool card and six second-room joystick shots', shots: [] };
+  for (const [x, y, power] of routes[0]) await mouseShot(page, x, y, power, false, route.shots);
+  await page.waitForFunction(() => window.__MONSTER_DEN__.model.state.phase === 'room_clear' && window.__MONSTER_DEN__.controller.overlay.children.length > 0);
+  const cards = await checkpoint(page, 'three tool choices explain mechanism and next-room use', '16-tool-choice.png');
+  for (const name of ['重撞拳套', '壁虎手套', '回旋腕带']) assert.ok(cards.activeLabels.includes(name), `Tool choice missing: ${name}`);
+  await clickLabel(page, '重撞拳套');
+  await page.waitForFunction(() => window.__MONSTER_DEN__.model.state.roomIndex === 1);
+  const before = await checkpoint(page, 'second-room optional stash and its value label before collection', '17-room2-stash.png');
+  const stash = before.stashes.find(item => item.id === 'store-side-stash');
+  const visual = before.stashVisuals.find(item => item.id === 'store-side-stash');
+  assert.ok(stash && !stash.taken && visual?.modelVisible, 'Second-room optional stash model is not visible.');
+  assert.equal(visual.label, '额外 +80'); assert.equal(visual.labelVisible, true);
+  assert.equal(before.stashCount, 0); assert.equal(before.stashValue, 0); assert.equal(before.exitRingActive, false);
+  const stashRoute = [[0, 3, 1], [-3.85, -.4], [-1.4, -.4], [-1.4, 4.5], [0, 4.2], [2.9, 5.7]];
+  for (let index = 0; index < stashRoute.length; index++) {
+    const [x, y, power] = stashRoute[index]; await mouseShot(page, x, y, power, false, route.shots);
+    if (index === 1) {
+      const collected = await checkpoint(page, 'optional stash collected while main treasure and locked exit remain', '18-room2-stash-collected.png');
+      assert.equal(collected.stashCount, 1); assert.equal(collected.stashValue, 80);
+      assert.equal(collected.stashes.find(item => item.id === 'store-side-stash').taken, true);
+      const hidden = collected.stashVisuals.find(item => item.id === 'store-side-stash');
+      assert.equal(hidden.modelVisible, false); assert.equal(hidden.labelVisible, false);
+      assert.equal(collected.treasureTaken, false); assert.equal(collected.exitRingActive, false);
+      assert.equal(collected.objective, '拿走宝物'); assert.equal(collected.objectiveVisible, true);
+      route.collected = { shot: collected.shots, stashCount: collected.stashCount, stashValue: collected.stashValue,
+        mainTreasureStillRequired: true, markerHidden: true, screenshot: '18-room2-stash-collected.png' };
+    }
+  }
+  const end = await inspect(page);
+  assert.equal(end.phase, 'room_clear'); assert.equal(end.shots, 8);
+  assert.equal(end.stashCount, 1); assert.equal(end.stashValue, 80); assert.equal(end.rescuesUsed, 0);
+  assert.ok(end.hp > 0); assert.ok(end.livingEnemies > 0);
+  route.completed = { room: end.room, phase: end.phase, shots: end.shots, hp: end.hp,
+    score: end.score, stashCount: end.stashCount, stashValue: end.stashValue, rescuesUsed: end.rescuesUsed };
+  await page.waitForLoadState('networkidle'); await context.close(); activePage = null;
+}
+
+async function activeToolNameCheck(url) {
+  report.activeToolPresentation = [];
+  for (const [tool, card] of [['grip', '壁虎手套'], ['return', '回旋腕带']]) {
+    const context = await browser.newContext({ viewport: { width: 420, height: 780 }, deviceScaleFactor: 1 });
+    const page = await context.newPage(); activePage = page; observe(page, `tool-name-${tool}`);
+    await page.goto(url, { waitUntil: 'load' }); await ready(page); await clickLabel(page, '潜入怪物窝');
+    const shots = [];
+    for (const [x, y, power] of routes[0]) await mouseShot(page, x, y, power, false, shots);
+    await page.waitForFunction(() => window.__MONSTER_DEN__.controller.overlay.children.length > 0);
+    await clickLabel(page, card);
+    const before = await inputState(page);
+    assert.equal(before.tool, tool); assertToolName(before, `${card} selected`);
+    assert.equal(before.toolStatus, '冲撞时可用');
+    await mouseShot(page, 0, 3, 1, false, shots);
+    const actual = shots[shots.length - 1], after = await inputState(page);
+    assert.ok(actual.toolPhases.some(sample => sample.phase === 'moving' && sample.name === toolNames[tool] && sample.status === '现在可以点按'), `${card}: ready tool was not named during the actual flight.`);
+    assert.ok(actual.toolPhases.some(sample => sample.phase === 'enemies' && sample.name === toolNames[tool] && sample.status === '等待敌人行动结束'), `${card}: tool name disappeared during the enemy turn.`);
+    assert.equal(after.phase, 'aiming'); assert.equal(after.toolStatus, '冲撞时可用'); assertToolName(after, `${card} after enemy turn`);
+    report.activeToolPresentation.push({ tool, card, enteredViaFirstRoomExit: true,
+      before: { phase: before.phase, name: before.toolName, status: before.toolStatus }, actualShot: actual,
+      after: { phase: after.phase, name: after.toolName, status: after.toolStatus } });
+    await page.waitForLoadState('networkidle'); await context.close(); activePage = null;
+  }
+}
+
 async function mobileInputCheck(url) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await context.newPage(); activePage = page; observe(page, 'mobile-390x844-dpr2');
@@ -340,6 +479,9 @@ async function mobileInputCheck(url) {
   await checkpoint(page, 'mobile home at 390×844 DPR2', '12-mobile-home.png');
   await clickLabel(page, '潜入怪物窝', true);
   await page.waitForFunction(() => window.__MONSTER_DEN__.controller.page === 'game');
+  const initial = await inspect(page);
+  assert.equal(initial.objective, '撞开木栏'); assert.equal(initial.objectiveVisible, true);
+  assert.equal(initial.exitRingActive, false); assertToolName(initial, 'Mobile initial room');
   await page.evaluate(() => {
     window.__acceptanceTouchEvents = [];
     for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(type, event => {
@@ -365,6 +507,7 @@ async function mobileInputCheck(url) {
   await afterFrames(page);
   const insideDeadZone = await inputState(page);
   assert.equal(insideDeadZone.power, 0); assert.equal(insideDeadZone.visibleDots, 0);
+  assertDragGuidance(insideDeadZone, 'Mobile sub-dead-zone aim');
   await send('touchEnd', []);
   const deadZoneRelease = await idleTouch('Mobile sub-dead-zone release');
   await send('touchStart', [touch(2, input.x, input.y)]);
@@ -372,9 +515,11 @@ async function mobileInputCheck(url) {
   await afterFrames(page);
   const pushed = await inputState(page);
   assert.ok(pushed.dragging && pushed.power > .98 && pushed.visibleDots > 0, 'Mobile joystick did not engage before recentering.');
+  assertDragGuidance(pushed, 'Mobile engaged aim before recentering');
   await send('touchMove', [touch(2, input.x, input.y)]); await afterFrames(page);
   const recentered = await inputState(page);
   assert.equal(recentered.power, 0); assert.equal(recentered.visibleDots, 0);
+  assertDragGuidance(recentered, 'Mobile recentered aim');
   await send('touchEnd', []);
   const recenterRelease = await idleTouch('Mobile recentered release');
   const scene = { x: input.rect.x + input.rect.width * .5, y: input.rect.y + input.rect.height * .42 };
@@ -392,6 +537,7 @@ async function mobileInputCheck(url) {
   const extra = touch(12, input.x + 45 * input.pixelX, input.y - 25 * input.pixelY);
   const extraMoved = touch(12, input.x - 55 * input.pixelX, input.y + 35 * input.pixelY);
   await send('touchStart', [owner]); await send('touchMove', [ownerDragged]); await afterFrames(page);
+  assertDragGuidance(await inputState(page), 'Primary mobile touch aim');
   const before = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
     aim: { x: window.__MONSTER_DEN__.controller.lastAim.x, y: window.__MONSTER_DEN__.controller.lastAim.y }, shots: window.__MONSTER_DEN__.model.state.shots }));
   assert.ok(before.dragging && before.shots === 0, 'Primary mobile touch failed to start an aim.');
@@ -429,6 +575,7 @@ async function mobileInputCheck(url) {
   const endedExtra = await page.evaluate(() => window.__acceptanceTouchEvents.some(event => event.type === 'touchend' && !event.trusted && event.active.length === 1 && event.changed.length === 1));
   assert.equal(endedExtra, true, 'DOM fixture did not deliver a secondary-only touchend.');
   assert.equal(releaseFixture.isTrusted, false);
+  assertDragGuidance(await inputState(page), 'Mobile aim after secondary-finger release');
   await checkpoint(page, 'CDP dual-touch aim; isolated release checked by marked DOM fixture', '13-mobile-aim.png');
   const cancelDiagnostics = { entries: [] };
   expectedTouchCancel.set(page, cancelDiagnostics);
@@ -442,6 +589,7 @@ async function mobileInputCheck(url) {
     'Expected native non-cancelable cancellation was not observed.');
   await send('touchStart', [touch(21, input.x, input.y)]);
   await send('touchMove', [touch(21, input.x, input.y - travel * input.pixelY)]);
+  await afterFrames(page); assertDragGuidance(await inputState(page), 'Mobile relaunch aim after cancellation');
   await send('touchEnd', []);
   await page.waitForFunction(() => window.__MONSTER_DEN__.model.state.shots === 1);
   await page.waitForFunction(() => window.__MONSTER_DEN__.model.state.phase === 'aiming', undefined, { timeout: 60000 });
@@ -452,12 +600,15 @@ async function mobileInputCheck(url) {
     diagnostic.evidence = { nativeCancel, aimCleared: true, cancellationDidNotLaunch: true, subsequentTouchLaunchedAndBrokeBoard: true };
   }
   const audio = await musicState(page, 'explore');
-  await checkpoint(page, 'mobile touch launch after cancellation', '14-mobile-shot.png');
+  const firstShot = await checkpoint(page, 'mobile touch launch after cancellation', '14-mobile-shot.png');
+  assert.equal(firstShot.treasureTaken, true); assert.equal(firstShot.objective, '前往出口');
+  assert.equal(firstShot.objectiveVisible, true); assert.equal(firstShot.exitRingActive, true);
   report.mobileInput = { viewport: '390×844', devicePixelRatio: 2, emulatedPhone: true, realPhone: false,
     joystickBoundaries,
     cdpSecondFingerCannotSteer: true, secondaryReleaseFixture: { ...releaseFixture, cannotReleasePrimaryShot: true },
     cdpCancellationDoesNotLaunch: true,
-    subsequentTouchLaunches: true, firstBoardDestroyed: true, audio };
+    subsequentTouchLaunches: true, firstBoardDestroyed: true, audio,
+    objectiveChangesAfterMainTreasure: true, exitLightsAfterMainTreasure: true };
   report.mobileInput.touchEvents = await page.evaluate(() => window.__acceptanceTouchEvents);
   await page.waitForLoadState('networkidle');
   await cdp.detach(); await context.close(); activePage = null;
@@ -478,7 +629,10 @@ async function mobileInputCheck(url) {
   const home = await checkpoint(page, 'home actual WebGL draw', '01-home.png');
   await clickLabel(page, '潜入怪物窝');
   await page.waitForFunction(() => window.__MONSTER_DEN__.controller.page === 'game');
-  await checkpoint(page, 'first room before input', '02-room1.png');
+  const first = await checkpoint(page, 'first room before input', '02-room1.png');
+  assert.equal(first.objective, '撞开木栏'); assert.equal(first.objectiveVisible, true);
+  assert.equal(first.treasureTaken, false); assert.equal(first.exitRingActive, false); assertToolName(first, 'Initial room');
+  report.firstSession = { initial: { objective: first.objective, objectiveVisible: first.objectiveVisible, exitRingActive: first.exitRingActive } };
   report.audio = { scope: 'Decoded assets, running AudioContext and scheduled music voices; output was not heard by a human', explore: await musicState(page, 'explore') };
   report.joystickBoundaries = await mouseJoystickBoundaries(page);
   for (let room = 0; room < routes.length; room++) {
@@ -491,13 +645,20 @@ async function mobileInputCheck(url) {
       await mouseShot(page, x, y, power, room === 0 && shot === 0);
       if (room === 0 && shot === 0) {
         assert.equal(await page.evaluate(() => window.__MONSTER_DEN__.model.state.obstacles.find(obstacle => obstacle.kind === 'board')?.destroyed), true);
-        await checkpoint(page, 'first shot breaks board and collects treasure', '04-room1-first-shot.png');
+        const obtained = await checkpoint(page, 'first shot breaks board and collects treasure', '04-room1-first-shot.png');
+        assert.equal(obtained.treasureTaken, true); assert.equal(obtained.objective, '前往出口');
+        assert.equal(obtained.objectiveVisible, true); assert.equal(obtained.exitRingActive, true);
+        report.firstSession.afterFirstShot = { objective: obtained.objective, objectiveVisible: obtained.objectiveVisible,
+          mainTreasureTaken: obtained.treasureTaken, exitRingActive: obtained.exitRingActive };
       }
     }
     const end = await inspect(page);
     assert.equal(end.phase, room === 4 ? 'victory' : 'room_clear', `Room ${room + 1} route did not reach its exit.`);
     assert.ok(end.livingEnemies > 0, `Room ${room + 1} should allow leaving living enemies behind.`);
-    report.route.rooms.push({ room: end.room, phase: end.phase, shots: end.shots, hp: end.hp, score: end.score, livingEnemies: end.livingEnemies });
+    assert.equal(end.stashCount, 0, `Room ${room + 1}: optional stash was collected on the established main route.`);
+    assert.equal(end.stashValue, 0);
+    report.route.rooms.push({ room: end.room, phase: end.phase, shots: end.shots, hp: end.hp, score: end.score,
+      livingEnemies: end.livingEnemies, stashCount: end.stashCount, stashValue: end.stashValue });
     if (room < routes.length - 1) {
       await page.waitForFunction(() => window.__MONSTER_DEN__.controller.overlay.children.length > 0);
       await clickLabel(page, '重撞拳套');
@@ -506,6 +667,9 @@ async function mobileInputCheck(url) {
   }
   const victory = await checkpoint(page, 'victory reached by 21 real pointer shots', '09-victory.png');
   assert.equal(victory.shots, 21); assert.equal(victory.rescuesUsed, 0); assert.ok(victory.hp > 0);
+  assert.equal(report.route.shots.length, 21); assert.equal(victory.stashCount, 0); assert.equal(victory.stashValue, 0);
+  report.firstSession.everyMainRouteAimShowsCancel = report.route.shots.every(shot => /回中[\s\S]*取消/.test(shot.cancelHint));
+  assert.equal(report.firstSession.everyMainRouteAimShowsCancel, true);
   assert.ok(victory.frames > home.frames + 100, 'Real Cocos frame loop did not advance through the route.');
   await clickLabel(page, '看视频 · 加领金币');
   const ad = await page.evaluate(() => ({ wallet: window.__MONSTER_DEN__.controller.save.read().progress.coins,
@@ -528,6 +692,8 @@ async function mobileInputCheck(url) {
   await page.waitForLoadState('networkidle');
   await context.close(); activePage = null;
   await mobileInputCheck(url);
+  await optionalStashCheck(url);
+  await activeToolNameCheck(url);
   assert.equal(report.errors.length, 0, 'Browser runtime errors were captured.');
   assert.equal(report.consoleErrors.length, 0, 'Shader or browser console errors were captured.');
   assert.ok(report.knownDiagnostics.every(diagnostic => diagnostic.behaviorVerified), 'A known diagnostic lacks its required behavioral verification.');

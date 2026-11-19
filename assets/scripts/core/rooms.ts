@@ -19,15 +19,15 @@ export const ACTION_PACING = {
 };
 
 export const TOOLS: { id: ToolId; name: string; description: string; actionLabel: string }[] = [
-  { id: 'heavy', name: '重撞拳套', description: '冲撞伤害翻倍，一击破开厚木板，柜子推得更远。', actionLabel: '重撞已装配' },
-  { id: 'grip', name: '壁虎手套', description: '飞行中抓停一次，可从当前位置重新瞄准；敌人暂不行动。', actionLabel: '抓停重瞄' },
-  { id: 'return', name: '回旋腕带', description: '飞行中转向发射起点一次，借返程取宝或避开箭路。', actionLabel: '回旋折返' },
+  { id: 'heavy', name: '重撞拳套', description: '冲撞更强，一击破厚木栏；柜子推得更远，反弹较弱。', actionLabel: '重撞已装配' },
+  { id: 'grip', name: '壁虎手套', description: '冲撞中抓停一次，原地重新瞄准；守卫暂不行动。', actionLabel: '抓停重瞄' },
+  { id: 'return', name: '回旋腕带', description: '冲撞中朝本次起点折返一次，可借返程取物。', actionLabel: '回旋折返' },
 ];
 
 /** Authored first expedition. None of the exits requires defeating every enemy. */
 export const ROOMS: RoomConfig[] = [
   {
-    id: 'moss-court', name: '苔门前院', hint: '拖住小兽，向后拉，松手撞进去。拿到宝物后去发光出口。',
+    id: 'moss-court', name: '苔门前院', hint: '推动底部摇杆瞄准，松手冲撞。拿到宝物后去发光出口。',
     width: 10, height: 14, start: { x: 0, y: -5.5 }, treasure: { x: 0, y: 1.6 }, exit: { x: 0, y: 5.6 },
     obstacles: [
       { id: 'welcome-board', kind: 'board', x: 0, y: -1.2, w: 2.1, h: 0.28, hp: 1 },
@@ -39,6 +39,7 @@ export const ROOMS: RoomConfig[] = [
   {
     id: 'arrow-store', name: '箭廊货仓', hint: '把柜子沿轨道推上去，它会一直留在那里挡箭。',
     width: 10, height: 14, start: { x: 0, y: -5.6 }, treasure: { x: 0, y: 4.2 }, exit: { x: 2.9, y: 5.7 },
+    stashes: [{ id: 'store-side-stash', x: -3.85, y: -0.4, value: 80 }],
     obstacles: [
       { id: 'arrow-cabinet', kind: 'cabinet', x: 0, y: -3, w: 1.7, h: 1.6, rail: { axis: 'y', min: -3, max: 0.2 } },
       { id: 'store-west-wall', kind: 'wall', x: -3.5, y: 1.2, w: 3, h: 0.5 },
@@ -67,6 +68,7 @@ export const ROOMS: RoomConfig[] = [
   {
     id: 'echo-vault', name: '回声宝库', hint: '宝物在右上角，出口在左边。拿到后可以直接溜走。',
     width: 10, height: 14, start: { x: 0, y: -5.7 }, treasure: { x: 3.6, y: 4.5 }, exit: { x: -3.5, y: 5.7 },
+    stashes: [{ id: 'vault-side-stash', x: -2.35, y: 0.5, value: 120 }],
     obstacles: [
       { id: 'vault-pillar', kind: 'pillar', x: 0, y: -1.7, w: 2, h: 1.8 },
       { id: 'vault-screen', kind: 'wall', x: 0.5, y: 2.1, w: 5.5, h: 0.45 },

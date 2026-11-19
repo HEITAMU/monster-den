@@ -57,7 +57,11 @@ System.register(["cc", "./MeshCodec", "./ResourceBundles"], function (exports_1,
         const renderer = node.addComponent(cc_1.MeshRenderer);
         const mesh = cc_1.utils.createMesh(data);
         renderer.mesh = mesh;
-        node.addComponent(OwnedMesh).mesh = mesh;
+        const owner = node.addComponent(OwnedMesh);
+        owner.mesh = mesh;
+        // Hidden nodes can be destroyed before their components ever load; Cocos
+        // skips their onDestroy hook. Node destruction still releases their buffers.
+        node.once(cc_1.Node.EventType.NODE_DESTROYED, owner.release, owner);
         renderer.setMaterial(material, 0);
         if (parent)
             node.parent = parent;
@@ -114,7 +118,8 @@ System.register(["cc", "./MeshCodec", "./ResourceBundles"], function (exports_1,
                     super(...arguments);
                     this.mesh = null;
                 }
-                onDestroy() { this.mesh?.destroy(); this.mesh = null; }
+                release() { this.mesh?.destroy(); this.mesh = null; }
+                onDestroy() { this.release(); }
             };
             OwnedMesh = __decorate([
                 cc_1._decorator.ccclass('MonsterDenOwnedMesh')
