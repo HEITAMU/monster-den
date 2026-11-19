@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Monster Den GPU diagnostic</title>
+<style>body{background:#102629;color:#f3e7ca;font:17px monospace;padding:24px}canvas{border:1px solid #9aba9a}pre{white-space:pre-wrap}</style>
+<h1>WebGL runtime check</h1><canvas id="check" width="360" height="240"></canvas><pre id="result">Checking…</pre>
+<script>
+const report={webglConstructor:typeof WebGLRenderingContext,webgl2Constructor:typeof WebGL2RenderingContext,context:null,errors:[]};
+const canvas=document.querySelector('#check');
+canvas.addEventListener('webglcontextcreationerror',event=>{report.errors.push(event.statusMessage||'Context creation failed')});
+let gl=null;
+for(const type of ['webgl2','webgl','experimental-webgl']){try{gl=canvas.getContext(type,{alpha:false,depth:true,stencil:true,antialias:false,failIfMajorPerformanceCaveat:false});if(gl){report.context=type;break;}}catch(e){report.errors.push(type+': '+e.message);}}
+if(gl){gl.clearColor(.24,.53,.42,1);gl.clear(gl.COLOR_BUFFER_BIT);report.version=gl.getParameter(gl.VERSION);report.vendor=gl.getParameter(gl.VENDOR);report.renderer=gl.getParameter(gl.RENDERER);report.maxTexture=gl.getParameter(gl.MAX_TEXTURE_SIZE);report.error=gl.getError();}
+document.querySelector('#result').textContent=JSON.stringify(report,null,2);
+</script></html>
