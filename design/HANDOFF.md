@@ -1,5 +1,13 @@
 # 《撞进怪物窝》续接记录
 
+## 0.4.0-alpha 首关样板更新（2026-11-20）
+
+0.4.0-alpha 主运行版本源于 [bd3cfceb](https://github.com/HEITAMU/monster-den/commit/bd3cfceb6265bcf38c96689959b80bb91918e910)， [WebGL 验收 44570620492](https://github.com/HEITAMU/monster-den/actions/runs/44570620492) 成功。具体报告见 [qa/0.4.0-alpha.md](../qa/0.4.0-alpha.md)。旧 0.3.0/0.3.1 的工程哈希、截图、发布报告均属于旧版，不混淆。
+
+首房增加五枚孢子菌核连锁：核心类型、碰撞、存档在 core/types.ts、rooms.ts、model.ts；GameMain.ts 用真实三维模型、规则生成的有机菌冠与编织根系、地面光圈和爆炸后的残留呈现。直接冲撞木栏路线仍保留，旧五房 21 发路线通过 WebGL 回归。首房的左侧一发可连锁毁木栏、伤守卫，但不直接给主宝物，也不提前解锁出口。场景与其他房间的商业美术质量仍需提升，不要再用堆提示、堆相似房间替代玩法和美术。
+
+
+
 更新日期：2026-11-19（北京时间）。**0.3.1 手感修复已完成浏览器验收**，当前入口 [0.3.1 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.3.1)，完整增量记录见 [0.3.1 验收](../qa/0.3.1.md)。以下为 0.3.0 基础版本交接，其已有验证不能冒充 0.3.1 重新验证。**0.3.0 引导与绕路取宝已发布**，入口为 [0.3.0 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.3.0)。本轮 110 项项目测试、严格类型（14 脚本、55 项 Cocos 导入、0 错误）、EmptyDevice 和实际 Chromium / WebGL2 验收均已通过。
 
 被测与部署运行源码均为 [`cb2fbffc4afa89de849e6e4ec56b2748dc3d407e`](https://github.com/HEITAMU/monster-den/commit/cb2fbffc4afa89de849e6e4ec56b2748dc3d407e)。main 已快进到该提交，工作分支也已包含它；[WebGL 工作流 44496981910](https://github.com/HEITAMU/monster-den/actions/runs/44496981910) 和 [Pages 工作流 44498519820](https://github.com/HEITAMU/monster-den/actions/runs/44498519820) 成功，13 个公开关键文件、2,424,176 字节均与被测文件逐字节一致。后续只补文档和证据时应说明与该运行提交的关系，不臆造尚未产生的最终文档提交号。
