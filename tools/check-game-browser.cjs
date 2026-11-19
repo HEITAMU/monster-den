@@ -18,10 +18,18 @@ const report = {
   test: 'Actual Cocos 3.8.8 WebGL, native UI, 21 pointer shots, audio playback state and mobile touch ownership',
   method: 'Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. Game state is read for targeting and assertions, never rewritten to reach victory.',
   passed: false, audibleOutputValidation: false, phonePerformanceValidation: false,
-  errors: [], consoleErrors: [], warnings: [], failedRequests: [], checkpoints: [],
+  errors: [], consoleErrors: [], knownDiagnostics: [], warnings: [], failedRequests: [], checkpoints: [],
   route: { source: 'design/PLAYTEST.md; documented 21-shot route, UI drag power at least 11%', rooms: [], shots: [] },
 };
 let server, browser, activePage;
+// Cocos 3.8.8's official web touch adapter calls preventDefault for every
+// canvas-target touch event, including a non-cancelable native touchcancel.
+// Chromium reports this one ignored no-op as a console error. Scope the
+// exception to our deliberate CDP cancellation, keep its full evidence, and
+// require the cancel/relaunch behavioral checks before classifying it benign.
+// Source: cocos-engine@3.8.8/pal/input/web/touch-input.ts, _createCallback.
+const expectedTouchCancel = new WeakMap();
+const TOUCH_CANCEL_INTERVENTION = 'Ignored attempt to cancel a touchcancel event with cancelable=false, for example because scrolling is in progress and cannot be interrupted.';
 const routes = [
   [[0, 1.6, 1], [0, 5.6]],
   [[0, 3, 1], [-1.4, -2.5], [-1.4, 4.5], [0, 4.2], [2.9, 5.7]],
@@ -55,7 +63,19 @@ function observe(page, scope) {
   page.on('console', message => {
     if (message.location().url?.endsWith('/favicon.ico')) return;
     const entry = { scope, message: message.text(), location: message.location() };
-    if (message.type() === 'error') report.consoleErrors.push(entry);
+    if (message.type() === 'error') {
+      const expected = expectedTouchCancel.get(page);
+      const knownSource = entry.location.url?.endsWith('/vendor/cocos-3.8.8.js')
+        && new URL(entry.location.url).origin === new URL(page.url()).origin;
+      if (expected && expected.entries.length === 0 && scope === 'mobile-390x844-dpr2'
+        && knownSource && entry.message === TOUCH_CANCEL_INTERVENTION) {
+        const diagnostic = { ...entry, originalSeverity: 'error', behaviorVerified: false,
+          reason: 'Official Cocos 3.8.8 web adapter calls preventDefault on our deliberately dispatched non-cancelable native touchcancel; Chromium ignores that no-op.',
+          source: 'cocos-engine@3.8.8/pal/input/web/touch-input.ts:_createCallback',
+          trigger: 'CDP Input.dispatchTouchEvent(type=touchCancel, touchPoints=[])' };
+        expected.entries.push(diagnostic); report.knownDiagnostics.push(diagnostic);
+      } else report.consoleErrors.push(entry);
+    }
     else if (message.type() === 'warning') report.warnings.push(entry);
   });
   page.on('response', response => {
@@ -212,7 +232,7 @@ async function mobileInputCheck(url) {
   await page.evaluate(() => {
     window.__acceptanceTouchEvents = [];
     for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(type, event => {
-      window.__acceptanceTouchEvents.push({ type, trusted: event.isTrusted, active: [...event.touches].map(t => t.identifier), changed: [...event.changedTouches].map(t => t.identifier) });
+      window.__acceptanceTouchEvents.push({ type, trusted: event.isTrusted, cancelable: event.cancelable, active: [...event.touches].map(t => t.identifier), changed: [...event.changedTouches].map(t => t.identifier) });
     }, { capture: true, passive: true });
   });
   const input = await inputGeometry(page), cdp = await context.newCDPSession(page);
@@ -261,10 +281,16 @@ async function mobileInputCheck(url) {
   assert.equal(endedExtra, true, 'DOM fixture did not deliver a secondary-only touchend.');
   assert.equal(releaseFixture.isTrusted, false);
   await checkpoint(page, 'CDP dual-touch aim; isolated release checked by marked DOM fixture', '13-mobile-aim.png');
-  await send('touchCancel', []); await afterFrames(page);
+  const cancelDiagnostics = { entries: [] };
+  expectedTouchCancel.set(page, cancelDiagnostics);
+  try { await send('touchCancel', []); await afterFrames(page); }
+  finally { expectedTouchCancel.delete(page); }
   const cancelled = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
     shots: window.__MONSTER_DEN__.model.state.shots, visibleAim: window.__MONSTER_DEN__.controller.aimNodes.some(node => node.active) }));
   assert.deepEqual(cancelled, { dragging: false, shots: 0, visibleAim: false });
+  const nativeCancel = await page.evaluate(() => window.__acceptanceTouchEvents.findLast(event => event.type === 'touchcancel'));
+  assert.ok(nativeCancel?.trusted && !nativeCancel.cancelable && nativeCancel.active.length === 0,
+    'Expected native non-cancelable cancellation was not observed.');
   await send('touchStart', [touch(21, input.x, input.y)]);
   await send('touchMove', [touch(21, input.x, input.y + 165 * input.pixelY)]);
   await send('touchEnd', []);
@@ -272,6 +298,10 @@ async function mobileInputCheck(url) {
   await page.waitForFunction(() => window.__MONSTER_DEN__.model.state.phase === 'aiming', undefined, { timeout: 60000 });
   const board = await page.evaluate(() => window.__MONSTER_DEN__.model.state.obstacles.find(obstacle => obstacle.kind === 'board')?.destroyed);
   assert.equal(board, true, 'A new primary touch after cancellation must launch and break the first board.');
+  for (const diagnostic of cancelDiagnostics.entries) {
+    diagnostic.behaviorVerified = true;
+    diagnostic.evidence = { nativeCancel, aimCleared: true, cancellationDidNotLaunch: true, subsequentTouchLaunchedAndBrokeBoard: true };
+  }
   const audio = await musicState(page, 'explore');
   await checkpoint(page, 'mobile touch launch after cancellation', '14-mobile-shot.png');
   report.mobileInput = { viewport: '390×844', devicePixelRatio: 2, emulatedPhone: true, realPhone: false,
@@ -349,6 +379,7 @@ async function mobileInputCheck(url) {
   await mobileInputCheck(url);
   assert.equal(report.errors.length, 0, 'Browser runtime errors were captured.');
   assert.equal(report.consoleErrors.length, 0, 'Shader or browser console errors were captured.');
+  assert.ok(report.knownDiagnostics.every(diagnostic => diagnostic.behaviorVerified), 'A known diagnostic lacks its required behavioral verification.');
   assert.equal(report.failedRequests.length, 0, 'Asset requests failed.');
   report.passed = true;
 })().catch(async error => {
