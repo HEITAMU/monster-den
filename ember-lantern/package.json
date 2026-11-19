@@ -1,0 +1,23 @@
+{
+  "name": "ember-lantern-cocos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "烬灯秘境 — Cocos Creator 3.8.8 WeChat Mini Game vertical slice",
+  "uuid": "a8044d61-0b41-4cf6-9f3c-0c837272ce2a",
+  "creator": {
+    "version": "3.8.8"
+  },
+  "scripts": {
+    "test": "node tools/run-tests.cjs",
+    "build:preview": "tsc -p tsconfig.preview.json",
+    "serve": "python3 -m http.server 39188 --directory .",
+    "check:assets": "python3 tools/check-assets.py"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "type": "module"
+}

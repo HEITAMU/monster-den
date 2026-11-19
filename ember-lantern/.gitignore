@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+build/
+temp/
+library/
+local/
+profiles/
+*.log
+__pycache__/
+.cache/
+playwright-report/

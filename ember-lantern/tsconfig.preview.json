@@ -1,0 +1,8 @@
+{
+  "compilerOptions":{
+    "target":"ES2020","module":"ES2020","strict":true,"skipLibCheck":true,
+    "outDir":"preview/modules","rootDir":"assets/scripts/core","removeComments":true,
+    "lib":["ES2020","DOM"]
+  },
+  "include":["assets/scripts/core/LanternRules.ts"]
+}
