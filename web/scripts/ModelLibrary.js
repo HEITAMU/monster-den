@@ -10,7 +10,8 @@ System.register(["cc", "./MeshCodec", "./ResourceBundles"], function (exports_1,
     var __moduleName = context_1 && context_1.id;
     async function loadGameJson(path) {
         if (globalThis.__monsterDenRuntime) {
-            const response = await fetch(`./resources/${path}.json`);
+            const version = globalThis.__monsterDenRuntime.version;
+            const response = await fetch(`./resources/${path}.json${version ? `?v=${encodeURIComponent(version)}` : ''}`);
             if (!response.ok)
                 throw new Error(`Resource unavailable: ${path}`);
             return response.json();

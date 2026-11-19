@@ -1,4 +1,4 @@
-import { ROOMS, TUNING } from './rooms';
+import { ROOMS, TUNING, ACTION_PACING } from './rooms';
 import type {
   AimPreview, Body, EnemyState, GameEvent, GameEventType, GameSnapshot, GameState,
   ObstacleState, RoomConfig, RuntimeState, ToolId, Vec2,
@@ -69,7 +69,7 @@ function segmentCircleT(a: Vec2, b: Vec2, centre: Vec2, radius: number): number 
   return t >= 0 && t <= 1 ? t : Infinity;
 }
 
-/** Pure deterministic simulation. Feed seconds to step; render state without mutating it. */
+/** Pure deterministic simulation. step() takes real seconds; pacing is applied at fixed clock ticks. */
 export class GameModel {
   public state!: GameState;
   private runtime!: RuntimeState;
@@ -85,7 +85,8 @@ export class GameModel {
 
   restart(): void {
     this.runtime = {
-      accumulator: 0, flightTime: 0, settledTime: 0, lastShotStart: { x: 0, y: 0 },
+      accumulator: 0, actionAccumulator: 0, flightRealTime: 0,
+      flightTime: 0, settledTime: 0, lastShotStart: { x: 0, y: 0 },
       hitEnemies: [], hitBoards: [], continuingTurn: false, nextProjectileId: 0, exitWarning: false,
     };
     this.events = [];
@@ -119,6 +120,7 @@ export class GameModel {
     this.runtime.continuingTurn = false;
     this.runtime.lastShotStart = { x: p.x, y: p.y };
     this.runtime.flightTime = 0; this.runtime.settledTime = 0;
+    this.runtime.flightRealTime = 0; this.runtime.actionAccumulator = 0;
     this.emit('shot', p.x, p.y, { amount: clamp(power, 0, 1), tool: p.tool });
     return true;
   }
@@ -131,6 +133,7 @@ export class GameModel {
       p.vx = 0; p.vy = 0; p.toolReady = false;
       this.state.phase = 'aiming'; this.runtime.continuingTurn = true;
       this.runtime.flightTime = 0; this.runtime.settledTime = 0;
+      this.runtime.flightRealTime = 0; this.runtime.actionAccumulator = 0;
     } else if (p.tool === 'return') {
       const dx = this.runtime.lastShotStart.x - p.x, dy = this.runtime.lastShotStart.y - p.y;
       if (length(dx, dy) < 0.25) return false;
@@ -138,6 +141,7 @@ export class GameModel {
       const speed = Math.max(7.8, Math.min(11.5, length(p.vx, p.vy) + 2));
       p.vx = d.x * speed; p.vy = d.y * speed; p.toolReady = false;
       this.runtime.flightTime = 0; this.runtime.settledTime = 0;
+      this.runtime.flightRealTime = 0; this.runtime.actionAccumulator = 0;
     } else return false;
     this.emit('tool_used', p.x, p.y, { tool: p.tool });
     return true;
@@ -221,9 +225,22 @@ export class GameModel {
     while (this.runtime.accumulator + EPS >= TUNING.fixedStep && steps < 32) {
       this.runtime.accumulator -= TUNING.fixedStep;
       if (this.runtime.accumulator < 1e-10) this.runtime.accumulator = 0;
-      this.tick(TUNING.fixedStep); steps++;
+      // Sample pacing at a fixed real-time cadence, never once per rendered frame.
+      // Every movement/collision still uses the exact original 1/120 physics step.
+      this.state.elapsed += TUNING.fixedStep;
+      if (this.state.phase === 'moving') this.runtime.flightRealTime += TUNING.fixedStep;
+      this.runtime.actionAccumulator += this.actionScale();
+      let physicsSteps = 0;
+      const maxPhysicsSteps = Math.ceil(Math.max(ACTION_PACING.flight, ACTION_PACING.tail, ACTION_PACING.enemies)) + 1;
+      while (this.runtime.actionAccumulator + EPS >= 1 && physicsSteps < maxPhysicsSteps) {
+        this.runtime.actionAccumulator -= 1;
+        if (this.runtime.actionAccumulator < 1e-10) this.runtime.actionAccumulator = 0;
+        this.tick(TUNING.fixedStep); physicsSteps++;
+        if (this.isTerminal()) break;
+      }
+      steps++;
       if (this.isTerminal()) {
-        this.runtime.accumulator = 0; break;
+        this.runtime.accumulator = 0; this.runtime.actionAccumulator = 0; break;
       }
     }
   }
@@ -245,6 +262,7 @@ export class GameModel {
     p.hp = Math.min(3, p.maxHp); p.invulnerable = 1;
     p.toolReady = p.tool === 'grip' || p.tool === 'return';
     this.state.rescuesUsed++; this.state.phase = 'aiming'; this.state.projectiles = [];
+    this.runtime.actionAccumulator = 0; this.runtime.flightRealTime = 0;
     this.runtime.continuingTurn = false; this.runtime.hitEnemies = []; this.runtime.hitBoards = [];
     for (const enemy of this.state.enemies) { enemy.vx = 0; enemy.vy = 0; enemy.action = 'idle'; }
     this.resolvePlayerObstacles(false); this.planEnemies();
@@ -263,6 +281,11 @@ export class GameModel {
       throw new Error('Invalid or unsupported Monster Den snapshot.');
     }
     this.state = copy(snapshot.state); this.runtime = copy(snapshot.runtime); this.events = [];
+    // v1 saves written before action pacing have neither field; retain their playable run.
+    if (!Number.isFinite(this.runtime.actionAccumulator) || this.runtime.actionAccumulator < 0 || this.runtime.actionAccumulator >= 1) this.runtime.actionAccumulator = 0;
+    if (!Number.isFinite(this.runtime.flightRealTime) || this.runtime.flightRealTime < 0) {
+      this.runtime.flightRealTime = Number.isFinite(this.runtime.flightTime) ? Math.max(0, this.runtime.flightTime) : 0;
+    }
   }
 
   private loadRoom(index: number, hp: number, tool: ToolId, score: number, rescues: number, shots: number, elapsed: number, turn: number): void {
@@ -280,6 +303,7 @@ export class GameModel {
       turn, score, rescuesUsed: rescues, shots, elapsed, enemyTime: 0,
     };
     this.runtime.accumulator = 0; this.runtime.flightTime = 0; this.runtime.settledTime = 0;
+    this.runtime.actionAccumulator = 0; this.runtime.flightRealTime = 0;
     this.runtime.hitEnemies = []; this.runtime.hitBoards = []; this.runtime.continuingTurn = false;
     this.runtime.exitWarning = false; this.runtime.lastShotStart = copy(room.start);
     this.planEnemies(); this.emit('room_start', room.start.x, room.start.y, { text: room.name });
@@ -295,8 +319,18 @@ export class GameModel {
   private playerDrag(): number { return TUNING.drag * (this.state.player.tool === 'heavy' ? 1.07 : 1); }
   private restitution(): number { return this.state.player.tool === 'heavy' ? 0.38 : TUNING.restitution; }
 
+  private actionScale(): number {
+    if (this.state.phase === 'enemies') return ACTION_PACING.enemies;
+    if (this.state.phase !== 'moving') return 1;
+    const p = this.state.player;
+    if (p.toolReady && (p.tool === 'grip' || p.tool === 'return') && this.runtime.flightRealTime <= ACTION_PACING.toolWindow) return 1;
+    const tailBlend = clamp(1 - length(p.vx, p.vy) / ACTION_PACING.tailBelowSpeed, 0, 1);
+    // Smoothly compress the low-speed tail instead of snapping to an invented landing.
+    // tail <= 2 * flight keeps rendered travel speed monotonic as physical speed falls.
+    return ACTION_PACING.flight + (ACTION_PACING.tail - ACTION_PACING.flight) * tailBlend;
+  }
+
   private tick(dt: number): void {
-    this.state.elapsed += dt;
     const p = this.state.player;
     p.invulnerable = Math.max(0, p.invulnerable - dt);
     this.moveCabinets(dt);
@@ -458,6 +492,7 @@ export class GameModel {
 
   private beginEnemyPhase(): void {
     this.state.phase = 'enemies'; this.state.enemyTime = 0;
+    this.runtime.actionAccumulator = 0;
     this.state.player.toolReady = false;
     for (const e of this.state.enemies) {
       e.vx = 0; e.vy = 0;
@@ -516,6 +551,7 @@ export class GameModel {
     if (done && this.state.projectiles.length === 0 && this.state.enemyTime >= TUNING.enemyWindup + 0.1
       && length(p.vx, p.vy) < 0.3 && this.cabinetsSettled()) {
       p.vx = 0; p.vy = 0; this.state.phase = 'aiming';
+      this.runtime.actionAccumulator = 0;
       for (const obstacle of this.state.obstacles) {
         if (obstacle.kind === 'cabinet') { obstacle.vx = 0; obstacle.vy = 0; }
       }

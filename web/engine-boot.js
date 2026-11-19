@@ -19,7 +19,8 @@ function compressUuid(uuid) {
   return output;
 }
 try {
-  const metadata = await (await fetch('./build-info.json')).json();
+  const release = new URL(import.meta.url).searchParams.get('v') || '';
+  const metadata = await (await fetch(`./build-info.json${release ? '?v=' + encodeURIComponent(release) : ''}`)).json();
   state.version = metadata.version;
   const cc = await startCocos(async c => {
     const module = await System.import('./scripts/GameMain.js');

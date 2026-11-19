@@ -23,7 +23,13 @@ for data in list(bpy.data.materials):
     bpy.data.materials.remove(data)
 
 
+def linear_hex(value):
+    rgb=[int(value[i:i+2],16)/255 for i in (1,3,5)]
+    return tuple(v/12.92 if v<=.04045 else ((v+.055)/1.055)**2.4 for v in rgb)
+
+
 def material(name, color, roughness=.68, metallic=0):
+    if isinstance(color,str):color=linear_hex(color)
     m = bpy.data.materials.new(name)
     m.diffuse_color = (*color, 1)
     m.use_nodes = True
@@ -35,29 +41,37 @@ def material(name, color, roughness=.68, metallic=0):
 
 
 M = {
-    'stone': material('Warm weathered limestone', (.46, .36, .25)),
-    'stoneLight': material('Cut sandstone edges', (.66, .55, .38)),
-    'stoneDark': material('Stone crevices', (.245, .23, .17)),
-    'mortar': material('Recessed old mortar', (.18, .20, .13)),
-    'wood': material('Old honey chestnut', (.36, .185, .075)),
-    'woodLight': material('Polished carved chestnut edges', (.54, .30, .115)),
-    'woodDark': material('Carved wood recess', (.18, .078, .035)),
-    'endgrain': material('Fresh split wood fibres', (.67, .43, .19)),
-    'copper': material('Warm aged brass', (.56, .32, .12), .34, .58),
-    'gold': material('Polished brass lip', (.79, .54, .20), .30, .65),
-    'iron': material('Blackened workshop iron', (.12, .135, .105), .42, .5),
-    'moss': material('Soft moss', (.23, .34, .09)),
-    'leaf': material('Emerald leaf', (.11, .31, .105), .55),
-    'leafLight': material('Fern new growth', (.30, .49, .12), .60),
-    'leafDark': material('Fern underside', (.075, .205, .075)),
-    'terracotta': material('Russet ceramic', (.55, .22, .095)),
-    'cap': material('Vermilion mushroom velvet', (.68, .25, .08), .8),
-    'capLight': material('Mushroom cap rim', (.87, .48, .18), .8),
-    'cream': material('Warm ivory', (.83, .71, .42)),
-    'amber': material('Lantern warm glass', (1.0, .57, .15), .25),
-    'jade': material('Living jade seed', (.20, .63, .31), .28),
+    'stone': material('Blue slate weathered face', '#485f6b'),
+    'stoneLight': material('Slate worn upper arris', '#738389'),
+    'stoneDark': material('Deep blue stone strata', '#253b47'),
+    'mortar': material('Fine recessed slate joints', '#445b62'),
+    'wood': material('Old honey chestnut', '#89502e'),
+    'woodLight': material('Polished carved chestnut edges', '#b77a42'),
+    'woodDark': material('Carved wood recess', '#49382b'),
+    'endgrain': material('Fresh split wood fibres', '#d1a267'),
+    'copper': material('Warm aged copper', '#a57749', .39, .58),
+    'gold': material('Polished amber brass lip', '#deb56a', .32, .65),
+    'iron': material('Blackened workshop iron', '#243d46', .42, .5),
+    'moss': material('Deep cushion moss', '#487447'),
+    'mossLight': material('Damp moss upper tips', '#789151'),
+    'leaf': material('Emerald leaf', '#457d56', .65),
+    'leafLight': material('Fern new growth', '#8aaf68', .65),
+    'leafDark': material('Fern underside', '#244b43'),
+    'terracotta': material('Russet ceramic', '#9c583c'),
+    'cap': material('Teal luminous cave fungus', '#459995', .76),
+    'capLight': material('Mint phosphorescent cap rim', '#9ce0bd', .72),
+    'cream': material('Warm ivory', '#d7cfad'),
+    'amber': material('Lantern warm glass', '#ffd087', .32),
+    'jade': material('Living jade seed', '#91e6c1', .32),
+    'root': material('Ancient grey oak root', '#6f624b'),
+    'rootLight': material('Exposed root grain', '#9b8660'),
+    'soil': material('Island peat underside', '#1d3238'),
+    'patina': material('Oxidised copper inlay', '#4a8c82', .65, .2),
+    'paint': material('Faded jade cabinet lacquer', '#37645f'),
+    'etched': material('Almost worn-away copper floor engraving', '#547670', .74, .12),
 }
-FLOOR_MATS = [material(f'Sandstone tile tone {i}', (.42 + i*.025, .34 + i*.021, .235 + i*.016)) for i in range(7)]
+FLOOR_MATS = [material(f'Large quiet slate tone {i}', color) for i,color in enumerate(
+    ['#596e76','#5b7178','#5d7077','#586d75','#60747a','#5d7079','#5a7078'])]
 
 
 def root(name):
@@ -189,24 +203,110 @@ def rivet(name, at, parent, radius=.035, mat=None, facing='front'):
 
 prefabs={}
 
-# A continuous, irregularly worn flagstone floor, with real recessed joints.
+# Polygon clipping makes broad irregular stonework rather than a tiled board.
+def clip_half_plane(poly,nx,ny,d):
+    output=[]
+    for a,b in zip(poly,poly[1:]+poly[:1]):
+        fa=nx*a[0]+ny*a[1]-d;fb=nx*b[0]+ny*b[1]-d
+        if fa<=0:output.append(a)
+        if (fa<=0)!=(fb<=0):
+            t=fa/(fa-fb)
+            output.append((a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t))
+    return output
+
+
+def slab(name,outline,top,mat,parent):
+    cx=sum(p[0] for p in outline)/len(outline);cy=sum(p[1] for p in outline)/len(outline)
+    # Each shared straight edge is lightly hand-chipped into a silhouette; the
+    # deviations point inward, so adjacent slabs cannot intersect each other.
+    chipped=[]
+    for a,b in zip(outline,outline[1:]+outline[:1]):
+        chipped.append(a)
+        length=math.hypot(b[0]-a[0],b[1]-a[1])
+        if length>1.2:
+            for t in (.31,.68):
+                x=a[0]+(b[0]-a[0])*t;y=a[1]+(b[1]-a[1])*t
+                delta=Vector((cx-x,cy-y));delta.normalize()
+                notch=random.uniform(.004,.024)
+                chipped.append((x+delta.x*notch,y+delta.y*notch))
+    outline=chipped
+    n=len(outline);verts=[]
+    for inset,z in ((.020,-.055),(.014,top-.025),(.045,top)):
+        for x,y in outline:
+            delta=Vector((cx-x,cy-y));delta.normalize()
+            verts.append((x+delta.x*inset,y+delta.y*inset,z))
+    faces=[tuple(reversed(range(n)))]
+    for row in range(2):
+        for i in range(n):faces.append((row*n+i,row*n+(i+1)%n,(row+1)*n+(i+1)%n,(row+1)*n+i))
+    faces.append(tuple(2*n+i for i in range(n)))
+    obj=mesh(name,verts,faces,[mat,M['mortar']],parent)
+    for face in obj.data.polygons[:-1]:face.material_index=1
+    return obj
+
+
+def island_body(parent):
+    outline=[]
+    outline.extend([(-4.94+i*.988,-7.12) for i in range(11)])
+    outline.extend([(5.12,-6.45+i*1.29) for i in range(11)])
+    outline.extend([(4.94-i*.988,7.12) for i in range(11)])
+    outline.extend([(-5.12,6.45-i*1.29) for i in range(11)])
+    n=len(outline);verts=[]
+    for row,(scale,z) in enumerate(((.94,-1.15),(1.025,-.77),(1.015,-.35),(1,-.035))):
+        for i,(x,y) in enumerate(outline):
+            radial=Vector((x/5.12,y/7.12));radial.normalize()
+            ledge=(.055 if row==3 else .13)*math.sin(i*1.9+row*.7)
+            ledge+=random.uniform(-.035,.035)
+            verts.append((x*scale+radial.x*ledge,y*scale+radial.y*ledge,z+random.uniform(-.07,.07)))
+    faces=[]
+    for row in range(3):
+        for i in range(n):faces.append((row*n+i,row*n+(i+1)%n,(row+1)*n+(i+1)%n,(row+1)*n+i))
+    faces.append(tuple(3*n+i for i in range(n)))
+    obj=mesh('Broken rock strata below the treasury',verts,faces,[M['soil'],M['stoneDark'],M['stone'],M['mortar']],parent)
+    for p in obj.data.polygons:p.material_index=3 if p.index==len(faces)-1 else (1 if p.index//n==0 else 2 if p.index%5==0 else 1)
+
+
+def rugged_rock(name,centre,size,parent):
+    cx,cy,cz=centre;w,d,h=size;n=9;verts=[]
+    radii=[random.uniform(.83,1.12) for _ in range(n)]
+    for row,(scale,z) in enumerate(((.58,0),(1,.22),(.94,.70),(.52,1))):
+        for i in range(n):
+            a=i*math.tau/n+.08*row
+            verts.append((cx+math.cos(a)*w*.5*radii[i]*scale,cy+math.sin(a)*d*.5*radii[i]*scale,cz+h*(z+random.uniform(-.025,.025))))
+    faces=[tuple(reversed(range(n)))]
+    for row in range(3):
+        for i in range(n):faces.append((row*n+i,row*n+(i+1)%n,(row+1)*n+(i+1)%n,(row+1)*n+i))
+    faces.append(tuple(3*n+i for i in range(n)))
+    obj=mesh(name,verts,faces,[M['stoneDark'],M['stone'],M['soil']],parent)
+    for p in obj.data.polygons:p.material_index=1 if p.index>n*2 else 2 if p.index%7==0 else 0
+
+
+# Full walkable rectangle remains flat; only low-contrast physical seams cross it.
 floor=root('floor');prefabs['floor']=floor
-box('Deep old foundation',(0,0,-.23),(10,14,.42),M['mortar'],floor,.14,3)
-for row in range(10):
-    y=-6.3+row*1.4
-    stagger=.70 if row%2 else 0
-    for col in range(8):
-        left=-5+col*1.42-stagger
-        right=left+1.39
-        left=max(-4.98,left);right=min(4.98,right)
-        if right-left<.20:continue
-        stone(f'Worn flagstone {row:02d} {col:02d}',((left+right)/2,y,-.04),(right-left,1.365,.09),random.choice(FLOOR_MATS),floor,.017)
-        if random.random()<.28:
-            xx=(left+right)/2;yy=y+random.uniform(-.5,.5)
-            tube('Fine worn chip',[(xx-.16,yy,.057),(xx-.03,yy+.05,.057),(xx+.12,yy+.035,.057)],.009,M['stoneDark'],floor,4)
-for i in range(18):
-    x=random.choice([-1,1])*random.uniform(3.7,4.8);y=random.uniform(-6.7,6.7)
-    lathe('Low joint moss',[(.08,0),(.14,.02),(.10,.035),(.025,.04)],M['moss'],floor,(x,y,.04),8,.17,(1.5,.6,1))
+island_body(floor)
+seeds=[(-4+col*2+random.uniform(-.62,.62),-6+row*2+random.uniform(-.58,.58)) for row in range(7) for col in range(5)]
+for index,(sx,sy) in enumerate(seeds):
+    polygon=[(-5,-7),(5,-7),(5,7),(-5,7)]
+    for tx,ty in seeds:
+        if (tx,ty)==(sx,sy):continue
+        nx=tx-sx;ny=ty-sy
+        polygon=clip_half_plane(polygon,nx,ny,(tx*tx+ty*ty-sx*sx-sy*sy)/2)
+        if not polygon:break
+    if len(polygon)>=3:
+        slab(f'Broad hand-cut vault flagstone {index:02d}',polygon,.044+random.uniform(-.002,.002),random.choice(FLOOR_MATS),floor)
+        if index%4==0:
+            xx,yy=polygon[0]
+            dx=(sx-xx)*.26;dy=(sy-yy)*.26
+            tube('Worn hairline stone fracture',[(xx+dx*.10,yy+dy*.10,.047),(xx+dx*.55,yy+dy*.50,.047),(xx+dx,yy+dy,.047)],.007,M['mortar'],floor,4)
+for i in range(24):
+    x=random.choice([-1,1])*random.uniform(4.68,4.94);y=random.uniform(-6.85,6.85)
+    lathe('Soft moss caught in edge joint',[(.05,0),(.13,.012),(.09,.026),(.015,.030)],M['moss'],floor,(x,y,.044),7,.22,(1.4,.65,1))
+# Faint broken botanical inlays remain confined to edge zones. They read as
+# worn architecture, not route markers, collectible halos or a gameplay grid.
+for cx,cy,flip in ((-4.15,-3.9,1),(4.15,1.65,-1),(-4.12,4.7,1),(4.12,-5.8,-1)):
+    for start,end,radius in ((.12,1.9,.46),(2.7,4.05,.46),(.5,2.1,.30)):
+        pts=[(cx+math.cos(a)*radius,cy+math.sin(a)*radius,.049) for a in [start+(end-start)*j/12 for j in range(13)]]
+        tube('Worn broken copper vine inlay',pts,.013,M['etched'],floor,4)
+    tube('Worn inlay leaf stem',[(cx-.15*flip,cy-.19,.049),(cx,cy,.049),(cx+.12*flip,cy+.21,.049)],.014,M['etched'],floor,4)
 
 # The cabinet is one mobile piece: carved carcass, copper corners, raised drawers, castors.
 cabinet=root('cabinet');prefabs['cabinet']=cabinet
@@ -215,7 +315,7 @@ for side in (-1,1):
     for plank in range(4):
         box('Side chestnut panel',(side*.777,-.51+plank*.34,.86),(.09,.327,1.03),M['wood'],cabinet,.025,2)
     box('Side inset brass border',(side*.833,0,.87),(.028,1.16,.79),M['copper'],cabinet,.025)
-    box('Recessed side carving',(side*.852,0,.87),(.025,1.045,.67),M['woodLight'],cabinet,.055)
+    box('Recessed jade lacquer side carving',(side*.852,0,.87),(.025,1.045,.67),M['paint'],cabinet,.055)
     for y in (-.51,.51):
         box('Corner copper strap',(side*.798,y, .87),(.10,.14,1.24),M['copper'],cabinet,.038)
         for z in (.37,1.37):rivet('Strap rivet',(side*.858,y,z),cabinet,.036,facing='side')
@@ -224,7 +324,7 @@ for side in (-1,1):
     tube('Carved side vine',path,.018,M['woodDark'],cabinet)
 for row,z in enumerate((.65,1.14)):
     box('Raised drawer front',(0,-.747,z),(1.37,.16,.41),M['woodLight'],cabinet,.055,3)
-    box('Carved drawer recess',(0,-.837,z),(1.18,.025,.27),M['wood'],cabinet,.042)
+    box('Carved jade lacquer drawer recess',(0,-.837,z),(1.18,.025,.27),M['paint'],cabinet,.042)
     for side in (-1,1):rivet('Drawer pull anchor',(side*.23,-.868,z+.03),cabinet,.05)
     tube('Curved brass drawer pull',[(-.23,-.89,z+.03),(-.21,-1.0,z-.065),(0,-1.035,z-.105),(.21,-1.0,z-.065),(.23,-.89,z+.03)],.035,M['gold'],cabinet,8)
     for side in (-1,1):
@@ -233,6 +333,11 @@ box('Lower cabinet cornice',(0,0,.32),(1.69,1.55,.16),M['copper'],cabinet,.055,3
 box('Upper cabinet cornice',(0,0,1.48),(1.73,1.61,.14),M['copper'],cabinet,.06,3)
 box('Solid chestnut top',(0,0,1.56),(1.66,1.54,.115),M['woodLight'],cabinet,.055,3)
 for x in (-.43,.1):tube('Top board seam',[(x,-.68,1.622),(x+.015,0,1.622),(x-.01,.68,1.622)],.009,M['woodDark'],cabinet,4)
+for x in (-.63,.63):
+    box('Cabinet top worn copper brace',(x,0,1.63),(.105,1.42,.032),M['copper'],cabinet,.012,2)
+    for y in (-.55,.55):rivet('Top strap sunk rivet',(x,y,1.648),cabinet,.025,M['gold'],facing='top')
+box('Cabinet top relief badge',(0,.14,1.642),(.29,.38,.035),M['paint'],cabinet,.06,3)
+leaf('Cabinet carved badge frond',(0,.02,1.665),(0,.29,1.67),.15,M['gold'],cabinet,.025,5)
 for x in (-.61,.61):
     for y in (-.52,.52):
         box('Castor mounting',(x,y,.23),(.20,.24,.13),M['iron'],cabinet,.035)
@@ -270,6 +375,11 @@ for i in range(9):
     lathe('Moss on capital',[(.07,0),(.12,.035),(.04,.065)],M['moss'],pillar,(math.cos(a)*r,math.sin(a)*r,1.63),7,.2)
 tube('Trailing pillar vine',[(.43,-.1,1.66),(.45,-.23,1.36),(.39,-.29,1.02),(.41,-.25,.78)],.022,M['leafDark'],pillar)
 for z in (.90,1.15,1.40):leaf('Pillar vine leaf',(.40,-.25,z),(.58,-.35,z+.14),.14,M['leaf'],pillar,.03,4)
+for a in (0,math.pi/2,math.pi,math.pi*1.5):
+    x,y=.347*math.cos(a),.347*math.sin(a)
+    tube('Pillar oxidised copper inlay',[(x,y,.49),(x*1.01,y*1.01,.67),(x,y,.88)],.012,M['patina'],pillar,5)
+for i in range(3):
+    lathe('Small pale cave fungus on moss cap',[(.018,0),(.042,.025),(.032,.046),(0,.052)],M['capLight'],pillar,(-.31+i*.11,-.18,1.67),8,.08)
 
 # Unit wall section. Scale x/z in the renderer to match each logical rectangle.
 wall=root('wall');prefabs['wall']=wall
@@ -278,8 +388,10 @@ for row in range(3):
     for col in range(pieces):
         width=1/pieces
         stone('Coursed wall stone',(-.5+(col+.5)*width,0,row*.29),(width-.018,.98,.30),M['stone'] if row!=2 else M['stoneLight'],wall,.012)
-box('Wall worn coping',(0,0,.91),(1.02,1.04,.14),M['stoneLight'],wall,.07,3)
+box('Wall worn coping',(0,0,.91),(1.02,1.04,.14),M['stone'],wall,.07,3)
 tube('Wall small moss seam',[(-.47,-.48,.58),(-.12,-.51,.56),(.17,-.49,.59)],.025,M['moss'],wall,5)
+for x in (-.33,.04,.31):
+    lathe('Wall cap cushion moss',[(.045,0),(.095,.015),(.07,.033),(0,.04)],M['mossLight'],wall,(x,.32,1.055),8,.18,(1.2,.55,1))
 
 # Treasure chest, open curved lid and a living amber seed on folded velvet.
 treasure=root('treasure');prefabs['treasure']=treasure
@@ -311,6 +423,9 @@ lathe('Treasured living amber seed',[(.11,0),(.22,.12),(.25,.28),(.17,.45),(.035
 for side in (-1,1):
     leaf('Jade seed sheath',(0,-.04,.70),(side*.35,-.06,1.16),.20,M['jade'],treasure,.10,6)
     tube('Treasure seed filigree',[(side*.08,-.26,.76),(side*.12,-.28,.95),(side*.05,-.20,1.17)],.015,M['gold'],treasure,6)
+for i,(x,y) in enumerate(((-.33,-.24),(.35,-.19),(-.34,.07),(.30,.14),(.05,-.25),(-.14,.15))):
+    for layer in range(1+i%3):
+        lathe('Scattered warm brass treasure coins',[(.062,0),(.068,.009),(.068,.026),(.059,.033)],M['gold'],treasure,(x,y,.68+layer*.026),10,.015,(1,1,1))
 
 # Real arched doorway: separate shaped voussoirs, worn jambs and a botanical crest.
 exit_root=root('exit');prefabs['exit']=exit_root
@@ -337,6 +452,14 @@ for side in (-1,1):
         leaf('Portal leaf relief',(x,-.31,z),(x+side*.22,-.33,z+.16),.19,M['leaf'],exit_root,.055,5)
 leaf('Portal jade crest',(0,-.34,2.20),(0,-.35,2.71),.36,M['jade'],exit_root,.10,7)
 for side in (-1,1):leaf('Portal crest side leaf',(0,-.34,2.25),(side*.32,-.34,2.47),.19,M['gold'],exit_root,.07,5)
+lathe('Portal weathered guardian medallion',[(.19,0),(.23,.025),(.19,.065),(.10,.085)],M['copper'],exit_root,(0,-.33,2.24),14,.025,(1,.32,1))
+for side in (-1,1):
+    # The two carved eyes and pointed ears make the treasury gate a distinct motif.
+    leaf('Portal guardian crest ear',(side*.14,-.35,2.27),(side*.33,-.34,2.60),.15,M['stoneLight'],exit_root,.02,5)
+    stone('Portal guardian brow',(side*.105,-.39,2.32),(.13,.055,.07),M['gold'],exit_root,.003)
+    tube('Portal suspended copper lamp bracket',[(side*.96,.02,1.26),(side*1.12,-.05,1.44),(side*1.13,-.18,1.54)],.023,M['copper'],exit_root,6)
+    lathe('Portal tiny warm lamp core',[(.065,0),(.088,.045),(.075,.15),(.025,.19)],M['amber'],exit_root,(side*1.13,-.18,1.20),10,.035)
+    lathe('Portal tiny lamp hood',[(.10,0),(.12,.032),(.04,.10)],M['copper'],exit_root,(side*1.13,-.18,1.37),10,.035)
 
 # A full fern in a handmade ribbed terracotta planter.
 fern=root('fern');prefabs['fern']=fern
@@ -386,17 +509,91 @@ for i in range(6):
     tube('Lantern carved cage bar',[(.21*math.cos(a),.21*math.sin(a),.25),(.225*math.cos(a),.225*math.sin(a),.45),(.20*math.cos(a),.20*math.sin(a),.72)],.019,M['gold'],lantern,6)
 tube('Lantern hanging ring',[(.10*math.cos(i*math.pi/12),0,1.0+.13*math.sin(i*math.pi/12)) for i in range(25)],.022,M['iron'],lantern,6)
 
-# Perimeter trim remains separate from gameplay obstacles.
+# The ruin edge is a designed miniature silhouette, separate from all collisions.
+# Raised decoration starts outside x +/-5 or y +/-7; the central route stays legible.
 trim=root('trim');prefabs['trim']=trim
 for side in (-1,1):
-    for j in range(10):
-        stone('Side courtyard curb',(side*5.12,-6.3+j*1.4,-.06),(.30,1.34,.28),M['stoneDark'],trim,.02)
+    cursor=-6.96
+    for j,length in enumerate((1.30,1.69,1.04,1.57,1.35,1.63,1.13,1.66,1.50,1.11)):
+        y=cursor+length*.5;cursor+=length
+        if y>6.8:break
+        stone('Broken slate boundary foundation',(side*5.17,y,-.06),(.30,length-.045,.29+random.uniform(-.04,.04)),M['stoneDark'],trim,.022)
+        stone('Soft grey stone edge coping',(side*5.17,y,.20),(.34,length-.08,.09),M['stone'],trim,.022)
+        if j in (0,3,6,8):
+            # Short root-covered buttresses give depth without hiding the playing field.
+            stone('Exterior ruin buttress',(side*5.38,y-.14,-.40),(.34,.58,.83),M['stoneDark'],trim,.028)
+            stone('Exterior buttress crown',(side*5.38,y-.14,.40),(.39,.63,.13),M['stone'],trim,.025)
+            box('Buttress weathered copper seam',(side*5.39,y-.45,.10),(.19,.025,.38),M['patina'],trim,.02,2)
     for j in range(7):
-        stone('End courtyard curb',(-4.3+j*1.43,side*7.12,-.06),(1.36,.30,.28),M['stoneDark'],trim,.02)
-for x in (-5.08,5.08):
-    for y in (-7.08,7.08):
-        stone('Courtyard corner plinth',(x,y,-.08),(.56,.56,.42),M['stone'],trim,.03)
-        lathe('Corner copper botanical finial',[(.16,0),(.18,.08),(.10,.18),(.035,.27)],M['copper'],trim,(x,y,.33),12,.03)
+        x=-4.30+j*1.43
+        stone('Irregular end foundation stone',(x,side*7.16,-.10),(1.39,.34,.34),M['stoneDark'],trim,.028)
+        stone('Irregular end stone coping',(x,side*7.16,.20),(1.34,.37,.10),M['stone'],trim,.025)
+    # Large organic root arcs travel along the exterior; their forks never cross the walkway.
+    for j,y in enumerate((-5.7,-2.3,1.6,5.3)):
+        points=[(side*5.47,y-.63,-.57),(side*5.51,y-.42,-.12),(side*5.38,y-.16,.26),(side*5.20,y+.10,.36),(side*5.30,y+.47,.24),(side*5.54,y+.72,-.06)]
+        tube('Old branching oak root on ruin side',points,[.055,.09,.115,.13,.09,.025],M['root'],trim,7)
+        tube('Fine root raised grain',[(x+side*.04,yy-.035,z+.055) for x,yy,z in points[1:-1]],.012,M['rootLight'],trim,5)
+        for k in range(2):
+            start=points[2+k]
+            tube('Forked exterior root', [start,(side*5.51,y+.18+k*.18,.06),(side*5.58,y+.32+k*.27,-.28)], [.055,.033,.008],M['root'],trim,6)
+    for j in range(15):
+        y=-6.62+j*.94+random.uniform(-.17,.17);x=side*(5.20+random.uniform(.0,.23))
+        for k in range(2):
+            lathe('Sculpted moss cushion on ruined parapet',[(.045,0),(.12,.025),(.135,.065),(.072,.10),(0,.11)],M['moss'] if k==0 else M['mossLight'],trim,(x,y+k*.13,.25),9,.17,(.85,1.6,.70))
+        if j%3==0:
+            for k in range(3):
+                xx=side*(5.31+k*.075);yy=y+k*.17
+                tube('Tiny crooked luminous fungus stem',[(xx,yy,.31),(xx+side*.02,yy,.42),(xx+side*.04,yy+.02,.49+k*.04)], [.023,.018,.014],M['leafDark'],trim,6)
+                lathe('Tiny luminous mint fungus crown',[(.035,0),(.10,.015),(.12,.05),(.08,.09),(0,.11)],M['capLight'] if k%2 else M['cap'],trim,(xx+side*.04,yy+.02,.48+k*.04),10,.08,(1,.75,.75))
+        if j%4==1:
+            for k in range(3):
+                start=(side*5.25,y,.32);end=(side*(5.45+k*.035),y-.22+k*.20,.48+k*.07)
+                leaf('Ruin fern accent frond',start,end,.12,M['leafLight'] if k==2 else M['leaf'],trim,.05,5)
+    for j in range(11):
+        y=-6.7+j*1.27;stone('Fallen small edge shale',(side*5.45,y,-.38),(.32,.54,.17),M['stone'],trim,.04)
+    for y in (-4.1,.8,4.7):
+        # Small broken masonry and broad root leaves make clustered transitions
+        # instead of outlining the whole courtyard with identical ornaments.
+        for k in range(4):
+            x=side*random.uniform(5.28,5.48);yy=y+random.uniform(-.35,.35)
+            stone('Broken masonry flake in root bed',(x,yy,.10),(.15+random.random()*.10,.19+random.random()*.15,.07),M['stone'] if k%2 else M['stoneDark'],trim,.021)
+        for k in range(4):
+            x=side*5.25;yy=y+random.uniform(-.25,.25)
+            leaf('Large sculpted exterior root leaf',(x,yy,.29),(side*(5.51+random.uniform(-.05,.02)),yy+random.uniform(-.33,.33),.38+random.uniform(0,.17)),.18,M['leaf'] if k%2 else M['leafLight'],trim,.08,6)
+
+for x in (-5.17,5.17):
+    for y in (-7.13,7.13):
+        stone('Ruin corner layered foot',(x,y,-.40),(.53,.55,.50),M['stoneDark'],trim,.035)
+        stone('Ruin corner broken capital',(x,y,.05),(.46,.48,.43),M['stone'],trim,.035)
+        stone('Ruin corner broad arris',(x,y,.44),(.51,.52,.10),M['stoneLight'],trim,.028)
+        lathe('Corner copper botanical finial',[(.115,0),(.15,.06),(.13,.15),(.055,.23),(.02,.27)],M['copper'],trim,(x,y,.54),12,.04)
+        lathe('Finial amber seed glint',[(.035,0),(.062,.055),(.025,.12),(0,.13)],M['amber'],trim,(x,y,.77),10,.02)
+        sx=1 if x>0 else -1;sy=1 if y>0 else -1
+        rugged_rock('Broken corner bedrock below foundation',(sx*5.15,sy*7.13,-.97),(.91,1.03,.76),trim)
+        rugged_rock('Detached small corner crag',(sx*5.43,sy*6.73,-.86),(.38,.62,.55),trim)
+        tube('Old corner root holding broken masonry',[(sx*5.1,sy*6.68,.22),(sx*5.25,sy*6.88,.37),(sx*5.4,sy*7.08,.21),(sx*5.5,sy*7.22,-.19),(sx*5.31,sy*7.39,-.63)], [.065,.14,.13,.09,.018],M['root'],trim,7)
+        for k in range(5):
+            xx=sx*(5.12+random.uniform(-.06,.21));yy=sy*(6.65+random.uniform(-.09,.27))
+            lathe('Dense corner velvet moss tuft',[(.045,0),(.13,.03),(.14,.065),(.07,.105),(0,.12)],M['mossLight'] if k%3==0 else M['moss'],trim,(xx,yy,.28),9,.19,(1.1,.8,.8))
+        for k in range(3):
+            xx=sx*(5.32+random.uniform(-.06,.06));yy=sy*(6.48+k*.16)
+            tube('Corner pale fungal stem',[(xx,yy,.24),(xx+.01,yy,.35),(xx+.025,yy,.44)], [.025,.02,.014],M['cream'],trim,6)
+            lathe('Corner stacked mint fungus shelf',[(.04,0),(.12,.025),(.14,.06),(.08,.12),(0,.13)],M['capLight'] if k==1 else M['cap'],trim,(xx+.025,yy,.41),10,.07,(1,.75,1))
+
+for side in (-1,1):
+    for j,y in enumerate((-4.5,-1.05,2.95,5.38)):
+        rugged_rock('Asymmetric exposed side rock shelf',(side*(5.25+.05*(j%2)),y,-.83),(.72,.96,.61),trim)
+    for x in (-3.9,-1.55,1.20,3.65):
+        rugged_rock('Broken front and back rock ledge',(x,side*7.18,-.89),(.93,.64,.69),trim)
+
+# Two taller back-edge remnants imply a larger building without obscuring routes.
+for side in (-1,1):
+    for row in range(3):
+        stone('Far corner old wall stump',(side*4.43,7.28,.30+row*.31),(.75,.38,.31),M['stone'],trim,.03)
+    stone('Far corner old coping',(side*4.43,7.28,1.21),(.83,.44,.14),M['stoneLight'],trim,.035)
+    tube('Far-wall loose copper winding',[(side*4.1,7.04,.50),(side*4.35,7.02,.67),(side*4.61,7.04,.86)],.022,M['copper'],trim,6)
+    for k in range(4):
+        lathe('Moss on rear ruin silhouette',[(.07,0),(.13,.035),(.08,.06),(0,.08)],M['moss'],trim,(side*(4.14+k*.16),7.25,1.35),8,.18,(1,.7,1))
 
 # An editable showcase arrangement in the source .blend. Exporter removes root transforms.
 positions={
@@ -417,28 +614,28 @@ print('Packed q16-n8-c8-v1',output,output.stat().st_size,'bytes; all exported tr
 # Lighting and cameras are source-preview only, not part of the game asset library.
 scene=bpy.context.scene
 scene.render.engine='CYCLES'
-scene.cycles.samples=48
+scene.cycles.samples=32
 scene.cycles.use_denoising=False
-scene.world.color=(.23,.26,.21)
+scene.world.color=(.09,.13,.16)
 world=scene.world
 world.use_nodes=True
-world.node_tree.nodes.get('Background').inputs[0].default_value=(.20,.24,.20,1)
-world.node_tree.nodes.get('Background').inputs[1].default_value=.45
+world.node_tree.nodes.get('Background').inputs[0].default_value=(.10,.15,.19,1)
+world.node_tree.nodes.get('Background').inputs[1].default_value=.40
 for name,loc,color,power,size in [
-    ('Warm skylight',(-4,-5,11),(1.0,.82,.59),1600,8),
-    ('Soft workshop fill',(6,1,8),(.69,.82,1.0),1000,7),
-    ('Golden exit rim',(-2,8,7),(1.0,.63,.28),1000,5),
+    ('Warm skylight',(-4,-5,11),(1.0,.89,.73),1500,8),
+    ('Cool vault fill',(6,1,8),(.60,.79,1.0),1100,7),
+    ('Golden exit rim',(-2,8,7),(1.0,.69,.38),1000,5),
 ]:
     data=bpy.data.lights.new(name,'AREA');data.energy=power;data.color=color;data.shape='DISK';data.size=size
     obj=bpy.data.objects.new(name,data);bpy.context.collection.objects.link(obj);obj.location=loc
     obj.rotation_euler=(Vector((0,0,0))-obj.location).to_track_quat('-Z','Y').to_euler()
 camera_data=bpy.data.cameras.new('Environment review camera')
 camera=bpy.data.objects.new('Environment review camera',camera_data);bpy.context.collection.objects.link(camera)
-camera.location=(11,-15,17)
+camera.location=(10,-15,18)
 camera.rotation_euler=(Vector((0,.6,.1))-camera.location).to_track_quat('-Z','Y').to_euler()
-camera_data.type='ORTHO';camera_data.ortho_scale=18.4
+camera_data.type='ORTHO';camera_data.ortho_scale=22.5
 scene.camera=camera
-scene.render.resolution_x=1100;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
+scene.render.resolution_x=1000;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
 scene.view_settings.view_transform='AgX'
 scene.render.image_settings.file_format='PNG'
 preview=ROOT.parent/'art-preview';preview.mkdir(parents=True,exist_ok=True)
@@ -446,5 +643,13 @@ scene.render.filepath=str(preview/'environment-review.png')
 (ROOT/'art-source').mkdir(exist_ok=True)
 bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'art-source/environment.blend'),compress=True)
+bpy.ops.render.render(write_still=True)
+# Same tilt and field width as the current game, without UI or gameplay shadows.
+camera.location=(0,-10,24)
+camera.rotation_euler=(Vector((0,0,0))-camera.location).to_track_quat('-Z','Y').to_euler()
+camera_data.ortho_scale=11.7/(720/1280)
+scene.render.resolution_x=840;scene.render.resolution_y=1200
+camera_data.ortho_scale=11.7/(840/1200)
+scene.render.filepath=str(preview/'environment-game-angle.png')
 bpy.ops.render.render(write_still=True)
 print('Environment source and preview complete.')

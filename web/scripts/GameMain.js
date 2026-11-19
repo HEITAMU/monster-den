@@ -37,7 +37,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
         ],
         execute: function () {
             ccclass = cc_1._decorator.ccclass;
-            VERSION = '0.1.1';
+            VERSION = '0.2.0';
             GROUND = .08, GROUND_EFFECT = .105;
             TOOL_COST = { heavy: 300, grip: 450, return: 450 };
             HINTS = ['先撞开木栏，拿宝物，再去出口', '推柜子挡住箭路，绕到后面拿宝物', '撞开中间的厚木栏，去拿宝物', '拿到宝物后，向左边出口撤离', '看清冲锋方向，带走窝主的宝物'];
@@ -45,7 +45,11 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                 constructor() {
                     super(...arguments);
                     this.model = new index_1.GameModel();
-                    this.cameraBase = new cc_1.Vec3(0, 22, 15);
+                    this.cameraBase = new cc_1.Vec3(0, 21.55, 15.66);
+                    this.cameraTarget = new cc_1.Vec3(0, -.45, .66);
+                    this.homeWorld = null;
+                    this.homeActor = null;
+                    this.homeGuard = null;
                     this.enemies = new Map();
                     this.obstacles = new Map();
                     this.treasure = null;
@@ -58,6 +62,9 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.arrowNodes = new Map();
                     this.sparkMaterials = [];
                     this.sparks = [];
+                    this.trails = [];
+                    this.impacts = [];
+                    this.trailClock = 0;
                     this.ready = false;
                     this.page = 'loading';
                     this.height = 1280;
@@ -76,6 +83,15 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.background = false;
                     this.adBusy = false;
                     this.rewardPending = false;
+                    this.stick = null;
+                    this.stickOffset = new cc_1.Vec2();
+                    this.stickEngaged = false;
+                    this.hitStop = 0;
+                    this.launchKick = 0;
+                    this.inputCanvas = null;
+                    this.mouseButtonGuard = null;
+                    this.joystickTuning = index_1.JOYSTICK_TUNING;
+                    this.gameplayTuning = index_1.TUNING;
                     this.overlayPhase = '';
                     this.tipTimer = 0;
                     this.tip = '';
@@ -88,6 +104,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.homeHeroRotation = 0;
                     this.saveClock = 0;
                 }
+                get groundProjection() { return Math.sin(Math.atan2(this.cameraBase.y - this.cameraTarget.y, this.cameraBase.z - this.cameraTarget.z)); }
                 async start() {
                     this.save = new SaveStore_1.SaveStore({ onWarning: m => this.toast(m) });
                     this.createScene();
@@ -141,13 +158,13 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.cameraNode = new cc_1.Node('AdventureCamera');
                     this.cameraNode.parent = this.node;
                     this.cameraNode.setPosition(this.cameraBase);
-                    this.cameraNode.lookAt(new cc_1.Vec3(0, 0, 0));
+                    this.cameraNode.lookAt(this.cameraTarget);
                     this.worldCamera = this.cameraNode.addComponent(cc_1.Camera);
                     this.worldCamera.projection = cc_1.Camera.ProjectionType.ORTHO;
                     this.worldCamera.near = .1;
                     this.worldCamera.far = 100;
                     this.worldCamera.clearFlags = cc_1.Camera.ClearFlag.SOLID_COLOR;
-                    this.worldCamera.clearColor = GameUI_1.rgba('#12292b');
+                    this.worldCamera.clearColor = GameUI_1.rgba('#101f2b');
                     this.worldCamera.visibility = cc_1.Layers.BitMask.DEFAULT;
                     this.worldCamera.priority = 0;
                     const lightNode = new cc_1.Node('WarmKey');
@@ -184,7 +201,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const size = cc_1.view.getVisibleSize();
                     this.height = size.height || 1280;
                     this.lastHeight = this.height;
-                    this.worldCamera.orthoHeight = 5.85 / (size.width / size.height);
+                    this.worldCamera.orthoHeight = 6.15 / (size.width / size.height);
                     for (const root of [this.hud, this.overlay, this.floating])
                         root.getComponent(cc_1.UITransform).setContentSize(720, this.height);
                 }
@@ -202,8 +219,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.matDanger = ModelLibrary_1.makeMaterial(new cc_1.Color(236, 105, 78, 150), false, true, true);
                     this.matGold = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#ffdb7c'), false, true, true, .8);
                     this.sparkMaterials = ['#ffe1a0', '#aaead0', '#d39b61', '#ef9b7d'].map(c => ModelLibrary_1.makeMaterial(GameUI_1.rgba(c), false, false, false, .8));
-                    for (let i = 0; i < 24; i++) {
-                        const node = ModelLibrary_1.meshNode('AimMark', ModelLibrary_1.discMesh(.07, .95, .8, 12), this.matAim, this.effectsWorld);
+                    for (let i = 0; i < 32; i++) {
+                        const node = ModelLibrary_1.meshNode('AimMark', ModelLibrary_1.discMesh(.075, .95, .8, 12), this.matAim, this.effectsWorld);
                         node.active = false;
                         this.aimNodes.push(node);
                     }
@@ -211,16 +228,27 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.aimEnd.active = false;
                     this.aimCaption = GameUI_1.label(this.floating, '', 20, 0, 0, 180, 35, GameUI_1.PALETTE.mint, true);
                     this.aimCaption.node.active = false;
+                    for (let i = 0; i < 12; i++) {
+                        const node = ModelLibrary_1.meshNode('DashWake', ModelLibrary_1.discMesh(1, .38, 0, 16), this.matAim, this.effectsWorld);
+                        node.active = false;
+                        this.trails.push({ node, life: 0 });
+                    }
+                    for (let i = 0; i < 4; i++) {
+                        const material = ModelLibrary_1.makeMaterial(GameUI_1.rgba('#ffe0a0', 180), false, true, true);
+                        const node = ModelLibrary_1.meshNode('ImpactRing', ModelLibrary_1.ringMesh(1, .11, 36), material, this.effectsWorld);
+                        node.active = false;
+                        this.impacts.push({ node, material, life: 0, size: 1 });
+                    }
                 }
                 instantiate(key, parent, x = 0, y = 0, scale = 1) {
                     const instance = this.env.instantiate(key, parent, scale);
                     instance.root.setPosition(x, key === 'floor' || key === 'trim' ? 0 : GROUND, -y);
                     return instance;
                 }
-                makeActor(key, x, y, scale) {
-                    const instance = this.characters.instantiate(key, this.actorWorld, scale);
+                makeActor(key, x, y, scale, parent = this.actorWorld) {
+                    const instance = this.characters.instantiate(key, parent, scale);
                     instance.root.setPosition(x, GROUND, -y);
-                    const shadow = ModelLibrary_1.meshNode('ContactShadow', ModelLibrary_1.discMesh(1, .28, 0, 36), this.matShadow, this.actorWorld);
+                    const shadow = ModelLibrary_1.meshNode('ContactShadow', ModelLibrary_1.discMesh(1, .36, 0, 36), this.matShadow, parent);
                     shadow.setPosition(x, GROUND_EFFECT, -y);
                     shadow.setScale(.72 * scale, 1, .5 * scale);
                     return { instance, shadow, scale, hit: 0, phase: Math.random() * 6 };
@@ -260,19 +288,29 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     for (const [x, y, key, s] of decor)
                         if (this.env.has(key))
                             this.instantiate(key, this.roomWorld, x, y, s);
-                    this.hero = this.makeActor('hero', state.player.x, state.player.y, .72);
+                    this.hero = this.makeActor('hero', state.player.x, state.player.y, .94);
                     this.heroRing = ModelLibrary_1.meshNode('PlayerRing', ModelLibrary_1.ringMesh(.48, .065), this.matAim, this.actorWorld);
                     for (const enemy of state.enemies) {
                         if (!enemy.alive)
                             continue;
                         const key = enemy.kind === 'charger' ? 'boss' : enemy.kind;
-                        this.enemies.set(enemy.id, this.makeActor(key, enemy.x, enemy.y, enemy.kind === 'boss' ? .97 : enemy.kind === 'charger' ? .58 : .66));
+                        this.enemies.set(enemy.id, this.makeActor(key, enemy.x, enemy.y, enemy.kind === 'boss' ? 1.04 : enemy.kind === 'charger' ? .65 : .78));
                         const danger = ModelLibrary_1.meshNode('EnemyIntent', this.beamMesh(), this.matDanger, this.effectsWorld);
                         this.threatNodes.set(enemy.id, danger);
+                    }
+                    for (const trail of this.trails) {
+                        trail.life = 0;
+                        trail.node.active = false;
+                    }
+                    for (const impact of this.impacts) {
+                        impact.life = 0;
+                        impact.node.active = false;
                     }
                     this.phase = '';
                     this.overlayPhase = '';
                     this.shake = 0;
+                    this.hitStop = 0;
+                    this.launchKick = 0;
                 }
                 beamMesh() { return { positions: [-.5, 0, -.5, .5, 0, -.5, -.5, 0, .5, .5, 0, .5], normals: [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], colors: [1, 1, 1, .04, 1, 1, 1, .04, 1, 1, 1, .45, 1, 1, 1, .45], uvs: [0, 0, 1, 0, 0, 1, 1, 1], indices: [0, 2, 1, 1, 2, 3] }; }
                 showHome() {
@@ -281,15 +319,18 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.cancelDrag();
                     this.page = 'home';
                     this.clear(this.hud);
+                    this.stick = null;
                     this.clear(this.overlay);
                     this.overlayPhase = '';
+                    this.createHomeSet();
+                    this.updateSceneVisibility();
                     this.updateMusicScene();
                     for (const t of this.threatNodes.values())
                         t.active = false;
                     const top = this.height / 2, bottom = -top;
-                    GameUI_1.label(this.hud, 'MONSTER DEN', 17, 0, top - 77, 640, 32, GameUI_1.PALETTE.muted, true);
-                    GameUI_1.label(this.hud, '撞进怪物窝', 53, 0, top - 134, 650, 80, GameUI_1.PALETTE.cream, true);
-                    GameUI_1.label(this.hud, '撞开一条路，把宝物带出来', 23, 0, top - 192, 630, 45, GameUI_1.PALETTE.gold);
+                    GameUI_1.label(this.hud, 'MONSTER DEN', 17, 0, top - 79, 640, 32, GameUI_1.PALETTE.mint, true);
+                    GameUI_1.label(this.hud, '撞进怪物窝', 56, 0, top - 137, 650, 86, GameUI_1.PALETTE.cream, true);
+                    GameUI_1.label(this.hud, '一推，一撞，带宝物回家', 23, 0, top - 197, 630, 45, GameUI_1.PALETTE.gold);
                     this.soundButton();
                     const saved = this.save.getSnapshot();
                     const savedPhase = saved?.state?.model?.state?.phase;
@@ -301,7 +342,34 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     GameUI_1.button(p, canContinue ? '重新出发' : '怎么玩', 152, -42, 280, 66, () => canContinue ? this.confirmNewRun() : this.showHelp(), false);
                     const coins = this.save.read().progress.coins || 0;
                     GameUI_1.label(p, `已带回 ${coins} 枚金币`, 21, 0, -97, 600, 35, GameUI_1.PALETTE.muted);
-                    GameUI_1.label(this.hud, `首段冒险 · ${VERSION}`, 17, 0, bottom + 25, 630, 30, '#72958e');
+                    GameUI_1.label(this.hud, `摇杆试玩 · ${VERSION}`, 17, 0, bottom + 25, 630, 30, '#729caa');
+                }
+                createHomeSet() {
+                    if (this.homeWorld)
+                        return;
+                    this.homeWorld = new cc_1.Node('CampDiorama');
+                    this.homeWorld.parent = this.world;
+                    this.instantiate('floor', this.homeWorld, 0, 0, .64);
+                    if (this.env.has('trim'))
+                        this.instantiate('trim', this.homeWorld, 0, 0, .64);
+                    this.instantiate('exit', this.homeWorld, .7, 3.3, 1.15);
+                    this.instantiate('treasure', this.homeWorld, 2.1, -1.7, 1.15);
+                    this.instantiate('cabinet', this.homeWorld, -2, 1.9, .8);
+                    for (const [x, y] of [[-3.1, -2.8], [3.1, 2.4]])
+                        this.instantiate('fern', this.homeWorld, x, y, 1.4);
+                    for (const [x, y] of [[-3.0, 3.5], [3, 3.4]])
+                        this.instantiate('lantern', this.homeWorld, x, y, 1.25);
+                    this.instantiate('mushroom', this.homeWorld, 3, -2.9, 1.1);
+                    this.homeActor = this.makeActor('hero', -.65, -1.6, 3.2, this.homeWorld);
+                    this.homeGuard = this.makeActor('guard', 2.25, 1.3, .95, this.homeWorld);
+                }
+                updateSceneVisibility() {
+                    const active = this.page === 'game';
+                    this.roomWorld.active = active;
+                    this.actorWorld.active = active;
+                    this.effectsWorld.active = active;
+                    if (this.homeWorld)
+                        this.homeWorld.active = this.page === 'home';
                 }
                 soundButton() {
                     const muted = this.audio.settings.muted;
@@ -326,7 +394,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.clear(this.overlay);
                     const p = GameUI_1.panel(this.overlay, 650, 490, 0, 0, GameUI_1.PALETTE.deep);
                     GameUI_1.label(p, '带着宝物离开', 36, 0, 173, 590, 65, GameUI_1.PALETTE.gold, true);
-                    GameUI_1.label(p, '在场景上按住，向后拖拽\n松手后，小兽会沿瞄准方向冲出\n\n撞柜子挡箭，撞木栏开路\n拿到宝物后，进入发光出口', 26, 0, 15, 580, 240);
+                    GameUI_1.label(p, '推动左下摇杆，沿路线瞄准\n推得越远，力度越大；松手冲撞\n回到摇杆中心再松手，可以取消\n\n撞柜子挡箭，撞木栏开路\n拿到宝物后，进入发光出口', 25, 0, 15, 580, 260);
                     GameUI_1.button(p, '明白了', 0, -170, 530, 72, () => { this.clickSound(); this.clear(this.overlay); });
                 }
                 confirmNewRun() {
@@ -345,7 +413,9 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.clickSound();
                     this.page = 'tools';
                     this.clear(this.hud);
+                    this.stick = null;
                     this.clear(this.overlay);
+                    this.updateSceneVisibility();
                     const d = this.save.read();
                     this.updateMusicScene();
                     GameUI_1.label(this.hud, '探险工具柜', 43, 0, this.height / 2 - 106, 650, 75, GameUI_1.PALETTE.gold, true);
@@ -388,12 +458,13 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.page = 'game';
                     this.updateMusicScene();
                     this.renderRoom();
+                    this.updateSceneVisibility();
                     this.drawHud();
                     this.clear(this.overlay);
                     this.persist();
                 }
                 continueRun() { if (this.adBusy || this.rewardPending)
-                    return; this.clickSound(); this.restoreRun(); this.page = 'game'; this.updateMusicScene(); this.renderRoom(); this.drawHud(); this.clear(this.overlay); }
+                    return; this.clickSound(); this.restoreRun(); this.page = 'game'; this.updateMusicScene(); this.renderRoom(); this.updateSceneVisibility(); this.drawHud(); this.clear(this.overlay); }
                 restoreRun() {
                     const saved = this.save.getSnapshot();
                     if (saved) {
@@ -421,19 +492,21 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.clear(this.overlay);
                     this.overlayPhase = '';
                     const top = this.height / 2, bottom = -top;
-                    GameUI_1.panel(this.hud, 672, 172, 0, top - 127, GameUI_1.PALETTE.deep, '#607d6d', 22, 243);
-                    this.roomLabel = GameUI_1.label(this.hud, '', 32, -66, top - 90, 480, 53, GameUI_1.PALETTE.cream, true);
-                    this.hpLabel = GameUI_1.label(this.hud, '', 29, -184, top - 143, 280, 45, GameUI_1.PALETTE.danger, true);
-                    this.lootLabel = GameUI_1.label(this.hud, '', 24, 189, top - 143, 270, 45, GameUI_1.PALETTE.gold, true);
+                    GameUI_1.panel(this.hud, 680, 126, 0, top - 83, GameUI_1.PALETTE.deep, '#6a8b92', 20, 246);
+                    this.roomLabel = GameUI_1.label(this.hud, '', 30, 0, top - 58, 465, 48, GameUI_1.PALETTE.cream, true);
+                    this.hpLabel = GameUI_1.label(this.hud, '', 27, -183, top - 111, 280, 40, GameUI_1.PALETTE.danger, true);
+                    this.lootLabel = GameUI_1.label(this.hud, '', 23, 187, top - 111, 260, 40, GameUI_1.PALETTE.gold, true);
                     this.stepDots = [];
                     for (let i = 0; i < 5; i++)
-                        this.stepDots.push(GameUI_1.label(this.hud, '●', 17, -66 + i * 33, top - 193, 30, 30));
+                        this.stepDots.push(GameUI_1.label(this.hud, '◆', 12, -42 + i * 21, top - 111, 22, 26));
                     this.soundButton();
                     GameUI_1.button(this.hud, '营地', -287, top - 42, 95, 43, () => { this.persist(); this.showHome(); }, false);
-                    const dock = GameUI_1.panel(this.hud, 672, 180, 0, bottom + 138, GameUI_1.PALETTE.deep, '#6e8c79', 25, 250);
-                    this.hintLabel = GameUI_1.label(dock, '', 24, 0, 48, 620, 64, GameUI_1.PALETTE.cream);
-                    this.phaseLabel = GameUI_1.label(dock, '', 20, -145, -23, 330, 50, GameUI_1.PALETTE.muted);
-                    this.toolButton = GameUI_1.button(dock, '使用工具', 171, -27, 275, 62, () => {
+                    GameUI_1.panel(this.hud, 682, 286, 0, bottom + 171, GameUI_1.PALETTE.deep, '#796b52', 27, 248);
+                    this.hintLabel = GameUI_1.label(this.hud, '', 23, 0, bottom + 341, 654, 48, GameUI_1.PALETTE.cream);
+                    this.stick = GameUI_1.joystick(this.hud, -136, bottom + 183);
+                    this.stickOffset.set(0, 0);
+                    this.phaseLabel = GameUI_1.label(this.hud, '', 22, 174, bottom + 250, 272, 42, GameUI_1.PALETTE.muted, true);
+                    this.toolButton = GameUI_1.button(this.hud, '使用工具', 174, bottom + 173, 247, 83, () => {
                         this.clickSound();
                         const p = this.model.state.player;
                         if (!this.model.activateTool())
@@ -444,14 +517,14 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         }
                     }, false);
                     this.toolButton.addComponent(cc_1.UIOpacity);
-                    this.toolGlow = GameUI_1.uiNode('ToolReadyGlow', this.toolButton, 275, 62);
+                    this.toolGlow = GameUI_1.uiNode('ToolReadyGlow', this.toolButton, 247, 83);
                     const glow = this.toolGlow.addComponent(cc_1.Graphics);
                     glow.lineWidth = 3;
                     glow.strokeColor = GameUI_1.rgba(GameUI_1.PALETTE.gold);
-                    glow.roundRect(-137, -31, 274, 62, 20);
+                    glow.roundRect(-123, -41, 246, 82, 18);
                     glow.stroke();
                     this.toolGlow.active = false;
-                    this.tutorialText = GameUI_1.label(this.hud, '拖拽瞄准 · 松手出击', 20, 0, bottom + 24, 650, 35, GameUI_1.PALETTE.muted);
+                    this.tutorialText = GameUI_1.label(this.hud, '推动摇杆 · 松手冲撞', 20, 175, bottom + 95, 276, 58, GameUI_1.PALETTE.muted);
                     this.updateHud();
                 }
                 updateHud() {
@@ -463,7 +536,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.lootLabel.string = s.treasure.taken ? '宝物已到手' : '寻找宝物';
                     this.stepDots.forEach((l, i) => { l.color = GameUI_1.rgba(i <= s.roomIndex ? GameUI_1.PALETTE.gold : '#486961'); });
                     this.hintLabel.string = this.tipTimer > 0 ? this.tip : s.treasure.taken ? '宝物到手，前往发光出口' : HINTS[s.roomIndex];
-                    this.phaseLabel.string = this.dragging ? `力度 ${Math.round(this.dragPower * 100)}%` : s.phase === 'moving' ? '正在冲撞' : s.phase === 'enemies' ? '守卫即将行动' : p.tool === 'grip' && !p.toolReady ? '抓停成功 · 再次瞄准' : `第 ${s.turn + 1} 次行动`;
+                    this.phaseLabel.string = this.dragging ? `力度 ${Math.round(this.dragPower * 100)}%` : s.phase === 'moving' ? '正在冲撞' : s.phase === 'enemies' ? '守卫行动' : p.tool === 'grip' && !p.toolReady ? '再次瞄准' : `第 ${s.turn + 1} 次行动`;
                     const tool = index_1.TOOLS.find(t => t.id === p.tool);
                     const toolLabel = this.toolButton?.getComponentsInChildren(cc_1.Label)[0];
                     const activeTool = p.tool === 'grip' || p.tool === 'return', available = activeTool && p.toolReady && s.phase === 'moving';
@@ -477,9 +550,14 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (opacity)
                         opacity.opacity = available || p.tool === 'heavy' ? 255 : 170;
                     if (this.tutorialText) {
-                        this.tutorialText.string = s.shots === 0 ? (this.dragging ? (this.dragPower > .1 ? '松手！撞开前面的木栏' : '向后拖远一点，看看前方路线') : '按住场景，向后拉，再松手') :
-                            s.phase === 'enemies' ? '红色区域是守卫的攻击方向' : activeTool && available ? '工具亮起了，冲撞中可以点击使用' : s.treasure.taken ? '带宝物进出口，就能离开这一间' : '拖拽瞄准 · 松手出击';
+                        this.tutorialText.string = s.shots === 0 ? (this.dragging ? (this.stickEngaged ? '松手冲撞\n回中可取消' : '向上推动摇杆') : '推杆瞄准\n松手冲撞') :
+                            s.phase === 'enemies' ? '留意红色攻击区域' : activeTool && available ? '点击工具\n改变这次冲撞' : s.treasure.taken ? '带宝物进出口' : '轻推微调\n推满远冲';
                         this.tutorialText.color = GameUI_1.rgba(s.shots === 0 ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.muted);
+                    }
+                    if (this.stick) {
+                        this.stick.caption.string = this.dragging ? (this.stickEngaged ? '松手冲撞' : '回中取消') : s.phase === 'aiming' ? '推动瞄准' : '等待落定';
+                        this.stick.caption.color = GameUI_1.rgba(this.stickEngaged ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.muted);
+                        this.stick.glow.active = s.phase === 'aiming';
                     }
                 }
                 showRoomClear() {
@@ -611,12 +689,26 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         this.page = 'game';
                         this.clear(this.overlay);
                         this.renderRoom();
+                        this.updateSceneVisibility();
                         this.drawHud();
                     }
                     else if (this.page === 'game')
                         this.showResult(true);
                 }
                 bindInput() {
+                    // Cocos 3.8.8 web synthesizes a touch for every mouse button but does not
+                    // mark event.simulate. Filter non-primary DOM buttons before that adapter;
+                    // native/WeChat touch input has no DOM and continues through Input below.
+                    if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+                        this.inputCanvas = document.querySelector('canvas');
+                        this.mouseButtonGuard = (event) => { if (event.button !== 0) {
+                            event.preventDefault();
+                            event.stopImmediatePropagation();
+                        } };
+                        this.inputCanvas?.addEventListener('mousedown', this.mouseButtonGuard, true);
+                        this.inputCanvas?.addEventListener('contextmenu', this.mouseButtonGuard, true);
+                        window.addEventListener('mouseup', this.mouseButtonGuard, true);
+                    }
                     cc_1.input.on(cc_1.Input.EventType.TOUCH_START, this.touchStart, this);
                     cc_1.input.on(cc_1.Input.EventType.TOUCH_MOVE, this.touchMove, this);
                     cc_1.input.on(cc_1.Input.EventType.TOUCH_END, this.touchEnd, this);
@@ -627,64 +719,85 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     cc_1.game.on(cc_1.Game.EVENT_HIDE, this.onHide, this);
                     cc_1.game.on(cc_1.Game.EVENT_SHOW, this.onShow, this);
                 }
-                validInput(location) { const sy = location.y / cc_1.view.getScaleY(); return this.ready && this.page === 'game' && !this.background && !this.adBusy && !this.rewardPending && !this.overlay.children.length && sy > 250 && sy < this.height - 220; }
+                validInput(location) {
+                    if (!this.ready || this.page !== 'game' || this.background || this.adBusy || this.rewardPending || this.overlay.children.length || !this.stick)
+                        return false;
+                    const x = location.x / cc_1.view.getScaleX() - 360 - this.stick.root.position.x, y = location.y / cc_1.view.getScaleY() - this.height / 2 - this.stick.root.position.y;
+                    return Math.hypot(x, y) <= 111;
+                }
                 begin(location) {
                     if (this.dragging || !this.validInput(location) || this.model.state.phase !== 'aiming')
                         return;
-                    this.clickSound();
+                    void this.audio.unlock().then(() => this.audio.startMusic());
                     this.dragging = true;
-                    this.dragStart.set(location);
+                    this.dragStart.set((this.stick.root.position.x + 360) * cc_1.view.getScaleX(), (this.stick.root.position.y + this.height / 2) * cc_1.view.getScaleY());
                     this.dragNow.set(location);
                     this.dragPower = 0;
+                    this.stickEngaged = false;
+                    this.move(location);
                 }
                 move(location) {
                     if (!this.dragging)
                         return;
                     this.dragNow.set(location);
-                    const dx = (this.dragStart.x - location.x) / cc_1.view.getScaleX(), dy = (this.dragStart.y - location.y) / cc_1.view.getScaleY();
-                    this.dragPower = Math.min(1, Math.sqrt(dx * dx + dy * dy) / 165);
-                    this.lastAim.set(dx, dy / Math.sin(Math.atan2(this.cameraBase.y, this.cameraBase.z)));
+                    const dx = (location.x - this.dragStart.x) / cc_1.view.getScaleX(), dy = (location.y - this.dragStart.y) / cc_1.view.getScaleY(), distance = Math.hypot(dx, dy);
+                    const { deadZone, travel } = this.joystickTuning, scale = distance > travel ? travel / distance : 1;
+                    this.stickOffset.set(dx * scale, dy * scale);
+                    this.stickEngaged = distance > deadZone;
+                    this.dragPower = Math.max(0, Math.min(1, (distance - deadZone) / (travel - deadZone)));
+                    this.lastAim.set(dx, dy / this.groundProjection);
                     this.showAim();
                 }
                 release() {
                     if (!this.dragging)
                         return;
+                    const fire = this.stickEngaged, power = this.dragPower;
                     this.dragging = false;
+                    this.stickEngaged = false;
                     this.clearAim();
-                    if (this.dragPower > .10 && this.model.shoot({ x: this.lastAim.x, y: this.lastAim.y }, this.dragPower))
+                    if (fire && this.model.shoot({ x: this.lastAim.x, y: this.lastAim.y }, power))
                         this.persist();
+                    this.dragPower = 0;
                 }
-                touchStart(e) { if (this.activeTouchId !== null || this.heldMouse)
+                touchStart(e) { if (e.simulate || this.activeTouchId !== null || this.heldMouse)
                     return; const id = e.getID(); if (id === null)
                     return; this.begin(e.getLocation()); if (this.dragging)
                     this.activeTouchId = id; }
-                touchMove(e) { if (this.activeTouchId === null || e.getID() !== this.activeTouchId)
+                touchMove(e) { if (e.simulate || this.activeTouchId === null || e.getID() !== this.activeTouchId)
                     return; this.move(e.getLocation()); }
-                touchEnd(e) { if (this.activeTouchId === null || e.getID() !== this.activeTouchId)
+                touchEnd(e) { if (e.simulate || this.activeTouchId === null || e.getID() !== this.activeTouchId)
                     return; this.move(e.getLocation()); this.activeTouchId = null; this.release(); }
-                touchCancel(e) { if (this.activeTouchId === null || e.getID() !== this.activeTouchId)
+                touchCancel(e) { if (e.simulate || this.activeTouchId === null || e.getID() !== this.activeTouchId)
                     return; this.cancelDrag(); }
-                cancelDrag() { this.activeTouchId = null; this.heldMouse = false; this.dragging = false; this.dragPower = 0; this.clearAim(); }
-                // Cocos synthesizes a touch before mouse events. Only use this fallback when
-                // no touch claimed the gesture, so the same mouse gesture cannot fire twice.
+                cancelDrag() { this.activeTouchId = null; this.heldMouse = false; this.dragging = false; this.stickEngaged = false; this.dragPower = 0; this.clearAim(); }
+                // On backends that mark simulated touch, the primary mouse path owns it here.
+                // The DOM guard above also covers 3.8.8 web's unmarked simulated events.
                 mouseDown(e) { if (e.getButton() !== 0 || this.activeTouchId !== null)
                     return; this.begin(e.getLocation()); this.heldMouse = this.dragging; }
                 mouseMove(e) { if (this.heldMouse)
                     this.move(e.getLocation()); }
-                mouseUp() { if (!this.heldMouse)
-                    return; this.heldMouse = false; this.release(); }
+                mouseUp(e) { if (!this.heldMouse)
+                    return; this.move(e.getLocation()); this.heldMouse = false; this.release(); }
                 onHide() { this.background = true; this.cancelDrag(); this.persist(); }
                 onShow() { this.background = false; }
                 showAim() {
                     this.clearAim();
-                    if (this.dragPower < .06)
+                    if (!this.stickEngaged)
                         return;
                     const preview = this.model.aim(this.lastAim.x, this.lastAim.y, this.dragPower);
-                    for (let i = 0; i < Math.min(this.aimNodes.length, preview.points.length); i++) {
-                        const at = Math.floor(i * (preview.points.length - 1) / (Math.min(this.aimNodes.length, preview.points.length) - 1 || 1)), p = preview.points[at];
+                    const cumulative = [0];
+                    for (let i = 1; i < preview.points.length; i++)
+                        cumulative.push(cumulative[i - 1] + Math.hypot(preview.points[i].x - preview.points[i - 1].x, preview.points[i].y - preview.points[i - 1].y));
+                    const total = cumulative[cumulative.length - 1], count = Math.min(this.aimNodes.length, Math.max(2, Math.ceil(total / .34) + 1));
+                    let segment = 1;
+                    for (let i = 0; i < count && preview.points.length > 1; i++) {
+                        const distance = total * i / (count - 1);
+                        while (segment < cumulative.length - 1 && cumulative[segment] < distance)
+                            segment++;
+                        const a = preview.points[segment - 1], b = preview.points[segment], t = (distance - cumulative[segment - 1]) / (cumulative[segment] - cumulative[segment - 1] || 1);
                         const n = this.aimNodes[i];
                         n.active = true;
-                        n.setPosition(p.x, GROUND_EFFECT + .01, -p.y);
+                        n.setPosition(a.x + (b.x - a.x) * t, GROUND_EFFECT + .01, -a.y - (b.y - a.y) * t);
                         n.setScale(i === 0 ? 1.3 : 1, 1, i === 0 ? 1.3 : 1);
                     }
                     const end = preview.points[preview.points.length - 1];
@@ -709,6 +822,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     dt = Math.min(dt, .05);
                     this.time += dt;
                     if (Math.abs(cc_1.view.getVisibleSize().height - this.lastHeight) > 1) {
+                        this.cancelDrag();
                         this.resize();
                         if (this.page === 'game')
                             this.drawHud();
@@ -720,7 +834,10 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (this.background || this.adBusy)
                         return;
                     if (this.page === 'game') {
-                        this.model.step(dt);
+                        if (this.hitStop > 0)
+                            this.hitStop = Math.max(0, this.hitStop - dt);
+                        else
+                            this.model.step(dt);
                         for (const event of this.model.drainEvents())
                             this.handleEvent(event);
                         if (this.model.state.phase !== this.phase) {
@@ -741,24 +858,54 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             this.persist();
                         }
                     }
+                    this.launchKick = Math.max(0, this.launchKick - dt * 5);
                     this.updateWorld(dt);
                     this.updateSparks(dt);
+                    this.updateStick(dt);
                     this.tipTimer = Math.max(0, this.tipTimer - dt);
-                    this.shake = Math.max(0, this.shake - dt * 1.5);
-                    this.cameraNode.setPosition(this.cameraBase.x + (Math.random() - .5) * this.shake * .18, this.cameraBase.y, this.cameraBase.z + (Math.random() - .5) * this.shake * .18);
+                    this.shake = Math.max(0, this.shake - dt * 2.5);
+                    this.cameraNode.setPosition(this.cameraBase.x + Math.sin(this.time * 75) * this.shake * .085, this.cameraBase.y, this.cameraBase.z + Math.cos(this.time * 67) * this.shake * .06);
+                }
+                updateStick(dt) {
+                    if (!this.stick || this.page !== 'game')
+                        return;
+                    if (!this.dragging) {
+                        const fade = Math.exp(-dt * 24);
+                        this.stickOffset.multiplyScalar(fade);
+                        if (this.stickOffset.length() < .05)
+                            this.stickOffset.set(0, 0);
+                    }
+                    this.stick.thumb.setPosition(this.stickOffset.x, this.stickOffset.y, 0);
+                    const g = this.stick.meter;
+                    g.clear();
+                    if (this.stickEngaged) {
+                        g.lineWidth = 5;
+                        g.strokeColor = GameUI_1.rgba(this.dragPower > .9 ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.mint, 240);
+                        g.arc(0, 0, 101, Math.PI / 2, Math.PI / 2 - this.dragPower * Math.PI * 2, true);
+                        g.stroke();
+                    }
+                    const opacity = this.stick.root.getComponent(cc_1.UIOpacity) || this.stick.root.addComponent(cc_1.UIOpacity);
+                    opacity.opacity = this.model.state.phase === 'aiming' ? 255 : 165;
+                    if (this.stick.glow.active)
+                        this.stick.glow.setScale(1 + Math.sin(this.time * 5) * .008, 1 + Math.sin(this.time * 5) * .008, 1);
                 }
                 animateActor(v, x, y, vx, vy, dt, isHero = false) {
                     const speed = Math.hypot(vx, vy), moving = speed > .3, phase = this.time * (moving ? 14 : 3) + v.phase;
                     const root = v.instance.root;
                     root.setPosition(x, GROUND + (moving ? .07 + Math.abs(Math.sin(phase)) * .04 : .025 + Math.sin(phase) * .025), -y);
-                    if (moving)
-                        root.setRotationFromEuler(0, Math.atan2(vx, -vy) * 180 / Math.PI, 0);
+                    if (moving) {
+                        const target = Math.atan2(vx, -vy) * 180 / Math.PI, delta = ((target - root.eulerAngles.y + 540) % 360) - 180;
+                        root.setRotationFromEuler(0, root.eulerAngles.y + delta * (1 - Math.exp(-dt * 30)), 0);
+                    }
                     else if (this.page === 'home' && isHero)
                         root.setRotationFromEuler(0, Math.sin(this.time * .4) * 12, 0);
-                    else if (isHero && this.dragging)
-                        root.setRotationFromEuler(0, Math.atan2(this.lastAim.x, -this.lastAim.y) * 180 / Math.PI, 0);
+                    else if (isHero && this.dragging && this.stickEngaged) {
+                        const target = Math.atan2(this.lastAim.x, -this.lastAim.y) * 180 / Math.PI, delta = ((target - root.eulerAngles.y + 540) % 360) - 180;
+                        root.setRotationFromEuler(0, root.eulerAngles.y + delta * (1 - Math.exp(-dt * 22)), 0);
+                    }
                     const squat = isHero && this.dragging ? 1 - this.dragPower * .12 : 1;
-                    root.setScale(v.scale * (1 + (1 - squat) * .3), v.scale * squat, v.scale * (1 + (1 - squat) * .3));
+                    const kick = isHero ? this.launchKick : 0;
+                    root.setScale(v.scale * (1 + (1 - squat) * .3 - kick * .07), v.scale * (squat - kick * .09), v.scale * (1 + (1 - squat) * .3 + kick * .21));
                     for (const [name, node] of v.instance.parts) {
                         const base = v.instance.baseEuler.get(name);
                         let ex = base.x, ey = base.y, ez = base.z;
@@ -767,11 +914,11 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             ey += Math.sin(phase * .6) * 3;
                         }
                         else if (name.includes('.arm.')) {
-                            ex += Math.sin(phase + (name.endsWith('L') ? 0 : Math.PI)) * (moving ? 32 : 4);
+                            ex += isHero && moving ? -36 + Math.sin(phase) * 7 : Math.sin(phase + (name.endsWith('L') ? 0 : Math.PI)) * (moving ? 32 : 4);
                             ez += (name.endsWith('L') ? 1 : -1) * (moving ? 10 : 0);
                         }
                         else if (name.includes('.leg.'))
-                            ex += Math.sin(phase + (name.endsWith('L') ? Math.PI : 0)) * (moving ? 34 : 2);
+                            ex += Math.sin(phase + (name.endsWith('L') ? Math.PI : 0)) * (moving ? (isHero ? 18 : 34) : 2);
                         else if (name.endsWith('.tail'))
                             ey += Math.sin(phase) * 15;
                         else if (name.endsWith('.body'))
@@ -784,10 +931,27 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     v.shadow.setPosition(x, GROUND_EFFECT, -y);
                 }
                 updateWorld(dt) {
+                    if (this.page === 'home' && this.homeActor) {
+                        this.animateActor(this.homeActor, -.65, -1.6, 0, 0, dt, true);
+                        if (this.homeGuard)
+                            this.animateActor(this.homeGuard, 2.25, 1.3, 0, 0, dt);
+                        return;
+                    }
                     const s = this.model.state, p = s.player;
                     if (!this.hero)
                         return;
                     this.animateActor(this.hero, p.x, p.y, this.page === 'game' ? p.vx : 0, this.page === 'game' ? p.vy : 0, dt, true);
+                    this.trailClock += dt;
+                    if (this.page === 'game' && s.phase === 'moving' && Math.hypot(p.vx, p.vy) > 2.5 && this.trailClock > .045) {
+                        this.trailClock = 0;
+                        const trail = this.trails.find(t => t.life <= 0);
+                        if (trail) {
+                            trail.life = .28;
+                            trail.node.active = true;
+                            trail.node.setPosition(p.x, GROUND_EFFECT + .006, -p.y);
+                            trail.node.setRotationFromEuler(0, Math.atan2(p.vx, -p.vy) * 180 / Math.PI, 0);
+                        }
+                    }
                     if (this.heroRing) {
                         this.heroRing.setPosition(p.x, GROUND_EFFECT + .01, -p.y);
                         this.heroRing.active = this.page === 'game';
@@ -886,10 +1050,22 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const sounds = { shot: 'launch', bounce: 'stone_hit', board_hit: 'wood_hit', board_break: 'wood_break', cabinet_push: 'cabinet_push', enemy_hit: 'enemy_hit', enemy_down: 'enemy_down', arrow: 'arrow', arrow_blocked: 'arrow_blocked', damage: 'danger', treasure: 'loot', victory: 'win', game_over: 'lose', room_clear: 'loot', tool_used: 'tool' };
                     if (sounds[e.type])
                         this.audio.play(sounds[e.type], e.type === 'bounce' ? .4 : 1);
+                    if (e.type === 'shot') {
+                        this.launchKick = 1;
+                        this.burst(e.x, e.y, 1, 4);
+                    }
                     if (['board_break', 'enemy_hit', 'enemy_down', 'cabinet_push', 'arrow_blocked', 'treasure', 'damage'].includes(e.type))
                         this.burst(e.x, e.y, e.type === 'damage' ? 3 : e.type === 'treasure' ? 0 : 2, e.type === 'board_break' ? 14 : 8);
                     if (['enemy_hit', 'board_break', 'cabinet_push', 'damage'].includes(e.type)) {
-                        this.shake = Math.max(this.shake, e.type === 'damage' ? .65 : .28);
+                        this.shake = Math.max(this.shake, e.type === 'damage' ? .65 : .34);
+                        this.hitStop = Math.max(this.hitStop, e.type === 'damage' ? .04 : .025);
+                        const impact = this.impacts.find(i => i.life <= 0);
+                        if (impact) {
+                            impact.life = .24;
+                            impact.size = e.type === 'cabinet_push' ? .7 : .5;
+                            impact.node.active = true;
+                            impact.node.setPosition(e.x, GROUND_EFFECT + .02, -e.y);
+                        }
                         if (e.id && this.enemies.has(e.id))
                             this.enemies.get(e.id).hit = .3;
                     }
@@ -906,7 +1082,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (e.type === 'board_hit') {
                         this.burst(e.x, e.y, 2, 5);
                         this.shake = Math.max(this.shake, .14);
-                        this.floatText('木栏松动', e.x, e.y, GameUI_1.PALETTE.gold);
+                        if (!this.model.state.obstacles.find(o => o.id === e.id)?.destroyed)
+                            this.floatText('木栏松动', e.x, e.y, GameUI_1.PALETTE.gold);
                     }
                     if (e.type === 'arrow_blocked')
                         this.showTip(this.model.state.obstacles.find(o => o.id === e.obstacleId)?.kind === 'cabinet' ? '柜子挡住了箭' : '掩体挡住了箭', 1.5);
@@ -946,6 +1123,23 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         s.node.setRotationFromEuler(this.time * 210, this.time * 100, i * 40);
                         s.node.setScale(s.life / s.max, s.life / s.max, s.life / s.max);
                     }
+                    for (const trail of this.trails) {
+                        if (trail.life <= 0)
+                            continue;
+                        trail.life = Math.max(0, trail.life - dt);
+                        const fade = trail.life / .28;
+                        trail.node.active = fade > 0;
+                        trail.node.setScale(.23 * fade, 1, .48 * fade);
+                    }
+                    for (const impact of this.impacts) {
+                        if (impact.life <= 0)
+                            continue;
+                        impact.life = Math.max(0, impact.life - dt);
+                        const fade = impact.life / .24, radius = impact.size * (2.4 - 1.4 * fade);
+                        impact.node.active = fade > 0;
+                        impact.node.setScale(radius, 1, radius);
+                        impact.material.setProperty('mainColor', GameUI_1.rgba('#ffe0a0', Math.round(fade * 210)));
+                    }
                 }
                 toast(message) {
                     if (!this.floating) {
@@ -964,11 +1158,19 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.persist();
                     this.audio?.dispose();
                     this.ads?.dispose();
+                    if (this.mouseButtonGuard) {
+                        this.inputCanvas?.removeEventListener('mousedown', this.mouseButtonGuard, true);
+                        this.inputCanvas?.removeEventListener('contextmenu', this.mouseButtonGuard, true);
+                        if (typeof window !== 'undefined')
+                            window.removeEventListener('mouseup', this.mouseButtonGuard, true);
+                    }
+                    this.inputCanvas = null;
+                    this.mouseButtonGuard = null;
                     if (globalThis.__MONSTER_DEN__?.controller === this)
                         delete globalThis.__MONSTER_DEN__;
                     this.env?.dispose();
                     this.characters?.dispose();
-                    for (const mat of [this.matShadow, this.matAim, this.matDanger, this.matGold, ...this.sparkMaterials])
+                    for (const mat of [this.matShadow, this.matAim, this.matDanger, this.matGold, ...this.sparkMaterials, ...this.impacts.map(i => i.material)])
                         mat?.destroy();
                     cc_1.input.off(cc_1.Input.EventType.TOUCH_START, this.touchStart, this);
                     cc_1.input.off(cc_1.Input.EventType.TOUCH_MOVE, this.touchMove, this);

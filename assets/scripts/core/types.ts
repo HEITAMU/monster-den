@@ -37,6 +37,7 @@ export interface GameState {
   player: PlayerState; obstacles: ObstacleState[]; enemies: EnemyState[];
   projectiles: ProjectileState[]; treasure: Vec2 & { taken: boolean };
   exit: Vec2 & { radius: number }; turn: number; score: number; rescuesUsed: number;
+  /** elapsed counts real fixed-clock seconds; enemyTime counts nominal physics seconds. */
   shots: number; elapsed: number; enemyTime: number;
 }
 export type GameEventType =
@@ -55,6 +56,10 @@ export interface AimPreview {
   targetId?: string;
 }
 export interface RuntimeState {
+  /** accumulator is wall time; actionAccumulator is a fractional physics-step budget. */
+  actionAccumulator: number;
+  /** Wall-clock time since the current shot/return; flightTime remains nominal physics time. */
+  flightRealTime: number;
   accumulator: number; flightTime: number; settledTime: number;
   lastShotStart: Vec2; hitEnemies: string[]; hitBoards: string[];
   continuingTurn: boolean; nextProjectileId: number; exitWarning: boolean;

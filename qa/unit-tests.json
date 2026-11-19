@@ -1,0 +1,26 @@
+{
+  "candidateVersion": "0.2.0",
+  "command": "node --test --test-reporter=dot tests/*.test.mjs",
+  "exitCode": 0,
+  "total": 98,
+  "passed": 98,
+  "failed": 0,
+  "environment": "Node.js v24.22.3, local test runner; no browser or phone",
+  "sourceFiles": {
+    "tests/audio-catalog.test.mjs": {
+      "sha256": "ace1633abc3756da32eee05f70db8a56c32a551148532a1b7cbaeb68a547731e"
+    },
+    "tests/core.test.mjs": {
+      "sha256": "cf68982e06700756aa9ee69d5d85cae0b5eb5ffd8f61da7b109db19dae6d25ad"
+    },
+    "tests/mesh-codec.test.mjs": {
+      "sha256": "c29141ee13af74024b9544eb76593ca0ebb7753da88cd047d02043cba788e1b3"
+    },
+    "tests/platform.audio.test.mjs": {
+      "sha256": "5813dd773f0bfe5b873ddbf24f85a045761ecff6459dbc256b70c957ab991dab"
+    },
+    "tests/platform.test.mjs": {
+      "sha256": "03bb0d48f3356bd754eb94c9b15df69dcbd642d32396e9d63966f7610dcfe918"
+    }
+  }
+}

@@ -2,10 +2,20 @@ import type { RoomConfig, ToolId } from './types';
 
 export const TUNING = {
   fixedStep: 1 / 120, maxFrameTime: 0.25, playerRadius: 0.38, maxHp: 5,
-  launchMin: 1.9, launchMax: 12.8, drag: 1.36, stopSpeed: 0.24,
+  launchMin: 0.55, launchMax: 12.8, drag: 1.36, stopSpeed: 0.24,
   cabinetDrag: 2.7, cabinetMaxSpeed: 8.5, restitution: 0.70,
   enemyWindup: 0.34, arrowSpeed: 15, invulnerableTime: 0.85,
   treasureRadius: 0.48, exitRadius: 0.8, maxFlightTime: 5.5,
+};
+
+/** Shared design-unit radii. Remap travel after the dead zone to the full 0..1 power range. */
+export const JOYSTICK_TUNING = { deadZone: 7, travel: 75 };
+
+/** Playback pacing only; collision steps, shot distances and interaction forces stay unchanged. */
+export const ACTION_PACING = {
+  flight: 1.5, tail: 3, tailBelowSpeed: 2.8, enemies: 1.5,
+  // Keep the opening of grip/return shots at normal speed for a deliberate tool tap.
+  toolWindow: 0.45,
 };
 
 export const TOOLS: { id: ToolId; name: string; description: string; actionLabel: string }[] = [

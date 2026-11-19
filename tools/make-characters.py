@@ -40,37 +40,41 @@ def material(name, color, rough=0.7, metal=0):
     return mat
 
 M = {
-    'fur': material('Badger | warm slate fur', '#776B60'),
-    'darkfur': material('Badger | espresso mask', '#342B29'),
-    'cream': material('Badger | warm ivory face', '#E6D9BA'),
-    'creamshade': material('Badger | warm underside', '#B3A181'),
+    'fur': material('Badger | clean graphite fur', '#59656A'),
+    'darkfur': material('Badger | charcoal face stripes', '#263139'),
+    'cream': material('Badger | clean cream fur', '#FFF1D3'),
+    'creamshade': material('Badger | warm shaded cream', '#D7C7A1'),
     'nose': material('Nose | satin charcoal', '#211B1B', 0.42),
-    'eye': material('Eyes | ivory', '#EFE3BD', 0.37),
-    'iris': material('Eyes | honey amber', '#AC6F22', 0.37),
+    'eye': material('Eyes | ivory', '#FFF8E8', 0.37),
+    'iris': material('Eyes | honey amber', '#D68A25', 0.37),
     'pupil': material('Eyes | near black', '#161B19', 0.3),
     'highlight': material('Eyes | glint', '#FFF3D5', 0.25),
     'ear': material('Ears | muted clay', '#B7826E'),
-    'leather': material('Gear | worn chestnut leather', '#6B422E'),
-    'leatheredge': material('Gear | ochre leather stitching', '#B78A55'),
-    'boot': material('Boots | charcoal leather', '#383832'),
-    'brass': material('Gear | aged brass', '#C3944B', 0.5, 0.18),
-    'brassdark': material('Gear | patinated brass edge', '#73572F', 0.62, 0.12),
-    'scarf': material('Scarf | burnt vermilion wool', '#BB553E'),
-    'scarfshade': material('Scarf | shaded folds', '#773B30'),
+    'leather': material('Gear | chestnut saddle leather', '#855432'),
+    'leatheredge': material('Gear | honey leather edge', '#D79B57'),
+    'boot': material('Boots | charcoal leather', '#384249'),
+    'brass': material('Gear | warm polished copper', '#E7AD56', 0.39, 0.28),
+    'brassdark': material('Gear | deep copper recess', '#9C622D', 0.5, 0.18),
+    'scarf': material('Scarf | explorer turquoise wool', '#18BCAC'),
+    'scarfshade': material('Scarf | deep teal folds', '#087367'),
+    'scarfedge': material('Scarf | mint stitched fold', '#92F0D2'),
+    'lens': material('Goggles | deep sea glass', '#257F8F', 0.24, 0.15),
+    'lenslight': material('Goggles | reflected mint sky', '#A3F5E9', 0.23, 0.1),
     'claw': material('Claws | old ivory', '#CDBD97'),
-    'green': material('Guard | moss green coat', '#617544'),
-    'greendark': material('Guard | forest shadow', '#344B34'),
-    'fungus': material('Guard | chestnut mushroom cap', '#B2643D'),
-    'funguslight': material('Guard | orange cap edge', '#DA9652'),
-    'fungusspot': material('Guard | mushroom cream spots', '#E1BC7D'),
-    'gills': material('Guard | mushroom gills', '#A88D65'),
-    'lizard': material('Archer | sage scales', '#769665'),
-    'lizarddark': material('Archer | forest scales', '#3C6547'),
-    'lizardlight': material('Archer | pale throat', '#CFBD82'),
-    'shell': material('Boss | burnt bronze shell', '#756044'),
-    'shelledge': material('Boss | copper raised plates', '#B08B4D'),
-    'bossflesh': material('Boss | deep teal hide', '#3F6862'),
-    'bosslight': material('Boss | sage skin fold', '#739284'),
+    'green': material('Guard | moss green coat', '#74894B'),
+    'greendark': material('Guard | forest shadow', '#405F40'),
+    'fungus': material('Guard | coral red cap', '#E45B4D'),
+    'funguslight': material('Guard | warm salmon cap rim', '#F89B68'),
+    'fungusspot': material('Guard | ivory cap islands', '#FFF2CE'),
+    'gills': material('Guard | golden cream gills', '#C6A66E'),
+    'lizard': material('Archer | emerald scales', '#3EB679'),
+    'lizarddark': material('Archer | deep green scales', '#17664F'),
+    'lizardlight': material('Archer | pale yellow throat', '#D9EAA4'),
+    'shell': material('Boss | midnight blue carapace', '#274B73'),
+    'shelllight': material('Boss | raised blue enamel plates', '#426F98'),
+    'shelledge': material('Boss | warm copper armor trim', '#E8A95D'),
+    'bossflesh': material('Boss | deep blue teal hide', '#3B7880'),
+    'bosslight': material('Boss | cool sage skin folds', '#87B2A2'),
 }
 
 def parent_keep(obj, parent):
@@ -215,6 +219,26 @@ def face_patch(name, profile, mat, parent, steps=16):
     faces=[(i*2,i*2+1,i*2+3,i*2+2) for i in range(len(profile)-1)]
     return mesh_obj(name,verts,faces,mat,parent)
 
+def oval_medallion(name, center, radius_x, radius_y, normal, rim, fill, parent):
+    """A domed inset and a real round metal rim, legible at the play camera."""
+    c=Vector(center);n=Vector(normal).normalized();u=Vector((1,0,0))
+    u=(u-n*u.dot(n)).normalized();v=n.cross(u).normalized()
+    segments=24
+    points=[tuple(c+u*math.cos(i*math.tau/segments)*radius_x+v*math.sin(i*math.tau/segments)*radius_y) for i in range(segments+1)]
+    tube(name+'.forged-rim',points,[.025]*(segments+1),rim,parent,8)
+    verts=[tuple(c+n*.035)];faces=[]
+    for ring,r in enumerate([.40,.75,1.0]):
+        for i in range(segments):
+            a=i*math.tau/segments
+            verts.append(tuple(c+u*math.cos(a)*radius_x*r+v*math.sin(a)*radius_y*r+n*(.035*(1-r*r))))
+    for i in range(segments):faces.append((0,1+i,1+(i+1)%segments))
+    for ring in range(2):
+        for i in range(segments):
+            a=1+ring*segments+i;b=1+ring*segments+(i+1)%segments
+            faces.append((a,a+segments,b+segments,b))
+    mesh_obj(name+'.convex-inset',verts,faces,fill,parent)
+    return c,u,v,n
+
 def eye(prefix, x, y, z, parent, scale=1, angry=False):
     s=scale
     ellipsoid(prefix+'.socket',(x,y+.012*s,z),(.123*s,.044*s,.104*s),M['darkfur'],parent,16,8)
@@ -286,7 +310,7 @@ def make_hero():
             base=(side*(.32+i*.013),.022-i*.029,1.30-i*.055)
             tip=(side*(.47-i*.016),-.01-i*.02,1.30-i*.063)
             horn(f'hero.cheek-tuft.{side}.{i}',base,tip,.079-i*.012,M['fur'] if i>0 else M['cream'],head,bend=(0,-.02,.018),sides=7)
-        eye(f'hero.eye.{side}',side*.207,-.306,1.466,head,.90,True)
+        eye(f'hero.eye.{side}',side*.207,-.312,1.466,head,1.02,False)
         stroke(f'hero.brow.{side}',[(side*.115,-.313,1.58),(side*.22,-.299,1.613),(side*.312,-.239,1.588)],.027,M['cream'],head,resolution=4)
 
     # Low, broad muzzle and triangular satin nose establish a badger rather than a sphere mascot.
@@ -303,16 +327,32 @@ def make_hero():
         for i in range(2):
             ellipsoid(f'hero.whisker-dimple.{side}.{i}',(side*(.10+i*.04),-.449+i*.015,1.29+i*.012),(.009,.004,.009),M['creamshade'],head,6,4)
 
+    # Raised explorer goggles are worn on the crown, with readable top/side
+    # volume. They do not hide the eyes, and use no texture or flat decal.
+    stroke('hero.goggles-leather-band',[(-.39,-.015,1.70),(-.35,.16,1.67),(0,.273,1.65),(.35,.16,1.67),(.39,-.015,1.70)],.043,M['leather'],head,resolution=4)
+    stroke('hero.goggles-band-edge',[(-.39,.01,1.727),(-.34,.17,1.697),(0,.279,1.677),(.34,.17,1.697),(.39,.01,1.727)],.009,M['brass'],head,resolution=4)
+    for side in(-1,1):
+        c,u,v,n=oval_medallion(f'hero.crown-goggle.{side}',(side*.18,-.18,1.79),.143,.108,(0,-.68,.735),M['brass'],M['lens'],head)
+        highlight=[tuple(c+u*x+v*y+n*.034) for x,y in [(-.087,.025),(-.055,.065),(.009,.075)]]
+        stroke(f'hero.goggle-reflection.{side}',highlight,.012,M['lenslight'],head,resolution=4)
+        box(f'hero.goggle-hinge.{side}',(side*.351,-.146,1.77),(.036,.04,.035),M['brassdark'],head,.012,2)
+    tube('hero.goggle-bridge',[(-.052,-.198,1.81),(0,-.211,1.827),(.052,-.198,1.81)],[.024,.028,.024],M['brass'],head,8)
+
     # Short scarf: folded collar with cloth tails, not a flat cape.
     collar=[(-.20,-.01,1.06),(-.15,-.17,1.045),(0,-.205,1.02),(.18,-.16,1.055),(.21,.025,1.075),(.10,.18,1.085),(-.10,.18,1.08),(-.20,-.01,1.06)]
-    stroke('hero.scarf-collar',collar,.063,M['scarf'],root,resolution=4)
+    stroke('hero.scarf-collar',collar,.082,M['scarf'],root,resolution=4)
     stroke('hero.scarf-fold',[(-.12,-.212,1.04),(0,-.235,1.025),(.14,-.199,1.062)],.012,M['scarfshade'],root,resolution=4)
-    cloth_verts=[(-.035,.18,1.08),(.11,.18,1.08),(.15,.31,.98),(.045,.37,.89),(-.01,.29,.83),(-.10,.28,.96)]
+    cloth_verts=[(-.055,.18,1.09),(.11,.18,1.09),(.34,.31,1.04),(.45,.37,.94),(.28,.39,.87),(.13,.33,.92)]
     cloth_faces=[(0,1,2,3,4,5)]
     cloth=mesh_obj('hero.scarf-tail',cloth_verts,cloth_faces,M['scarf'],scarf)
-    mod=cloth.modifiers.new('wool thickness','SOLIDIFY');mod.thickness=.023
+    mod=cloth.modifiers.new('wool thickness','SOLIDIFY');mod.thickness=.033
     mod=cloth.modifiers.new('rounded cloth','BEVEL');mod.width=.018;mod.segments=2
-    stroke('hero.scarf-tail-fold',[(.02,.20,1.07),(.045,.28,.98),(.012,.31,.88)],.008,M['scarfshade'],scarf,resolution=4)
+    stroke('hero.scarf-tail-fold',[(.03,.20,1.095),(.20,.30,1.015),(.35,.36,.94)],.014,M['scarfedge'],scarf,resolution=4)
+    bib=mesh_obj('hero.folded-scarf-bib',[(-.215,-.187,1.075),(.185,-.19,1.07),(-.17,-.267,.93),(.025,-.31,.92),(.16,-.26,.94),(-.015,-.30,.765)],
+         [(0,2,3),(0,3,1),(1,3,4),(2,5,3),(3,5,4)],M['scarf'],root)
+    mod=bib.modifiers.new('woven cloth body','SOLIDIFY');mod.thickness=.035
+    mod=bib.modifiers.new('soft cloth hem','BEVEL');mod.width=.014;mod.segments=2
+    stroke('hero.scarf-bib-hem',[(-.16,-.285,.93),(-.015,-.324,.785),(.145,-.278,.94)],.012,M['scarfedge'],root,resolution=3)
 
     # Cross-body leather strap and brass clasp.
     strap=[(-.255,-.105,1.025),(-.19,-.21,.94),(-.07,-.244,.80),(.06,-.245,.68),(.195,-.19,.53),(.275,-.08,.46)]
@@ -325,6 +365,10 @@ def make_hero():
     box('hero.pouch-flap',(.281,-.198,.547),(.099,.018,.060),M['leatheredge'],root,.025,3,rotation=(.1,-.12,-.13))
     ellipsoid('hero.pouch-button',(.285,-.219,.52),(.020,.010,.020),M['brass'],root,10,6)
     stroke('hero.pouch-seam',[(.205,-.201,.51),(.211,-.204,.421),(.285,-.211,.398),(.355,-.189,.429)],.005,M['leatheredge'],root,resolution=3)
+    box('hero.explorer-backpack',(0,.245,.80),(.178,.125,.225),M['leather'],root,.075,3)
+    box('hero.backpack-folded-flap',(0,.352,.93),(.171,.04,.105),M['leatheredge'],root,.038,3)
+    box('hero.backpack-copper-clasp',(0,.398,.865),(.043,.014,.049),M['brass'],root,.013,2)
+    stroke('hero.pack-top-handle',[(-.08,.27,1.035),(-.06,.28,1.12),(.06,.28,1.12),(.08,.27,1.035)],.018,M['leatheredge'],root,resolution=3)
 
     for side,joint in [(-1,armL),(1,armR)]:
         tube(f'hero.arm.{side}.skin',[(side*.28,.005,.99),(side*.355,.015,.89),(side*.412,-.005,.76),(side*.425,-.072,.64),(side*.402,-.115,.57)], [.12,.13,.105,.093,.085],M['fur'],joint,12,1.02)
@@ -333,16 +377,20 @@ def make_hero():
         stroke(f'hero.pauldron-rim.{side}',[(side*.22,-.14,.948),(side*.36,-.179,.932),(side*.491,-.10,.934),(side*.48,.11,.952)],.014,M['brassdark'],joint,resolution=4)
         for z in(.963,.925):
             ellipsoid(f'hero.rivet.{side}.{z}',(side*.396,-.167,z),(.012,.008,.012),M['brassdark'],joint,8,5)
-        tube(f'hero.wrist-cuff.{side}',[(side*.423,-.080,.66),(side*.416,-.103,.616)], [.106,.102],M['leather'],joint,12)
-        ellipsoid(f'hero.paw.{side}',(side*.405,-.132,.548),(.103,.085,.102),M['darkfur'],joint,14,8)
-        ellipsoid(f'hero.thumb.{side}',(side*.332,-.145,.559),(.044,.052,.054),M['darkfur'],joint,10,6)
+        tube(f'hero.wrist-cuff.{side}',[(side*.415,-.080,.69),(side*.409,-.103,.614)], [.124,.118],M['scarfshade'],joint,12)
+        loft(f'hero.forged-leather-mitt.{side}',[(side*.40,-.13,.448,.06,.061),(side*.405,-.14,.49,.116,.087),
+             (side*.407,-.13,.56,.124,.099),(side*.412,-.105,.615,.108,.083),(side*.414,-.10,.635,.082,.069)],M['leatheredge'],joint,16)
+        ellipsoid(f'hero.thumb.{side}',(side*.326,-.157,.559),(.052,.063,.065),M['leather'],joint,12,8)
+        stroke(f'hero.glove-knuckle-seam.{side}',[(side*.40-.085,-.219,.564),(side*.40,-.241,.574),(side*.40+.085,-.218,.564)],.013,M['brassdark'],joint,resolution=4)
         for i in range(3):
             x=side*.405+(i-1)*.047
             horn(f'hero.hand-claw.{side}.{i}',(x,-.192,.527),(x,-.237,.483),.017,M['claw'],joint,bend=(0,-.012,.008),sides=7)
 
     for side,joint in [(-1,legL),(1,legR)]:
         tube(f'hero.leg.{side}.skin',[(side*.165,.03,.40),(side*.19,.027,.30),(side*.185,-.012,.16)], [.125,.12,.092],M['darkfur'],joint,12,1.05)
-        ellipsoid(f'hero.boot.{side}',(side*.19,-.095,.115),(.143,.215,.109),M['boot'],joint,16,8)
+        ellipsoid(f'hero.boot.{side}',(side*.19,-.095,.124),(.15,.225,.12),M['boot'],joint,18,10)
+        loft(f'hero.boot-high-cuff.{side}',[(side*.185,.005,.17,.12,.105),(side*.185,.009,.24,.132,.113),
+             (side*.183,.014,.30,.124,.105),(side*.183,.014,.315,.11,.098)],M['leather'],joint,14)
         stroke(f'hero.boot-sole.{side}',[(side*.19-.11,-.23,.058),(side*.19,-.292,.048),(side*.19+.11,-.23,.058)],.014,M['leather'],joint,resolution=4)
         for i in range(3):
             x=side*.19+(i-1)*.061
@@ -353,7 +401,10 @@ def make_hero():
     tube('hero.fluffy-tail',[(0,.20,.52),(0,.34,.52),(.03,.47,.59),(.05,.55,.72),(.045,.54,.82)], [.12,.15,.13,.095,.015],M['fur'],tail,12,1)
     for i in range(3):
         horn(f'hero.tail-tip.{i}',(-.05+i*.05,.49,.73),(-.07+i*.065,.55,.87),.05,M['creamshade'],tail,sides=7)
-    root['description']='Original badger raider: sculpted face mask, eyelids, clawed paws, brass shoulder plates, stitched satchel and wool scarf.'
+    # Keep the torso and ground footprint unchanged: only the head gets the
+    # readable chibi silhouette, around its original animation pivot.
+    head.scale=(1.095,1.075,1.10)
+    root['description']='Cream-and-charcoal badger explorer with crown-mounted copper goggles, turquoise folded scarf, thick leather mitts, stout boots and a stitched pack.'
     return root
 
 def carved_plate(name, outline, thickness, mat, parent, bevel=.018):
@@ -377,7 +428,7 @@ def make_guard():
     loft('guard.fungal-stalk',[(0,.035,.28,.13,.12),(0,.025,.38,.255,.20),(0,.028,.64,.29,.225),
          (0,.02,.86,.26,.20),(0,.015,.97,.19,.15),(0,.01,1.05,.14,.12)],M['green'],root,24)
     loft('guard.face-stalk',[(0,0,.91,.12,.10),(0,-.01,1.02,.20,.16),(0,-.01,1.16,.263,.21),
-         (0,.01,1.31,.283,.225),(0,.02,1.45,.255,.19),(0,.02,1.50,.19,.15)],M['creamshade'],head,24)
+         (0,.01,1.31,.283,.225),(0,.02,1.45,.255,.19),(0,.02,1.50,.19,.15)],M['cream'],head,24)
     # Sculpted cap, rolled irregular lip and a radial underside.
     caprows=[(0,.05,1.42,.055,.045),(0,.04,1.405,.28,.22),(0,.045,1.44,.49,.365),
              (0,.05,1.49,.585,.43),(0,.055,1.55,.595,.44),(0,.07,1.65,.51,.38),
@@ -395,14 +446,14 @@ def make_guard():
         stroke(f'guard.cap-gill.{s}',[(.18*math.cos(angle),.04+.14*math.sin(angle),1.413),
                (.34*math.cos(angle),.045+.25*math.sin(angle),1.408),
                (.53*math.cos(angle),.05+.385*math.sin(angle),1.455)],.009,M['gills'],head,resolution=3)
-    spots=[(-.28,-.20,1.70,.085,.055),(.17,-.24,1.74,.072,.05),(.40,-.06,1.66,.065,.05),
-           (-.38,.13,1.65,.08,.054),(.025,.03,1.852,.079,.06),(.22,.27,1.73,.067,.045),(-.14,.32,1.75,.055,.035)]
+    spots=[(-.28,-.20,1.70,.105,.071),(.17,-.24,1.74,.09,.063),(.40,-.06,1.66,.08,.061),
+           (-.38,.13,1.65,.10,.067),(.025,.03,1.852,.12,.082),(.22,.27,1.73,.082,.057),(-.14,.32,1.75,.069,.046)]
     for i,(x,y,z,sx,sy) in enumerate(spots):
         spot=ellipsoid(f'guard.cap-spot.{i}',(x,y,z), (sx,sy,.014),M['fungusspot'],head,12,7)
         normal=Vector((x*.8,(y-.07)*1.1,max(.2,z-1.4))).normalized()
         spot.rotation_euler=normal.to_track_quat('Z','Y').to_euler()
-    eye('guard.eye.L',-.123,-.218,1.23,head,.72,True)
-    eye('guard.eye.R',.123,-.218,1.23,head,.72,True)
+    eye('guard.eye.L',-.123,-.225,1.23,head,.84,True)
+    eye('guard.eye.R',.123,-.225,1.23,head,.84,True)
     ellipsoid('guard.bulb-nose',(0,-.255,1.16),(.065,.071,.061),M['cream'],head,12,8)
     stroke('guard.grumbling-mouth',[(-.083,-.218,1.065),(0,-.239,1.08),(.087,-.217,1.065)],.011,M['darkfur'],head,resolution=4)
     for side in(-1,1):
@@ -422,6 +473,8 @@ def make_guard():
     # A leaf-shaped seedpod shield and a crooked wooden baton.
     shieldpoints=[(-.34,-.22,1.02),(-.19,-.24,.90),(-.16,-.25,.67),(-.25,-.25,.47),(-.37,-.26,.41),(-.52,-.23,.60),(-.54,-.20,.85),(-.44,-.20,.99)]
     carved_plate('guard.carved-seedpod-shield',shieldpoints,.066,M['leather'],left,.032)
+    stroke('guard.shield-carved-border',[(-.34,-.27,1.00),(-.23,-.285,.89),(-.20,-.30,.67),(-.29,-.31,.48),
+           (-.37,-.31,.45),(-.48,-.28,.61),(-.50,-.26,.84),(-.43,-.26,.95),(-.34,-.27,1.00)],.018,M['leatheredge'],left,resolution=3)
     stroke('guard.shield-ridge',[(-.35,-.265,.97),(-.32,-.292,.77),(-.36,-.30,.49)],.025,M['leatheredge'],left,resolution=5)
     stroke('guard.shield-leaf-vein.L',[(-.35,-.293,.76),(-.46,-.274,.87)],.012,M['brassdark'],left,resolution=3)
     stroke('guard.shield-leaf-vein.R',[(-.34,-.294,.72),(-.23,-.278,.82)],.012,M['brassdark'],left,resolution=3)
@@ -435,7 +488,7 @@ def make_guard():
         ellipsoid(f'guard.root-foot.{side}',(side*.17,-.092,.09),(.13,.18,.089),M['greendark'],joint,14,8)
         for i in range(2):
             horn(f'guard.root-toe.{side}.{i}',(side*.17+(i-.5)*.077,-.22,.08),(side*.17+(i-.5)*.10,-.29,.028),.038,M['green'],joint,sides=7)
-    root['description']='A living mushroom watchman with sculpted gills, a seedpod shield and a crooked wooden baton.'
+    root['description']='Coral-capped mushroom watchman, with broad ivory cap islands, a cream face, folded green tabard and carved seedpod shield.'
     return root
 
 def make_archer():
@@ -448,7 +501,9 @@ def make_archer():
     loft('archer.flexible-torso',[(0,.035,.35,.13,.12),(0,.03,.48,.205,.17),(0,.025,.66,.22,.18),
          (0,.015,.85,.21,.175),(0,.01,1.00,.185,.15),(0,.01,1.14,.125,.12)],M['lizard'],root,24)
     ellipsoid('archer.pale-throat',(0,-.133,.86),(.142,.057,.26),M['lizardlight'],root,18,10)
-    ellipsoid('archer.cheek-skull',(0,-.008,1.34),(.27,.265,.262),M['lizard'],head,22,14)
+    loft('archer.continuous-angular-skull',[(0,-.008,1.095,.11,.10),(0,-.015,1.16,.20,.19),
+         (0,-.015,1.29,.27,.245),(0,-.012,1.43,.285,.24),(0,.004,1.54,.245,.195),
+         (0,.025,1.61,.145,.11),(0,.026,1.63,.04,.035)],M['lizard'],head,26)
     tube('archer.long-snout',[(0,-.12,1.35),(0,-.29,1.315),(0,-.46,1.29),(0,-.60,1.27),(0,-.65,1.26)],
          [.19,.178,.128,.085,.065],M['lizard'],head,16,.62)
     tube('archer.lower-jaw',[(0,-.22,1.21),(0,-.40,1.205),(0,-.58,1.22)], [.14,.108,.058],M['lizardlight'],head,12,.45)
@@ -460,7 +515,7 @@ def make_archer():
         horn(f'archer.little-fang.{side}',(side*.13,-.37,1.235),(side*.132,-.377,1.195),.015,M['claw'],head,sides=6)
     for i in range(4):
         y=-.02+i*.085;z=1.59-i*.022
-        horn(f'archer.head-crest.{i}',(0,y,z),(0,y+.055,z+.12-i*.009),.055-i*.005,M['funguslight'],head,bend=(0,.015,.025),sides=7)
+        horn(f'archer.head-crest.{i}',(0,y,z),(0,y+.075,z+.17-i*.018),.061-i*.006,M['funguslight'],head,bend=(0,.015,.035),sides=8)
     # Light leather harness, small scale skirts and a usable crossbow.
     stroke('archer.shoulder-strap',[(-.16,-.06,1.04),(-.11,-.17,.93),(.03,-.195,.72),(.15,-.12,.49)],.027,M['leather'],root,resolution=5)
     box('archer.strap-clasp',(-.04,-.214,.82),(.04,.015,.045),M['brass'],root,.009,2)
@@ -473,12 +528,14 @@ def make_archer():
         ellipsoid(f'archer.hand.{side}',(side*.12,-.355,.79),(.062,.06,.058),M['lizardlight'],joint,12,7)
         for i in range(2):
             tube(f'archer.finger.{side}.{i}',[(side*.12+(i-.5)*.035,-.393,.81),(side*.12+(i-.5)*.035,-.418,.77)], [.017,.011],M['lizard'],joint,6)
-    box('archer.crossbow-stock',(0,-.40,.78),(.043,.18,.035),M['leather'],weapon,.018,2)
-    stroke('archer.carved-crossbow-limb',[(-.335,-.385,.80),(-.22,-.493,.82),(0,-.53,.82),(.22,-.493,.82),(.335,-.385,.80)],.027,M['leatheredge'],weapon,resolution=5)
-    stroke('archer.bowstring',[(-.335,-.385,.80),(0,-.30,.815),(.335,-.385,.80)],.006,M['claw'],weapon,resolution=3)
+    box('archer.crossbow-stock',(0,-.40,.78),(.056,.19,.044),M['leather'],weapon,.021,2)
+    stroke('archer.carved-crossbow-limb',[(-.39,-.385,.81),(-.26,-.505,.84),(0,-.55,.84),(.26,-.505,.84),(.39,-.385,.81)],.038,M['leatheredge'],weapon,resolution=5)
+    stroke('archer.bowstring',[(-.39,-.385,.81),(0,-.30,.835),(.39,-.385,.81)],.009,M['claw'],weapon,resolution=3)
     tube('archer.loaded-bolt',[(0,-.31,.836),(0,-.62,.836)],[.009,.008],M['brassdark'],weapon,6)
     horn('archer.arrowhead',(0,-.60,.836),(0,-.695,.836),.024,M['brass'],weapon,sides=6)
-    box('archer.crossbow-guide',(0,-.47,.815),(.055,.038,.025),M['brass'],weapon,.009,2)
+    box('archer.crossbow-guide',(0,-.47,.835),(.069,.045,.032),M['brass'],weapon,.012,2)
+    for side in(-1,1):
+        box(f'archer.crossbow-copper-tip.{side}',(side*.37,-.405,.818),(.041,.035,.04),M['brass'],weapon,.012,2,rotation=(0,0,side*.35))
     # Tail is a continuous curved skin; the tip curls out to remain readable from above.
     tailpoints=[(0,.17,.48),(.045,.31,.42),(.14,.48,.31),(.27,.60,.23),(.43,.64,.27),(.54,.55,.37),(.53,.45,.43)]
     tube('archer.long-curled-tail',tailpoints,[.115,.11,.09,.068,.05,.027,.003],M['lizard'],tail,12,.8)
@@ -496,7 +553,7 @@ def make_archer():
         for i in range(3):
             x=side*.18+(i-1)*.05
             horn(f'archer.toe.{side}.{i}',(x,-.18,.064),(x+(i-1)*.02,-.265,.018),.022,M['claw'],joint,sides=6)
-    root['description']='A long-muzzled lizard bolt-keeper with folded limbs, expressive eyelids, a crafted crossbow and a curling tail.'
+    root['description']='Emerald long-muzzled lizard bolt-keeper with a salmon crown crest, bold leather harness, copper-bound curved crossbow and curling tail.'
     return root
 
 def make_boss():
@@ -510,6 +567,16 @@ def make_boss():
     ellipsoid('boss.belly',(0,-.268,.74),(.375,.104,.34),M['bosslight'],root,22,12)
     # Continuous convex shell with raised, curved armored ribs.
     ellipsoid('boss.carapace',(0,.18,1.035),(.625,.435,.61),M['shell'],shell,28,16)
+    # Large interlocking crown plates establish an armored silhouette from
+    # above. Each plate has a raised ridge and thickness, not painted lines.
+    for side in(-1,1):
+        vertices=[(side*.05,-.035,1.56),(side*.29,-.015,1.54),(side*.48,.18,1.43),
+                  (side*.38,.42,1.45),(side*.12,.46,1.57),(side*.03,.22,1.66),(side*.22,.22,1.665)]
+        faces=[(6,i,(i+1)%6) if side>0 else (6,(i+1)%6,i) for i in range(6)]
+        plate=mesh_obj(f'boss.raised-crown-plate.{side}',vertices,faces,M['shelllight'],shell)
+        mod=plate.modifiers.new('thick chitin plates','SOLIDIFY');mod.thickness=.035
+        mod=plate.modifiers.new('worn armor edges','BEVEL');mod.width=.018;mod.segments=2
+        stroke(f'boss.crown-copper-seam.{side}',[(side*.065,-.025,1.575),(side*.07,.20,1.68),(side*.12,.45,1.59)],.022,M['shelledge'],shell,resolution=4)
     for i,z in enumerate([.64,.87,1.10,1.32]):
         t=(z-1.035)/.61;r=math.sqrt(max(.02,1-t*t));rx=.625*r;ry=.435*r
         pts=[]
@@ -529,8 +596,10 @@ def make_boss():
         stroke(f'boss.angry-brow.{side}',[(side*.10,-.564,1.36),(side*.21,-.565,1.40),(side*.30,-.48,1.42)],.035,M['brassdark'],head,resolution=4)
         tube(f'boss.mandible.{side}',[(side*.255,-.47,1.14),(side*.35,-.57,1.09),(side*.31,-.70,1.10),(side*.19,-.742,1.17),(side*.15,-.70,1.23)],
              [.085,.084,.063,.036,.003],M['claw'],head,10,.78)
-        tube(f'boss.curled-horn.{side}',[(side*.26,-.16,1.51),(side*.35,-.12,1.67),(side*.44,-.19,1.81),(side*.46,-.30,1.84),(side*.39,-.35,1.79)],
-             [.09,.08,.058,.035,.004],M['shelledge'],head,10,.85)
+        tube(f'boss.curled-horn.{side}',[(side*.26,-.16,1.51),(side*.39,-.10,1.73),(side*.53,-.16,1.95),
+             (side*.55,-.29,2.055),(side*.46,-.405,2.025),(side*.36,-.425,1.95)],
+             [.125,.116,.087,.061,.031,.003],M['shelledge'],head,12,.87)
+        tube(f'boss.horn-dark-root.{side}',[(side*.26,-.16,1.51),(side*.305,-.137,1.59)],[.134,.129],M['brassdark'],head,12,.9)
         ellipsoid(f'boss.cheek-ridge.{side}',(side*.34,-.40,1.15),(.085,.14,.11),M['bosslight'],head,12,8)
     ellipsoid('boss.beak',(0,-.572,1.15),(.15,.14,.128),M['brassdark'],head,16,10)
     stroke('boss.mouth', [(-.11,-.652,1.115),(0,-.69,1.09),(.11,-.652,1.115)],.012,M['darkfur'],head,resolution=4)
@@ -554,7 +623,7 @@ def make_boss():
         for i in range(3):
             x=side*.34+(i-1)*.10
             horn(f'boss.foot-talon.{side}.{i}',(x,-.32,.105),(x,-.46,.026),.035,M['claw'],joint,bend=(0,-.018,.02),sides=8)
-    root['description']='A broad plated vault-beast: continuous shell, teal hide, sculpted mandibles, curled horns and thick clawed limbs.'
+    root['description']='Midnight-blue vault beast with raised interlocking crown armor, massive warm-copper curled horns, teal hide and heavy claws.'
     return root
 
 def camera_at(location, target, scale):
@@ -604,7 +673,14 @@ raw_output=PROJECT/'.build/raw-models/characters.json'
 result=export_library(actors,raw_output)
 output=PROJECT/'assets/models/characters.json'
 output.parent.mkdir(parents=True,exist_ok=True)
+# pack_library replaces raw indices in place, so inspect the raw geometry first.
+triangles={key:sum(len(node.get('mesh',{}).get('indices',[]))//3 for node in prefab['nodes']) for key,prefab in result['prefabs'].items()}
+assert all(count>0 for count in triangles.values()), f'Empty character geometry: {triangles}'
+assert sum(triangles.values())<=45000, f'Character triangle budget exceeded: {triangles}'
 output.write_text(json.dumps(pack_library(result),separators=(',',':')),encoding='utf-8')
+assert output.stat().st_size<900*1024, f'Character payload budget exceeded: {output.stat().st_size}'
+print('CHARACTER_BUDGET',json.dumps({'triangles':triangles,'totalTriangles':sum(triangles.values()),'bytes':output.stat().st_size,
+      'nodes':{key:len(prefab['nodes']) for key,prefab in result['prefabs'].items()}},ensure_ascii=False))
 print('Packed q16-n8-c8-v1',output,output.stat().st_size,'bytes; all exported triangles and joints retained')
 
 # Real model preview: studio lighting and camera are not exported into gameplay assets.
@@ -621,6 +697,14 @@ bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'),compress=True)
 bpy.ops.render.render(write_still=True)
 print('CHARACTER_PREVIEW',PREVIEW/'hero-preview.png')
+camera=bpy.context.scene.camera
+camera.location=(0,-8,20.1)
+camera.rotation_euler=(Vector((0,0,.9))-camera.location).to_track_quat('-Z','Y').to_euler()
+camera.data.ortho_scale=2.55
+bpy.context.scene.render.resolution_x=700;bpy.context.scene.render.resolution_y=700
+bpy.context.scene.render.filepath=str(PREVIEW/'hero-game-angle.png')
+bpy.ops.render.render(write_still=True)
+print('CHARACTER_GAME_ANGLE',PREVIEW/'hero-game-angle.png')
 if not HERO_ONLY:
     for key,root in actors.items():
         for obj in root.children_recursive:obj.hide_render=False
@@ -635,3 +719,10 @@ if not HERO_ONLY:
     bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'),compress=True)
     bpy.ops.render.render(write_still=True)
     print('CHARACTER_LINEUP',PREVIEW/'character-lineup.png')
+    camera.location=(.15,-8,20.1)
+    camera.rotation_euler=(Vector((.15,0,.9))-camera.location).to_track_quat('-Z','Y').to_euler()
+    camera.data.ortho_scale=7.85
+    bpy.context.scene.render.resolution_y=650
+    bpy.context.scene.render.filepath=str(PREVIEW/'character-game-angle.png')
+    bpy.ops.render.render(write_still=True)
+    print('CHARACTER_GAME_LINEUP',PREVIEW/'character-game-angle.png')

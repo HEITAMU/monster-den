@@ -13,7 +13,7 @@ registerHooks({
   },
 });
 
-const { GameModel, ROOMS } = await import('../assets/scripts/core/index.ts');
+const { GameModel, ROOMS, TUNING, JOYSTICK_TUNING, ACTION_PACING } = await import('../assets/scripts/core/index.ts');
 
 function room(overrides = {}) {
   return {
@@ -34,9 +34,9 @@ function settle(model) {
 function fireAt(model, x, y, strength) {
   const p = model.state.player;
   const dx = x - p.x, dy = y - p.y, distance = Math.hypot(dx, dy);
-  const drag = 1.36 * (p.tool === 'heavy' ? 1.07 : 1);
+  const drag = TUNING.drag * (p.tool === 'heavy' ? 1.07 : 1);
   const multiplier = p.tool === 'heavy' ? 0.96 : 1;
-  const power = strength ?? Math.max(0, Math.min(1, ((distance + 0.17) * drag / 1.006 / multiplier - 1.9) / 10.9));
+  const power = strength ?? Math.max(0, Math.min(1, ((distance + 0.17) * drag / 1.006 / multiplier - TUNING.launchMin) / (TUNING.launchMax - TUNING.launchMin)));
   assert.equal(model.shoot({ x: dx, y: dy }, power), true);
   settle(model);
 }
@@ -135,6 +135,99 @@ test('repeated and invalid aim requests preserve simulation state and pending ev
     assert.deepEqual(model.snapshot(), before);
   }
   assert.deepEqual(model.drainEvents(), expectedEvents);
+});
+
+test('short joystick travel gives a small nudge and weak/medium/full turns return control promptly', () => {
+  const config = room({ width: 100, height: 100, start: { x: 0, y: 0 },
+    treasure: { x: 40, y: 40 }, exit: { x: -40, y: 40 },
+    enemies: [{ id: 'distant-guard', kind: 'guard', x: 30, y: 30 }] });
+  const cases = [
+    { power: 1 / (JOYSTICK_TUNING.travel - JOYSTICK_TUNING.deadZone), maxSeconds: 1.1, distance: [0.3, 0.5] },
+    { power: 0.11, maxSeconds: 1.45, distance: [1.1, 1.4] },
+    { power: 0.5, maxSeconds: 2.05, distance: [4.6, 4.95] },
+    { power: 1, maxSeconds: 2.35, distance: [9.25, 9.36] },
+  ];
+  for (const { power, maxSeconds, distance } of cases) {
+    const model = new GameModel({ rooms: [config] });
+    model.shoot({ x: 0, y: 1 }, power);
+    let frames = 0;
+    while (model.state.phase !== 'aiming' && frames < 600) { model.step(1 / 120); frames++; }
+    assert.equal(model.state.phase, 'aiming');
+    assert.ok(frames / 120 < maxSeconds, `${power} power turn took ${frames / 120} real seconds`);
+    assert.ok(model.state.player.y >= distance[0] && model.state.player.y <= distance[1]);
+    assert.ok(Math.abs(model.state.elapsed - frames / 120) < 1e-9,
+      'elapsed must count real seconds, not accelerated physics time');
+  }
+});
+
+test('grip and return retain a deliberate tool-tap window even on short nudge shots', () => {
+  const config = room({ width: 100, height: 100, start: { x: 0, y: 0 },
+    treasure: { x: 40, y: 40 }, exit: { x: -40, y: 40 } });
+  for (const tool of ['grip', 'return']) {
+    for (const power of [0.03, 0.11, 0.5, 1]) {
+      const model = new GameModel({ rooms: [config] }); model.equipStartingTool(tool);
+      model.shoot({ x: 0, y: 1 }, power);
+      // A human has half a second after release to move the finger onto the tool button.
+      for (let frame = 0; frame < 30; frame++) model.step(1 / 60);
+      assert.equal(model.state.phase, 'moving', `${tool} ${power}: tool window vanished too soon`);
+      assert.equal(model.state.player.toolReady, true);
+      const turn = model.state.turn;
+      assert.equal(model.activateTool(), true);
+      assert.equal(model.state.turn, turn);
+      assert.equal(model.activateTool(), false);
+    }
+  }
+  assert.ok(ACTION_PACING.tail <= 2 * ACTION_PACING.flight,
+    'Low-speed playback compression must not make the rendered body accelerate as its physics speed falls');
+});
+
+test('paced flight, tools and enemy turns stay identical at 30 and 60 rendered FPS', () => {
+  const config = room({ width: 100, height: 100, start: { x: 0, y: 0 },
+    treasure: { x: 40, y: 40 }, exit: { x: -40, y: 40 },
+    enemies: [{ id: 'distant-guard', kind: 'guard', x: 30, y: 30 }] });
+  for (const tool of ['none', 'heavy', 'grip', 'return']) {
+    for (const power of [0.11, 0.5, 1]) {
+      const a = new GameModel({ rooms: [config] }), b = new GameModel({ rooms: [config] });
+      for (const model of [a, b]) { model.equipStartingTool(tool); model.shoot({ x: 0, y: 1 }, power); }
+      for (let frame = 1; frame <= 180; frame++) {
+        a.step(1 / 60);
+        if (frame % 2) continue;
+        b.step(1 / 30);
+        assert.deepEqual(a.snapshot(), b.snapshot(), `${tool} ${power}: divergence at frame ${frame}`);
+        if (frame === 30 && (tool === 'grip' || tool === 'return')) {
+          for (const model of [a, b]) {
+            assert.equal(model.activateTool(), true);
+            if (tool === 'grip') assert.equal(model.shoot({ x: 1, y: 0 }, 0.3), true);
+          }
+        }
+      }
+      assert.deepEqual(a.drainEvents(), b.drainEvents());
+    }
+  }
+});
+
+test('paced mid-flight saves preserve fractional timing and legacy v1 saves receive safe clock defaults', () => {
+  const config = room({ width: 100, height: 100, start: { x: 0, y: 0 },
+    treasure: { x: 40, y: 40 }, exit: { x: -40, y: 40 } });
+  const original = new GameModel({ rooms: [config] });
+  original.shoot({ x: 0, y: 1 }, 1); original.step(0.213);
+  const saved = JSON.parse(JSON.stringify(original.snapshot()));
+  assert.ok(saved.runtime.actionAccumulator > 0 && saved.runtime.actionAccumulator < 1);
+  const restored = new GameModel({ rooms: [config], snapshot: saved });
+  original.drainEvents();
+  for (let i = 0; i < 100; i++) { original.step(1 / 60); restored.step(1 / 60); }
+  assert.deepEqual(restored.snapshot(), original.snapshot());
+  assert.deepEqual(restored.drainEvents(), original.drainEvents());
+
+  const legacy = JSON.parse(JSON.stringify(saved));
+  delete legacy.runtime.actionAccumulator; delete legacy.runtime.flightRealTime;
+  const migrated = new GameModel({ rooms: [config], snapshot: legacy });
+  assert.deepEqual(migrated.state, legacy.state, 'Loading old v1 must not reset the adventure');
+  assert.equal(migrated.snapshot().runtime.actionAccumulator, 0);
+  assert.equal(migrated.snapshot().runtime.flightRealTime, legacy.runtime.flightTime);
+  settle(migrated);
+  assert.equal(migrated.state.phase, 'aiming');
+  assert.ok(Math.abs(migrated.state.player.y - original.state.player.y) < 1e-10);
 });
 
 test('first launch breaks a visible board, collects the treasure, and leaves an enemy alive', () => {

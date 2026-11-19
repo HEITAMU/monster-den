@@ -3,7 +3,7 @@ import {
   Vec2,Vec3,Quat,Layers,DirectionalLight,MeshRenderer,Material,utils,view,input,Input,UIOpacity,
   EventTouch,EventMouse,Game,game,tween,math,
 } from 'cc';
-import {GameModel,TOOLS} from './core/index';
+import {GameModel,TOOLS,TUNING,JOYSTICK_TUNING} from './core/index';
 import type {GameSnapshot,GameEvent,ToolId,ObstacleState,EnemyState} from './core/types';
 import {SaveStore} from './platform/SaveStore';
 import {RewardedAds} from './platform/RewardedAds';
@@ -11,15 +11,18 @@ import {GameAudio} from './platform/GameAudio';
 import type {SoundCue} from './platform/GameAudio';
 import {loadAudioCatalog} from './AudioCatalog';
 import {ModelLibrary,ModelInstance,loadGameJson,loadGameEffects,makeMaterial,meshNode,discMesh,ringMesh} from './ModelLibrary';
-import {PALETTE,rgba,uiNode,label,panel,button,separator} from './GameUI';
+import {PALETTE,rgba,uiNode,label,panel,button,separator,joystick} from './GameUI';
+import type {JoystickArt} from './GameUI';
 
 const {ccclass}=_decorator;
-const VERSION='0.1.1';
+const VERSION='0.2.0';
 const GROUND=.08,GROUND_EFFECT=.105;
 type Page='loading'|'home'|'game'|'tools';
 interface LocalRun {model:GameSnapshot;bonus:number;settled:boolean;bankedRooms:number;}
 interface Visual {instance:ModelInstance;shadow:Node;scale:number;hit:number;phase:number;}
 interface Spark {node:Node;vx:number;vy:number;vz:number;life:number;max:number;}
+interface Trail {node:Node;life:number;}
+interface Impact {node:Node;material:Material;life:number;size:number;}
 const TOOL_COST:Record<string,number>={heavy:300,grip:450,return:450};
 const HINTS=['先撞开木栏，拿宝物，再去出口','推柜子挡住箭路，绕到后面拿宝物','撞开中间的厚木栏，去拿宝物','拿到宝物后，向左边出口撤离','看清冲锋方向，带走窝主的宝物'];
 
@@ -30,17 +33,22 @@ export class GameMain extends Component {
   private env!:ModelLibrary;private characters!:ModelLibrary;
   private world!:Node;private roomWorld!:Node;private actorWorld!:Node;private effectsWorld!:Node;
   private canvas!:Node;private hud!:Node;private overlay!:Node;private floating!:Node;
-  private worldCamera!:Camera;private cameraNode!:Node;private cameraBase=new Vec3(0,22,15);
+  private worldCamera!:Camera;private cameraNode!:Node;private cameraBase=new Vec3(0,21.55,15.66);private cameraTarget=new Vec3(0,-.45,.66);
+  private homeWorld:Node|null=null;private homeActor:Visual|null=null;private homeGuard:Visual|null=null;
   private hero!:Visual;private enemies=new Map<string,Visual>();private obstacles=new Map<string,ModelInstance>();
   private treasure:ModelInstance|null=null;private exitRing:Node|null=null;private heroRing:Node|null=null;
   private aimNodes:Node[]=[];private aimEnd:Node|null=null;private aimCaption:Label|null=null;
   private threatNodes=new Map<string,Node>();private arrowNodes=new Map<string,Node>();
   private matShadow!:Material;private matAim!:Material;private matDanger!:Material;private matGold!:Material;
-  private sparkMaterials:Material[]=[];private sparks:Spark[]=[];
+  private sparkMaterials:Material[]=[];private sparks:Spark[]=[];private trails:Trail[]=[];private impacts:Impact[]=[];private trailClock=0;
   private ready=false;private page:Page='loading';private height=1280;private time=0;private phase='';
   private runId='';private runMeta={bonus:0,settled:false,bankedRooms:0};
   private dragging=false;private dragStart=new Vec2();private dragNow=new Vec2();private dragPower=0;private lastAim=new Vec2(0,1);
   private activeTouchId:number|null=null;private heldMouse=false;private shake=0;private background=false;private adBusy=false;private rewardPending=false;
+  private stick:JoystickArt|null=null;private stickOffset=new Vec2();private stickEngaged=false;private hitStop=0;private launchKick=0;
+  private inputCanvas:HTMLCanvasElement|null=null;private mouseButtonGuard:((event:MouseEvent)=>void)|null=null;
+  readonly joystickTuning=JOYSTICK_TUNING;readonly gameplayTuning=TUNING;
+  get groundProjection():number{return Math.sin(Math.atan2(this.cameraBase.y-this.cameraTarget.y,this.cameraBase.z-this.cameraTarget.z));}
   private overlayPhase='';private tipTimer=0;private tip='';private toastNode:Node|null=null;
   private roomLabel!:Label;private hpLabel!:Label;private lootLabel!:Label;private hintLabel!:Label;private phaseLabel!:Label;
   private toolButton:Node|null=null;private toolGlow:Node|null=null;private stepDots:Label[]=[];private tutorialText:Label|null=null;
@@ -78,10 +86,10 @@ export class GameMain extends Component {
     this.actorWorld=new Node('Actors');this.actorWorld.parent=this.world;
     this.effectsWorld=new Node('Effects');this.effectsWorld.parent=this.world;
     this.cameraNode=new Node('AdventureCamera');this.cameraNode.parent=this.node;
-    this.cameraNode.setPosition(this.cameraBase);this.cameraNode.lookAt(new Vec3(0,0,0));
+    this.cameraNode.setPosition(this.cameraBase);this.cameraNode.lookAt(this.cameraTarget);
     this.worldCamera=this.cameraNode.addComponent(Camera);this.worldCamera.projection=Camera.ProjectionType.ORTHO;
     this.worldCamera.near=.1;this.worldCamera.far=100;this.worldCamera.clearFlags=Camera.ClearFlag.SOLID_COLOR;
-    this.worldCamera.clearColor=rgba('#12292b');this.worldCamera.visibility=Layers.BitMask.DEFAULT;this.worldCamera.priority=0;
+    this.worldCamera.clearColor=rgba('#101f2b');this.worldCamera.visibility=Layers.BitMask.DEFAULT;this.worldCamera.priority=0;
     const lightNode=new Node('WarmKey');lightNode.parent=this.node;lightNode.setRotationFromEuler(-55,-35,0);
     const light=lightNode.addComponent(DirectionalLight);light.color=rgba('#ffedcf');light.illuminance=1;
     this.canvas=new Node('Interface');this.canvas.parent=this.node;this.canvas.layer=Layers.Enum.UI_2D;
@@ -96,7 +104,7 @@ export class GameMain extends Component {
 
   private resize():void {
     const size=view.getVisibleSize();this.height=size.height||1280;this.lastHeight=this.height;
-    this.worldCamera.orthoHeight=5.85/(size.width/size.height);
+    this.worldCamera.orthoHeight=6.15/(size.width/size.height);
     for(const root of [this.hud,this.overlay,this.floating])root.getComponent(UITransform)!.setContentSize(720,this.height);
   }
   private clear(node:Node):void{for(const child of [...node.children])child.destroy();node.removeAllChildren();}
@@ -110,16 +118,18 @@ export class GameMain extends Component {
     this.matDanger=makeMaterial(new Color(236,105,78,150),false,true,true);
     this.matGold=makeMaterial(rgba('#ffdb7c'),false,true,true,.8);
     this.sparkMaterials=['#ffe1a0','#aaead0','#d39b61','#ef9b7d'].map(c=>makeMaterial(rgba(c),false,false,false,.8));
-    for(let i=0;i<24;i++){const node=meshNode('AimMark',discMesh(.07,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
+    for(let i=0;i<32;i++){const node=meshNode('AimMark',discMesh(.075,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
     this.aimEnd=meshNode('AimEndpoint',ringMesh(.38,.055),this.matAim,this.effectsWorld);this.aimEnd.active=false;
     this.aimCaption=label(this.floating,'',20,0,0,180,35,PALETTE.mint,true);this.aimCaption.node.active=false;
+    for(let i=0;i<12;i++){const node=meshNode('DashWake',discMesh(1,.38,0,16),this.matAim,this.effectsWorld);node.active=false;this.trails.push({node,life:0});}
+    for(let i=0;i<4;i++){const material=makeMaterial(rgba('#ffe0a0',180),false,true,true);const node=meshNode('ImpactRing',ringMesh(1,.11,36),material,this.effectsWorld);node.active=false;this.impacts.push({node,material,life:0,size:1});}
   }
   private instantiate(key:string,parent:Node,x=0,y=0,scale=1):ModelInstance{
     const instance=this.env.instantiate(key,parent,scale);instance.root.setPosition(x,key==='floor'||key==='trim'?0:GROUND,-y);return instance;
   }
-  private makeActor(key:string,x:number,y:number,scale:number):Visual {
-    const instance=this.characters.instantiate(key,this.actorWorld,scale);instance.root.setPosition(x,GROUND,-y);
-    const shadow=meshNode('ContactShadow',discMesh(1,.28,0,36),this.matShadow,this.actorWorld);shadow.setPosition(x,GROUND_EFFECT,-y);shadow.setScale(.72*scale,1,.5*scale);
+  private makeActor(key:string,x:number,y:number,scale:number,parent=this.actorWorld):Visual {
+    const instance=this.characters.instantiate(key,parent,scale);instance.root.setPosition(x,GROUND,-y);
+    const shadow=meshNode('ContactShadow',discMesh(1,.36,0,36),this.matShadow,parent);shadow.setPosition(x,GROUND_EFFECT,-y);shadow.setScale(.72*scale,1,.5*scale);
     return {instance,shadow,scale,hit:0,phase:Math.random()*6};
   }
   private renderRoom():void {
@@ -136,23 +146,24 @@ export class GameMain extends Component {
     this.exitRing=meshNode('ExitGlow',ringMesh(.8,.12),this.matGold,this.roomWorld);this.exitRing.setPosition(state.exit.x,GROUND_EFFECT,-state.exit.y);
     const decor=[[-5.15,-5.2,'fern',1.1],[-5.1,3.8,'fern',1.3],[5.1,2.8,'fern',1.3],[5.1,-4.8,'mushroom',1.2],[-5.2,0,'mushroom',1],[-4.6,6.5,'lantern',1],[4.7,6.4,'lantern',1]] as const;
     for(const [x,y,key,s] of decor)if(this.env.has(key))this.instantiate(key,this.roomWorld,x,y,s);
-    this.hero=this.makeActor('hero',state.player.x,state.player.y,.72);
+    this.hero=this.makeActor('hero',state.player.x,state.player.y,.94);
     this.heroRing=meshNode('PlayerRing',ringMesh(.48,.065),this.matAim,this.actorWorld);
-    for(const enemy of state.enemies){if(!enemy.alive)continue;const key=enemy.kind==='charger'?'boss':enemy.kind;this.enemies.set(enemy.id,this.makeActor(key,enemy.x,enemy.y,enemy.kind==='boss'?.97:enemy.kind==='charger'?.58:.66));
+    for(const enemy of state.enemies){if(!enemy.alive)continue;const key=enemy.kind==='charger'?'boss':enemy.kind;this.enemies.set(enemy.id,this.makeActor(key,enemy.x,enemy.y,enemy.kind==='boss'?1.04:enemy.kind==='charger'?.65:.78));
       const danger=meshNode('EnemyIntent',this.beamMesh(),this.matDanger,this.effectsWorld);this.threatNodes.set(enemy.id,danger);}
-    this.phase='';this.overlayPhase='';this.shake=0;
+    for(const trail of this.trails){trail.life=0;trail.node.active=false;}for(const impact of this.impacts){impact.life=0;impact.node.active=false;}
+    this.phase='';this.overlayPhase='';this.shake=0;this.hitStop=0;this.launchKick=0;
   }
   private beamMesh():any{return {positions:[-.5,0,-.5,.5,0,-.5,-.5,0,.5,.5,0,.5],normals:[0,1,0,0,1,0,0,1,0,0,1,0],colors:[1,1,1,.04,1,1,1,.04,1,1,1,.45,1,1,1,.45],uvs:[0,0,1,0,0,1,1,1],indices:[0,2,1,1,2,3]};}
 
   private showHome():void {
     if(this.adBusy||this.rewardPending)return;
-    this.cancelDrag();this.page='home';this.clear(this.hud);this.clear(this.overlay);this.overlayPhase='';
+    this.cancelDrag();this.page='home';this.clear(this.hud);this.stick=null;this.clear(this.overlay);this.overlayPhase='';this.createHomeSet();this.updateSceneVisibility();
     this.updateMusicScene();
     for(const t of this.threatNodes.values())t.active=false;
     const top=this.height/2,bottom=-top;
-    label(this.hud,'MONSTER DEN',17,0,top-77,640,32,PALETTE.muted,true);
-    label(this.hud,'撞进怪物窝',53,0,top-134,650,80,PALETTE.cream,true);
-    label(this.hud,'撞开一条路，把宝物带出来',23,0,top-192,630,45,PALETTE.gold);
+    label(this.hud,'MONSTER DEN',17,0,top-79,640,32,PALETTE.mint,true);
+    label(this.hud,'撞进怪物窝',56,0,top-137,650,86,PALETTE.cream,true);
+    label(this.hud,'一推，一撞，带宝物回家',23,0,top-197,630,45,PALETTE.gold);
     this.soundButton();
     const saved=this.save.getSnapshot<LocalRun>();const savedPhase=saved?.state?.model?.state?.phase;
     const terminal=savedPhase==='victory'||savedPhase==='game_over';
@@ -162,7 +173,24 @@ export class GameMain extends Component {
     button(p,'工具柜',-152,-42,280,66,()=>this.showTools(),false);
     button(p,canContinue?'重新出发':'怎么玩',152,-42,280,66,()=>canContinue?this.confirmNewRun():this.showHelp(),false);
     const coins=this.save.read().progress.coins||0;label(p,`已带回 ${coins} 枚金币`,21,0,-97,600,35,PALETTE.muted);
-    label(this.hud,`首段冒险 · ${VERSION}`,17,0,bottom+25,630,30,'#72958e');
+    label(this.hud,`摇杆试玩 · ${VERSION}`,17,0,bottom+25,630,30,'#729caa');
+  }
+  private createHomeSet():void {
+    if(this.homeWorld)return;
+    this.homeWorld=new Node('CampDiorama');this.homeWorld.parent=this.world;
+    this.instantiate('floor',this.homeWorld,0,0,.64);if(this.env.has('trim'))this.instantiate('trim',this.homeWorld,0,0,.64);
+    this.instantiate('exit',this.homeWorld,.7,3.3,1.15);
+    this.instantiate('treasure',this.homeWorld,2.1,-1.7,1.15);
+    this.instantiate('cabinet',this.homeWorld,-2,1.9,.8);
+    for(const [x,y] of [[-3.1,-2.8],[3.1,2.4]])this.instantiate('fern',this.homeWorld,x,y,1.4);
+    for(const [x,y] of [[-3.0,3.5],[3,3.4]])this.instantiate('lantern',this.homeWorld,x,y,1.25);
+    this.instantiate('mushroom',this.homeWorld,3,-2.9,1.1);
+    this.homeActor=this.makeActor('hero',-.65,-1.6,3.2,this.homeWorld);
+    this.homeGuard=this.makeActor('guard',2.25,1.3,.95,this.homeWorld);
+  }
+  private updateSceneVisibility():void {
+    const active=this.page==='game';this.roomWorld.active=active;this.actorWorld.active=active;this.effectsWorld.active=active;
+    if(this.homeWorld)this.homeWorld.active=this.page==='home';
   }
   private soundButton():void {
     const muted=this.audio.settings.muted;
@@ -180,7 +208,7 @@ export class GameMain extends Component {
   private showHelp():void {
     this.clickSound();this.clear(this.overlay);const p=panel(this.overlay,650,490,0,0,PALETTE.deep);
     label(p,'带着宝物离开',36,0,173,590,65,PALETTE.gold,true);
-    label(p,'在场景上按住，向后拖拽\n松手后，小兽会沿瞄准方向冲出\n\n撞柜子挡箭，撞木栏开路\n拿到宝物后，进入发光出口',26,0,15,580,240);
+    label(p,'推动左下摇杆，沿路线瞄准\n推得越远，力度越大；松手冲撞\n回到摇杆中心再松手，可以取消\n\n撞柜子挡箭，撞木栏开路\n拿到宝物后，进入发光出口',25,0,15,580,260);
     button(p,'明白了',0,-170,530,72,()=>{this.clickSound();this.clear(this.overlay);});
   }
   private confirmNewRun():void {
@@ -190,7 +218,7 @@ export class GameMain extends Component {
   }
   private showTools():void {
     if(this.adBusy||this.rewardPending)return;
-    this.cancelDrag();this.clickSound();this.page='tools';this.clear(this.hud);this.clear(this.overlay);const d=this.save.read();
+    this.cancelDrag();this.clickSound();this.page='tools';this.clear(this.hud);this.stick=null;this.clear(this.overlay);this.updateSceneVisibility();const d=this.save.read();
     this.updateMusicScene();
     label(this.hud,'探险工具柜',43,0,this.height/2-106,650,75,PALETTE.gold,true);
     label(this.hud,`金币 ${d.progress.coins||0} · 开局可携带一件`,22,0,this.height/2-163,650,44,PALETTE.muted);
@@ -211,9 +239,9 @@ export class GameMain extends Component {
     this.cancelDrag();this.clickSound();this.model.restart();const tool=this.save.read().progress.startingTool as ToolId;
     if(tool&&this.save.read().progress.unlockedTools.includes(tool))this.model.equipStartingTool(tool);
     this.runId=`den-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;this.runMeta={bonus:0,settled:false,bankedRooms:0};
-    this.save.update(d=>{d.progress.runsPlayed++;});this.page='game';this.updateMusicScene();this.renderRoom();this.drawHud();this.clear(this.overlay);this.persist();
+    this.save.update(d=>{d.progress.runsPlayed++;});this.page='game';this.updateMusicScene();this.renderRoom();this.updateSceneVisibility();this.drawHud();this.clear(this.overlay);this.persist();
   }
-  private continueRun():void{if(this.adBusy||this.rewardPending)return;this.clickSound();this.restoreRun();this.page='game';this.updateMusicScene();this.renderRoom();this.drawHud();this.clear(this.overlay);}
+  private continueRun():void{if(this.adBusy||this.rewardPending)return;this.clickSound();this.restoreRun();this.page='game';this.updateMusicScene();this.renderRoom();this.updateSceneVisibility();this.drawHud();this.clear(this.overlay);}
   private restoreRun():void {
     const saved=this.save.getSnapshot<LocalRun>();if(saved){try{this.model.restore(saved.state.model);this.runId=saved.runId;this.runMeta={bonus:saved.state.bonus||0,settled:!!saved.state.settled,bankedRooms:saved.state.bankedRooms||0};}catch(e){console.warn('Run restore failed',e);this.save.clearSnapshot();this.model.restart();this.runId='';this.runMeta={bonus:0,settled:false,bankedRooms:0};}}
     if(!this.runId)this.runId=`den-${Date.now()}`;
@@ -222,24 +250,25 @@ export class GameMain extends Component {
   private persist():boolean{return !!(this.ready&&this.runId&&this.save.saveSnapshot(this.runId,{model:this.model.snapshot(),...this.runMeta}).ok);}
   private drawHud():void {
     this.clear(this.hud);this.clear(this.overlay);this.overlayPhase='';const top=this.height/2,bottom=-top;
-    panel(this.hud,672,172,0,top-127,PALETTE.deep,'#607d6d',22,243);
-    this.roomLabel=label(this.hud,'',32,-66,top-90,480,53,PALETTE.cream,true);
-    this.hpLabel=label(this.hud,'',29,-184,top-143,280,45,PALETTE.danger,true);
-    this.lootLabel=label(this.hud,'',24,189,top-143,270,45,PALETTE.gold,true);
-    this.stepDots=[];for(let i=0;i<5;i++)this.stepDots.push(label(this.hud,'●',17,-66+i*33,top-193,30,30));
+    panel(this.hud,680,126,0,top-83,PALETTE.deep,'#6a8b92',20,246);
+    this.roomLabel=label(this.hud,'',30,0,top-58,465,48,PALETTE.cream,true);
+    this.hpLabel=label(this.hud,'',27,-183,top-111,280,40,PALETTE.danger,true);
+    this.lootLabel=label(this.hud,'',23,187,top-111,260,40,PALETTE.gold,true);
+    this.stepDots=[];for(let i=0;i<5;i++)this.stepDots.push(label(this.hud,'◆',12,-42+i*21,top-111,22,26));
     this.soundButton();button(this.hud,'营地',-287,top-42,95,43,()=>{this.persist();this.showHome();},false);
-    const dock=panel(this.hud,672,180,0,bottom+138,PALETTE.deep,'#6e8c79',25,250);
-    this.hintLabel=label(dock,'',24,0,48,620,64,PALETTE.cream);
-    this.phaseLabel=label(dock,'',20,-145,-23,330,50,PALETTE.muted);
-    this.toolButton=button(dock,'使用工具',171,-27,275,62,()=>{
+    panel(this.hud,682,286,0,bottom+171,PALETTE.deep,'#796b52',27,248);
+    this.hintLabel=label(this.hud,'',23,0,bottom+341,654,48,PALETTE.cream);
+    this.stick=joystick(this.hud,-136,bottom+183);this.stickOffset.set(0,0);
+    this.phaseLabel=label(this.hud,'',22,174,bottom+250,272,42,PALETTE.muted,true);
+    this.toolButton=button(this.hud,'使用工具',174,bottom+173,247,83,()=>{
       this.clickSound();const p=this.model.state.player;
       if(!this.model.activateTool())this.showTip(p.tool==='none'?'带出这间的宝物，就能选一件工具':p.tool==='heavy'?'重撞持续生效：撞击更强，推柜更远':!p.toolReady?'这回合已经用过，下一回合恢复':'冲出去以后，再点击工具',2);
       else{this.cancelDrag();this.persist();}
     },false);
     this.toolButton.addComponent(UIOpacity);
-    this.toolGlow=uiNode('ToolReadyGlow',this.toolButton,275,62);
-    const glow=this.toolGlow.addComponent(Graphics);glow.lineWidth=3;glow.strokeColor=rgba(PALETTE.gold);glow.roundRect(-137,-31,274,62,20);glow.stroke();this.toolGlow.active=false;
-    this.tutorialText=label(this.hud,'拖拽瞄准 · 松手出击',20,0,bottom+24,650,35,PALETTE.muted);
+    this.toolGlow=uiNode('ToolReadyGlow',this.toolButton,247,83);
+    const glow=this.toolGlow.addComponent(Graphics);glow.lineWidth=3;glow.strokeColor=rgba(PALETTE.gold);glow.roundRect(-123,-41,246,82,18);glow.stroke();this.toolGlow.active=false;
+    this.tutorialText=label(this.hud,'推动摇杆 · 松手冲撞',20,175,bottom+95,276,58,PALETTE.muted);
     this.updateHud();
   }
   private updateHud():void {
@@ -249,7 +278,7 @@ export class GameMain extends Component {
     this.lootLabel.string=s.treasure.taken?'宝物已到手':'寻找宝物';
     this.stepDots.forEach((l,i)=>{l.color=rgba(i<=s.roomIndex?PALETTE.gold:'#486961');});
     this.hintLabel.string=this.tipTimer>0?this.tip:s.treasure.taken?'宝物到手，前往发光出口':HINTS[s.roomIndex];
-    this.phaseLabel.string=this.dragging?`力度 ${Math.round(this.dragPower*100)}%`:s.phase==='moving'?'正在冲撞':s.phase==='enemies'?'守卫即将行动':p.tool==='grip'&&!p.toolReady?'抓停成功 · 再次瞄准':`第 ${s.turn+1} 次行动`;
+    this.phaseLabel.string=this.dragging?`力度 ${Math.round(this.dragPower*100)}%`:s.phase==='moving'?'正在冲撞':s.phase==='enemies'?'守卫行动':p.tool==='grip'&&!p.toolReady?'再次瞄准':`第 ${s.turn+1} 次行动`;
     const tool=TOOLS.find(t=>t.id===p.tool);const toolLabel=this.toolButton?.getComponentsInChildren(Label)[0];
     const activeTool=p.tool==='grip'||p.tool==='return',available=activeTool&&p.toolReady&&s.phase==='moving';
     if(toolLabel){
@@ -259,10 +288,11 @@ export class GameMain extends Component {
     if(this.toolGlow)this.toolGlow.active=available;
     const opacity=this.toolButton?.getComponent(UIOpacity);if(opacity)opacity.opacity=available||p.tool==='heavy'?255:170;
     if(this.tutorialText){
-      this.tutorialText.string=s.shots===0?(this.dragging?(this.dragPower>.1?'松手！撞开前面的木栏':'向后拖远一点，看看前方路线'):'按住场景，向后拉，再松手'):
-        s.phase==='enemies'?'红色区域是守卫的攻击方向':activeTool&&available?'工具亮起了，冲撞中可以点击使用':s.treasure.taken?'带宝物进出口，就能离开这一间':'拖拽瞄准 · 松手出击';
+      this.tutorialText.string=s.shots===0?(this.dragging?(this.stickEngaged?'松手冲撞\n回中可取消':'向上推动摇杆'):'推杆瞄准\n松手冲撞'):
+        s.phase==='enemies'?'留意红色攻击区域':activeTool&&available?'点击工具\n改变这次冲撞':s.treasure.taken?'带宝物进出口':'轻推微调\n推满远冲';
       this.tutorialText.color=rgba(s.shots===0?PALETTE.gold:PALETTE.muted);
     }
+    if(this.stick){this.stick.caption.string=this.dragging?(this.stickEngaged?'松手冲撞':'回中取消'):s.phase==='aiming'?'推动瞄准':'等待落定';this.stick.caption.color=rgba(this.stickEngaged?PALETTE.gold:PALETTE.muted);this.stick.glow.active=s.phase==='aiming';}
   }
   private showRoomClear():void {
     this.clear(this.overlay);const p=panel(this.overlay,665,720,0,0,PALETTE.deep,'#bfa46c',28,252);
@@ -324,42 +354,69 @@ export class GameMain extends Component {
     if(!result.ok){this.toast(result.error||'奖励暂未保存，请稍后重试');return;}
     if(result.alreadyApplied)return;
     const snapshot=this.save.getSnapshot<LocalRun>()!;this.model.restore(snapshot.state.model);this.runMeta={bonus:snapshot.state.bonus,settled:snapshot.state.settled,bankedRooms:snapshot.state.bankedRooms};
-    if(placement==='rescue'){this.page='game';this.clear(this.overlay);this.renderRoom();this.drawHud();}
+    if(placement==='rescue'){this.page='game';this.clear(this.overlay);this.renderRoom();this.updateSceneVisibility();this.drawHud();}
     else if(this.page==='game')this.showResult(true);
   }
 
   private bindInput():void {
+    // Cocos 3.8.8 web synthesizes a touch for every mouse button but does not
+    // mark event.simulate. Filter non-primary DOM buttons before that adapter;
+    // native/WeChat touch input has no DOM and continues through Input below.
+    if(typeof document!=='undefined'&&typeof window!=='undefined'){
+      this.inputCanvas=document.querySelector('canvas');
+      this.mouseButtonGuard=(event:MouseEvent)=>{if(event.button!==0){event.preventDefault();event.stopImmediatePropagation();}};
+      this.inputCanvas?.addEventListener('mousedown',this.mouseButtonGuard,true);
+      this.inputCanvas?.addEventListener('contextmenu',this.mouseButtonGuard,true);
+      window.addEventListener('mouseup',this.mouseButtonGuard,true);
+    }
     input.on(Input.EventType.TOUCH_START,this.touchStart,this);input.on(Input.EventType.TOUCH_MOVE,this.touchMove,this);input.on(Input.EventType.TOUCH_END,this.touchEnd,this);input.on(Input.EventType.TOUCH_CANCEL,this.touchCancel,this);
     input.on(Input.EventType.MOUSE_DOWN,this.mouseDown,this);input.on(Input.EventType.MOUSE_MOVE,this.mouseMove,this);input.on(Input.EventType.MOUSE_UP,this.mouseUp,this);
     game.on(Game.EVENT_HIDE,this.onHide,this);game.on(Game.EVENT_SHOW,this.onShow,this);
   }
-  private validInput(location:Vec2):boolean{const sy=location.y/view.getScaleY();return this.ready&&this.page==='game'&&!this.background&&!this.adBusy&&!this.rewardPending&&!this.overlay.children.length&&sy>250&&sy<this.height-220;}
+  private validInput(location:Vec2):boolean{
+    if(!this.ready||this.page!=='game'||this.background||this.adBusy||this.rewardPending||this.overlay.children.length||!this.stick)return false;
+    const x=location.x/view.getScaleX()-360-this.stick.root.position.x,y=location.y/view.getScaleY()-this.height/2-this.stick.root.position.y;
+    return Math.hypot(x,y)<=111;
+  }
   private begin(location:Vec2):void {
-    if(this.dragging||!this.validInput(location)||this.model.state.phase!=='aiming')return;this.clickSound();this.dragging=true;this.dragStart.set(location);this.dragNow.set(location);this.dragPower=0;
+    if(this.dragging||!this.validInput(location)||this.model.state.phase!=='aiming')return;
+    void this.audio.unlock().then(()=>this.audio.startMusic());this.dragging=true;
+    this.dragStart.set((this.stick!.root.position.x+360)*view.getScaleX(),(this.stick!.root.position.y+this.height/2)*view.getScaleY());
+    this.dragNow.set(location);this.dragPower=0;this.stickEngaged=false;this.move(location);
   }
   private move(location:Vec2):void {
-    if(!this.dragging)return;this.dragNow.set(location);const dx=(this.dragStart.x-location.x)/view.getScaleX(),dy=(this.dragStart.y-location.y)/view.getScaleY();
-    this.dragPower=Math.min(1,Math.sqrt(dx*dx+dy*dy)/165);this.lastAim.set(dx,dy/Math.sin(Math.atan2(this.cameraBase.y,this.cameraBase.z)));
+    if(!this.dragging)return;this.dragNow.set(location);
+    const dx=(location.x-this.dragStart.x)/view.getScaleX(),dy=(location.y-this.dragStart.y)/view.getScaleY(),distance=Math.hypot(dx,dy);
+    const {deadZone,travel}=this.joystickTuning,scale=distance>travel?travel/distance:1;
+    this.stickOffset.set(dx*scale,dy*scale);this.stickEngaged=distance>deadZone;
+    this.dragPower=Math.max(0,Math.min(1,(distance-deadZone)/(travel-deadZone)));this.lastAim.set(dx,dy/this.groundProjection);
     this.showAim();
   }
   private release():void {
-    if(!this.dragging)return;this.dragging=false;this.clearAim();if(this.dragPower>.10&&this.model.shoot({x:this.lastAim.x,y:this.lastAim.y},this.dragPower))this.persist();
+    if(!this.dragging)return;const fire=this.stickEngaged,power=this.dragPower;this.dragging=false;this.stickEngaged=false;this.clearAim();
+    if(fire&&this.model.shoot({x:this.lastAim.x,y:this.lastAim.y},power))this.persist();this.dragPower=0;
   }
-  private touchStart(e:EventTouch):void{if(this.activeTouchId!==null||this.heldMouse)return;const id=e.getID();if(id===null)return;this.begin(e.getLocation());if(this.dragging)this.activeTouchId=id;}
-  private touchMove(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());}
-  private touchEnd(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());this.activeTouchId=null;this.release();}
-  private touchCancel(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.cancelDrag();}
-  private cancelDrag():void{this.activeTouchId=null;this.heldMouse=false;this.dragging=false;this.dragPower=0;this.clearAim();}
-  // Cocos synthesizes a touch before mouse events. Only use this fallback when
-  // no touch claimed the gesture, so the same mouse gesture cannot fire twice.
+  private touchStart(e:EventTouch):void{if(e.simulate||this.activeTouchId!==null||this.heldMouse)return;const id=e.getID();if(id===null)return;this.begin(e.getLocation());if(this.dragging)this.activeTouchId=id;}
+  private touchMove(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());}
+  private touchEnd(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());this.activeTouchId=null;this.release();}
+  private touchCancel(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.cancelDrag();}
+  private cancelDrag():void{this.activeTouchId=null;this.heldMouse=false;this.dragging=false;this.stickEngaged=false;this.dragPower=0;this.clearAim();}
+  // On backends that mark simulated touch, the primary mouse path owns it here.
+  // The DOM guard above also covers 3.8.8 web's unmarked simulated events.
   private mouseDown(e:EventMouse):void{if(e.getButton()!==0||this.activeTouchId!==null)return;this.begin(e.getLocation());this.heldMouse=this.dragging;}
   private mouseMove(e:EventMouse):void{if(this.heldMouse)this.move(e.getLocation());}
-  private mouseUp():void{if(!this.heldMouse)return;this.heldMouse=false;this.release();}
+  private mouseUp(e:EventMouse):void{if(!this.heldMouse)return;this.move(e.getLocation());this.heldMouse=false;this.release();}
   private onHide():void{this.background=true;this.cancelDrag();this.persist();}
   private onShow():void{this.background=false;}
   private showAim():void {
-    this.clearAim();if(this.dragPower<.06)return;const preview=this.model.aim(this.lastAim.x,this.lastAim.y,this.dragPower);
-    for(let i=0;i<Math.min(this.aimNodes.length,preview.points.length);i++){const at=Math.floor(i*(preview.points.length-1)/(Math.min(this.aimNodes.length,preview.points.length)-1||1)),p=preview.points[at];const n=this.aimNodes[i];n.active=true;n.setPosition(p.x,GROUND_EFFECT+.01,-p.y);n.setScale(i===0?1.3:1,1,i===0?1.3:1);}
+    this.clearAim();if(!this.stickEngaged)return;const preview=this.model.aim(this.lastAim.x,this.lastAim.y,this.dragPower);
+    const cumulative=[0];for(let i=1;i<preview.points.length;i++)cumulative.push(cumulative[i-1]+Math.hypot(preview.points[i].x-preview.points[i-1].x,preview.points[i].y-preview.points[i-1].y));
+    const total=cumulative[cumulative.length-1],count=Math.min(this.aimNodes.length,Math.max(2,Math.ceil(total/.34)+1));let segment=1;
+    for(let i=0;i<count&&preview.points.length>1;i++){
+      const distance=total*i/(count-1);while(segment<cumulative.length-1&&cumulative[segment]<distance)segment++;
+      const a=preview.points[segment-1],b=preview.points[segment],t=(distance-cumulative[segment-1])/(cumulative[segment]-cumulative[segment-1]||1);
+      const n=this.aimNodes[i];n.active=true;n.setPosition(a.x+(b.x-a.x)*t,GROUND_EFFECT+.01,-a.y-(b.y-a.y)*t);n.setScale(i===0?1.3:1,1,i===0?1.3:1);
+    }
     const end=preview.points[preview.points.length-1];
     if(end&&this.aimEnd&&this.aimCaption){
       this.aimEnd.active=true;this.aimEnd.setPosition(end.x,GROUND_EFFECT+.016,-end.y);
@@ -373,31 +430,41 @@ export class GameMain extends Component {
 
   update(dt:number):void {
     if(!this.ready)return;dt=Math.min(dt,.05);this.time+=dt;
-    if(Math.abs(view.getVisibleSize().height-this.lastHeight)>1){this.resize();if(this.page==='game')this.drawHud();else if(this.page==='home')this.showHome();else this.showTools();}
+    if(Math.abs(view.getVisibleSize().height-this.lastHeight)>1){this.cancelDrag();this.resize();if(this.page==='game')this.drawHud();else if(this.page==='home')this.showHome();else this.showTools();}
     if(this.background||this.adBusy)return;
     if(this.page==='game'){
-      this.model.step(dt);for(const event of this.model.drainEvents())this.handleEvent(event);
+      if(this.hitStop>0)this.hitStop=Math.max(0,this.hitStop-dt);else this.model.step(dt);
+      for(const event of this.model.drainEvents())this.handleEvent(event);
       if(this.model.state.phase!==this.phase){this.phase=this.model.state.phase;this.persist();}
       if(['room_clear','game_over','victory'].includes(this.phase)&&this.overlayPhase!==this.phase){
         this.overlayPhase=this.phase;if(this.phase==='room_clear')this.showRoomClear();else this.showResult(this.phase==='victory');
       }
       this.updateHud();this.saveClock+=dt;if(this.saveClock>2){this.saveClock=0;this.persist();}
     }
-    this.updateWorld(dt);this.updateSparks(dt);this.tipTimer=Math.max(0,this.tipTimer-dt);
-    this.shake=Math.max(0,this.shake-dt*1.5);this.cameraNode.setPosition(this.cameraBase.x+(Math.random()-.5)*this.shake*.18,this.cameraBase.y,this.cameraBase.z+(Math.random()-.5)*this.shake*.18);
+    this.launchKick=Math.max(0,this.launchKick-dt*5);this.updateWorld(dt);this.updateSparks(dt);this.updateStick(dt);this.tipTimer=Math.max(0,this.tipTimer-dt);
+    this.shake=Math.max(0,this.shake-dt*2.5);this.cameraNode.setPosition(this.cameraBase.x+Math.sin(this.time*75)*this.shake*.085,this.cameraBase.y,this.cameraBase.z+Math.cos(this.time*67)*this.shake*.06);
+  }
+  private updateStick(dt:number):void {
+    if(!this.stick||this.page!=='game')return;
+    if(!this.dragging){const fade=Math.exp(-dt*24);this.stickOffset.multiplyScalar(fade);if(this.stickOffset.length()<.05)this.stickOffset.set(0,0);}
+    this.stick.thumb.setPosition(this.stickOffset.x,this.stickOffset.y,0);
+    const g=this.stick.meter;g.clear();if(this.stickEngaged){g.lineWidth=5;g.strokeColor=rgba(this.dragPower>.9?PALETTE.gold:PALETTE.mint,240);g.arc(0,0,101,Math.PI/2,Math.PI/2-this.dragPower*Math.PI*2,true);g.stroke();}
+    const opacity=this.stick.root.getComponent(UIOpacity)||this.stick.root.addComponent(UIOpacity);opacity.opacity=this.model.state.phase==='aiming'?255:165;
+    if(this.stick.glow.active)this.stick.glow.setScale(1+Math.sin(this.time*5)*.008,1+Math.sin(this.time*5)*.008,1);
   }
   private animateActor(v:Visual,x:number,y:number,vx:number,vy:number,dt:number,isHero=false):void {
     const speed=Math.hypot(vx,vy),moving=speed>.3,phase=this.time*(moving?14:3)+v.phase;
     const root=v.instance.root;root.setPosition(x,GROUND+(moving?.07+Math.abs(Math.sin(phase))*.04:.025+Math.sin(phase)*.025),-y);
-    if(moving)root.setRotationFromEuler(0,Math.atan2(vx,-vy)*180/Math.PI,0);
+    if(moving){const target=Math.atan2(vx,-vy)*180/Math.PI,delta=((target-root.eulerAngles.y+540)%360)-180;root.setRotationFromEuler(0,root.eulerAngles.y+delta*(1-Math.exp(-dt*30)),0);}
     else if(this.page==='home'&&isHero)root.setRotationFromEuler(0,Math.sin(this.time*.4)*12,0);
-    else if(isHero&&this.dragging)root.setRotationFromEuler(0,Math.atan2(this.lastAim.x,-this.lastAim.y)*180/Math.PI,0);
+    else if(isHero&&this.dragging&&this.stickEngaged){const target=Math.atan2(this.lastAim.x,-this.lastAim.y)*180/Math.PI,delta=((target-root.eulerAngles.y+540)%360)-180;root.setRotationFromEuler(0,root.eulerAngles.y+delta*(1-Math.exp(-dt*22)),0);}
     const squat=isHero&&this.dragging?1-this.dragPower*.12:1;
-    root.setScale(v.scale*(1+(1-squat)*.3),v.scale*squat,v.scale*(1+(1-squat)*.3));
+    const kick=isHero?this.launchKick:0;
+    root.setScale(v.scale*(1+(1-squat)*.3-kick*.07),v.scale*(squat-kick*.09),v.scale*(1+(1-squat)*.3+kick*.21));
     for(const [name,node] of v.instance.parts){const base=v.instance.baseEuler.get(name)!;let ex=base.x,ey=base.y,ez=base.z;
       if(name.endsWith('.head')){ex+=moving?-12:Math.sin(phase)*3;ey+=Math.sin(phase*.6)*3;}
-      else if(name.includes('.arm.')){ex+=Math.sin(phase+(name.endsWith('L')?0:Math.PI))*(moving?32:4);ez+=(name.endsWith('L')?1:-1)*(moving?10:0);}
-      else if(name.includes('.leg.'))ex+=Math.sin(phase+(name.endsWith('L')?Math.PI:0))*(moving?34:2);
+      else if(name.includes('.arm.')){ex+=isHero&&moving?-36+Math.sin(phase)*7:Math.sin(phase+(name.endsWith('L')?0:Math.PI))*(moving?32:4);ez+=(name.endsWith('L')?1:-1)*(moving?10:0);}
+      else if(name.includes('.leg.'))ex+=Math.sin(phase+(name.endsWith('L')?Math.PI:0))*(moving?(isHero?18:34):2);
       else if(name.endsWith('.tail'))ey+=Math.sin(phase)*15;
       else if(name.endsWith('.body'))ex+=moving?12:0;
       node.setRotationFromEuler(ex,ey,ez);
@@ -406,8 +473,14 @@ export class GameMain extends Component {
     v.shadow.setPosition(x,GROUND_EFFECT,-y);
   }
   private updateWorld(dt:number):void {
+    if(this.page==='home'&&this.homeActor){this.animateActor(this.homeActor,-.65,-1.6,0,0,dt,true);if(this.homeGuard)this.animateActor(this.homeGuard,2.25,1.3,0,0,dt);return;}
     const s=this.model.state,p=s.player;if(!this.hero)return;
     this.animateActor(this.hero,p.x,p.y,this.page==='game'?p.vx:0,this.page==='game'?p.vy:0,dt,true);
+    this.trailClock+=dt;
+    if(this.page==='game'&&s.phase==='moving'&&Math.hypot(p.vx,p.vy)>2.5&&this.trailClock>.045){
+      this.trailClock=0;const trail=this.trails.find(t=>t.life<=0);
+      if(trail){trail.life=.28;trail.node.active=true;trail.node.setPosition(p.x,GROUND_EFFECT+.006,-p.y);trail.node.setRotationFromEuler(0,Math.atan2(p.vx,-p.vy)*180/Math.PI,0);}
+    }
     if(this.heroRing){this.heroRing.setPosition(p.x,GROUND_EFFECT+.01,-p.y);this.heroRing.active=this.page==='game';const size=1+Math.sin(this.time*3)*.04;this.heroRing.setScale(size,1,size);}
     if(this.treasure){this.treasure.root.active=!s.treasure.taken;this.treasure.root.setPosition(s.treasure.x,.12+Math.sin(this.time*2.5)*.08,-s.treasure.y);}
     if(this.exitRing){const size=1+Math.sin(this.time*3)*.07;this.exitRing.setScale(size,1,size);}
@@ -434,12 +507,17 @@ export class GameMain extends Component {
   private handleEvent(e:GameEvent):void {
     const sounds:Record<string,SoundCue>={shot:'launch',bounce:'stone_hit',board_hit:'wood_hit',board_break:'wood_break',cabinet_push:'cabinet_push',enemy_hit:'enemy_hit',enemy_down:'enemy_down',arrow:'arrow',arrow_blocked:'arrow_blocked',damage:'danger',treasure:'loot',victory:'win',game_over:'lose',room_clear:'loot',tool_used:'tool'};
     if(sounds[e.type])this.audio.play(sounds[e.type],e.type==='bounce'?.4:1);
+    if(e.type==='shot'){this.launchKick=1;this.burst(e.x,e.y,1,4);}
     if(['board_break','enemy_hit','enemy_down','cabinet_push','arrow_blocked','treasure','damage'].includes(e.type))this.burst(e.x,e.y,e.type==='damage'?3:e.type==='treasure'?0:2,e.type==='board_break'?14:8);
-    if(['enemy_hit','board_break','cabinet_push','damage'].includes(e.type)){this.shake=Math.max(this.shake,e.type==='damage'?.65:.28);if(e.id&&this.enemies.has(e.id))this.enemies.get(e.id)!.hit=.3;}
+    if(['enemy_hit','board_break','cabinet_push','damage'].includes(e.type)){
+      this.shake=Math.max(this.shake,e.type==='damage'?.65:.34);this.hitStop=Math.max(this.hitStop,e.type==='damage'?.04:.025);
+      const impact=this.impacts.find(i=>i.life<=0);if(impact){impact.life=.24;impact.size=e.type==='cabinet_push'?.7:.5;impact.node.active=true;impact.node.setPosition(e.x,GROUND_EFFECT+.02,-e.y);}
+      if(e.id&&this.enemies.has(e.id))this.enemies.get(e.id)!.hit=.3;
+    }
     if(e.type==='treasure'){this.showTip('宝物到手！去发光出口',3);this.floatText('宝物 +100',e.x,e.y,PALETTE.gold);}
     if(e.type==='damage'){this.hero.hit=.4;this.floatText(`-${e.amount||1}`,e.x,e.y,PALETTE.danger);}
     if(e.type==='enemy_hit')this.floatText(`-${e.amount||1}`,e.x,e.y,PALETTE.cream);
-    if(e.type==='board_hit'){this.burst(e.x,e.y,2,5);this.shake=Math.max(this.shake,.14);this.floatText('木栏松动',e.x,e.y,PALETTE.gold);}
+    if(e.type==='board_hit'){this.burst(e.x,e.y,2,5);this.shake=Math.max(this.shake,.14);if(!this.model.state.obstacles.find(o=>o.id===e.id)?.destroyed)this.floatText('木栏松动',e.x,e.y,PALETTE.gold);}
     if(e.type==='arrow_blocked')this.showTip(this.model.state.obstacles.find(o=>o.id===e.obstacleId)?.kind==='cabinet'?'柜子挡住了箭':'掩体挡住了箭',1.5);
     if(e.type==='exit_locked')this.showTip('先拿到房间里的宝物',2);
     if(e.type==='room_clear'||e.type==='victory'||e.type==='game_over')this.persist();
@@ -455,15 +533,19 @@ export class GameMain extends Component {
   }
   private updateSparks(dt:number):void {
     for(let i=this.sparks.length-1;i>=0;i--){const s=this.sparks[i];s.life-=dt;if(s.life<=0){s.node.destroy();this.sparks.splice(i,1);continue;}s.vy-=dt*12;s.node.setPosition(s.node.position.x+s.vx*dt,Math.max(.03,s.node.position.y+s.vy*dt),s.node.position.z+s.vz*dt);s.node.setRotationFromEuler(this.time*210,this.time*100,i*40);s.node.setScale(s.life/s.max,s.life/s.max,s.life/s.max);}
+    for(const trail of this.trails){if(trail.life<=0)continue;trail.life=Math.max(0,trail.life-dt);const fade=trail.life/.28;trail.node.active=fade>0;trail.node.setScale(.23*fade,1,.48*fade);}
+    for(const impact of this.impacts){if(impact.life<=0)continue;impact.life=Math.max(0,impact.life-dt);const fade=impact.life/.24,radius=impact.size*(2.4-1.4*fade);impact.node.active=fade>0;impact.node.setScale(radius,1,radius);impact.material.setProperty('mainColor',rgba('#ffe0a0',Math.round(fade*210)));}
   }
   private toast(message:string):void {
     if(!this.floating){console.warn(message);return;}this.toastNode?.destroy();const p=panel(this.floating,640,120,0,-this.height/2+340,PALETTE.deep,PALETTE.gold,20,252);label(p,message,24,0,0,590,100);this.toastNode=p;this.scheduleOnce(()=>{if(p.isValid)p.destroy();if(this.toastNode===p)this.toastNode=null;},3.5);
   }
   onDestroy():void {
     this.persist();this.audio?.dispose();this.ads?.dispose();
+    if(this.mouseButtonGuard){this.inputCanvas?.removeEventListener('mousedown',this.mouseButtonGuard,true);this.inputCanvas?.removeEventListener('contextmenu',this.mouseButtonGuard,true);if(typeof window!=='undefined')window.removeEventListener('mouseup',this.mouseButtonGuard,true);}
+    this.inputCanvas=null;this.mouseButtonGuard=null;
     if((globalThis as any).__MONSTER_DEN__?.controller===this)delete (globalThis as any).__MONSTER_DEN__;
     this.env?.dispose();this.characters?.dispose();
-    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,...this.sparkMaterials])mat?.destroy();
+    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,...this.sparkMaterials,...this.impacts.map(i=>i.material)])mat?.destroy();
     input.off(Input.EventType.TOUCH_START,this.touchStart,this);input.off(Input.EventType.TOUCH_MOVE,this.touchMove,this);input.off(Input.EventType.TOUCH_END,this.touchEnd,this);input.off(Input.EventType.TOUCH_CANCEL,this.touchCancel,this);
     input.off(Input.EventType.MOUSE_DOWN,this.mouseDown,this);input.off(Input.EventType.MOUSE_MOVE,this.mouseMove,this);input.off(Input.EventType.MOUSE_UP,this.mouseUp,this);
     game.off(Game.EVENT_HIDE,this.onHide,this);game.off(Game.EVENT_SHOW,this.onShow,this);

@@ -18,13 +18,36 @@ const engineOut = path.join(root, '.build/engine-headless');
 fs.mkdirSync(out, { recursive: true });
 const result = { backend: 'Cocos EmptyDevice', engineVersion: '3.8.8',
   pixelValidation: false, gpuShaderCompilation: false, audibleOutputValidation: false,
-  testMethod: 'Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.',
+  testMethod: 'Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through the rendered fixed joystick and real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.',
   errors: [], warnings: [], checkpoints: [], sourceFiles: {}, assetRequests: [] };
 const record = file => {
   const buffer = fs.readFileSync(file);
   result.sourceFiles[path.relative(root, file)] = { bytes: buffer.length, sha256: crypto.createHash('sha256').update(buffer).digest('hex') };
   return buffer.toString('utf8');
 };
+function joystickEndpoint(input, dx, dy, power) {
+  const { deadZone, travel } = input.joystickTuning;
+  const projectedY = dy * input.groundProjection, length = Math.hypot(dx, projectedY);
+  assert.ok(length > 0, 'A joystick shot requires a nonzero direction.');
+  const radius = deadZone + power * (travel - deadZone);
+  const wanted = { x: dx / length * radius, y: projectedY / length * radius };
+  const raw = { x: input.x + wanted.x * input.pixelX, y: input.y - wanted.y * input.pixelY };
+  // MouseEvent client coordinates in this DOM host are integer CSS pixels.
+  // Choose the closest reachable point and verify its actual expected power.
+  const candidates = [];
+  for (const x of new Set([Math.floor(raw.x), Math.ceil(raw.x)])) {
+    for (const y of new Set([Math.floor(raw.y), Math.ceil(raw.y)])) {
+      const local = { x: (x - input.x) / input.pixelX, y: (input.y - y) / input.pixelY };
+      const distance = Math.hypot(local.x, local.y);
+      if (distance <= deadZone || (power === 1 && distance < travel)) continue;
+      candidates.push({ x, y, effectivePower: Math.min(1, (distance - deadZone) / (travel - deadZone)),
+        error: Math.hypot(local.x - wanted.x, local.y - wanted.y) });
+    }
+  }
+  candidates.sort((a, b) => a.error - b.error);
+  assert.ok(candidates.length, 'No reachable CSS point could engage the requested joystick direction.');
+  return candidates[0];
+}
 let win, cc, dom;
 const onUnhandled = error => result.errors.push(`Unhandled rejection: ${error?.stack || error}`);
 process.on('unhandledRejection', onUnhandled);
@@ -140,11 +163,19 @@ process.on('unhandledRejection', onUnhandled);
     const meshes = [...new Set(renderers.map(renderer => renderer.mesh).filter(Boolean))];
     const entry = { label, page: controller.page, room: api.model.state.roomIndex + 1, phase: api.model.state.phase,
       nodeMeshRenderers: renderers.length, uniqueMeshes: meshes.length, labels: labels.length,
+      activeMeshRenderers: renderers.filter(renderer => renderer.node.activeInHierarchy).length,
+      homeActorVisible: controller.homeActor?.instance.root.activeInHierarchy,
+      heroVisible: controller.hero?.instance.root.activeInHierarchy,
       cameras: sceneAsset.scene.getComponentsInChildren(cc.Camera).length,
       loadedGameModules: moduleCache.size, liveMeshes: liveMeshes.size, totalCocosFrames: cc.director.getTotalFrames() };
     assert.ok(entry.nodeMeshRenderers > 10, `${label}: actual mesh hierarchy absent`);
     assert.ok(entry.labels > 3, `${label}: actual Cocos labels absent`);
     assert.equal(entry.cameras, 2, `${label}: missing 3D/UI camera`);
+    if (controller.page === 'home' || controller.page === 'game') {
+      assert.ok(entry.activeMeshRenderers > 10, `${label}: visible mesh hierarchy absent`);
+      assert.equal(controller.page === 'home' ? entry.homeActorVisible : entry.heroVisible, true,
+        `${label}: expected showcase/gameplay hero is hidden`);
+    }
     for (const renderer of renderers) {
       assert.ok(renderer.mesh?.renderingSubMeshes.length, `Missing mesh: ${renderer.node.name}`);
       assert.ok(renderer.getMaterial(0)?.passes.length, `Missing material pass: ${renderer.node.name}`);
@@ -164,21 +195,99 @@ process.on('unhandledRejection', onUnhandled);
   assert.equal(controller.page, 'game');
   checkpoint('home button entered first room');
   const playerBefore = { x: api.model.state.player.x, y: api.model.state.player.y };
-  function mouse(type, x, y) {
+  function mouse(type, x, y, button = 0) {
     const names = { [cc.Input.EventType.MOUSE_DOWN]: 'mousedown', [cc.Input.EventType.MOUSE_MOVE]: 'mousemove', [cc.Input.EventType.MOUSE_UP]: 'mouseup' };
-    const event = new win.MouseEvent(names[type], { bubbles: true, cancelable: true, clientX: x, clientY: 1280 - y,
-      button: 0, buttons: type === cc.Input.EventType.MOUSE_UP ? 0 : 1 });
+    const event = new win.MouseEvent(names[type], { bubbles: true, cancelable: true, clientX: x, clientY: y,
+      button, buttons: type === cc.Input.EventType.MOUSE_UP ? 0 : button === 1 ? 4 : button === 2 ? 2 : 1 });
     win.document.getElementById('GameCanvas').dispatchEvent(event);
   }
-  mouse(cc.Input.EventType.MOUSE_DOWN, 360, 560);
-  mouse(cc.Input.EventType.MOUSE_MOVE, 360, 395);
+  function inputGeometry() {
+    assert.ok(controller.stick?.root.activeInHierarchy, 'Visible fixed joystick is missing.');
+    const canvas = win.document.getElementById('GameCanvas'), rect = canvas.getBoundingClientRect();
+    // EmptyDevice has no finite render-camera projection. Derive this DOM
+    // host fixture's CSS coordinates from the actual drawn UI node and view
+    // adaptation; the WebGL browser check uses its real UI camera instead.
+    const visible = cc.view.getVisibleSize();
+    const center = { x: (controller.stick.root.position.x + visible.width / 2) * cc.view.getScaleX(),
+      y: (controller.stick.root.position.y + visible.height / 2) * cc.view.getScaleY() };
+    return { x: rect.left + center.x / canvas.width * rect.width, y: rect.bottom - center.y / canvas.height * rect.height,
+      coordinateSource: 'Actual joystick UI-node position and Cocos view scale; EmptyDevice cannot project a render camera',
+      pixelX: cc.view.getScaleX() * rect.width / canvas.width, pixelY: cc.view.getScaleY() * rect.height / canvas.height,
+      groundProjection: controller.groundProjection, joystickTuning: { ...controller.joystickTuning },
+      gameplayTuning: { ...controller.gameplayTuning }, rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
+  }
+  function inputState() {
+    return { dragging: controller.dragging, power: controller.dragPower, shots: api.model.state.shots,
+      visibleDots: controller.aimNodes.filter(node => node.active).length,
+      aim: { x: controller.lastAim.x, y: controller.lastAim.y },
+      thumb: { x: controller.stick.thumb.position.x, y: controller.stick.thumb.position.y } };
+  }
+  const input = inputGeometry(), { deadZone, travel } = input.joystickTuning;
+  assert.ok(Number.isFinite(input.x) && Number.isFinite(input.y) && deadZone > 0 && travel > deadZone && input.groundProjection > 0,
+    `Invalid fixed joystick geometry: ${JSON.stringify(input)}`);
+  const assertIdle = async label => {
+    await tick(3);
+    const state = inputState();
+    assert.equal(state.shots, 0, `${label} launched a shot.`);
+    assert.equal(state.dragging, false, `${label} left the joystick held.`);
+    assert.equal(state.visibleDots, 0, `${label} left aim meshes visible.`);
+    return state;
+  };
+  mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+  mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y);
+  const centerTap = await assertIdle('Joystick center tap');
+  mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+  mouse(cc.Input.EventType.MOUSE_MOVE, input.x + deadZone * .5 * input.pixelX, input.y);
+  await tick(2);
+  const insideDeadZone = inputState();
+  assert.equal(insideDeadZone.power, 0); assert.equal(insideDeadZone.visibleDots, 0);
+  mouse(cc.Input.EventType.MOUSE_UP, input.x + deadZone * .5 * input.pixelX, input.y);
+  const deadZoneRelease = await assertIdle('Sub-dead-zone release');
+  mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+  mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y - travel * input.pixelY);
+  await tick(2);
+  const pushed = inputState();
+  assert.ok(pushed.dragging && pushed.power > .98 && pushed.visibleDots > 0,
+    `Joystick did not engage before recentering: ${JSON.stringify({ input, pushed })}`);
+  mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y); await tick(2);
+  const recentered = inputState();
+  assert.equal(recentered.power, 0); assert.equal(recentered.visibleDots, 0);
+  mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y);
+  const recenterRelease = await assertIdle('Recentered joystick release');
+  const scenePoint = { x: input.rect.x + input.rect.width * .5, y: input.rect.y + input.rect.height * .42 };
+  mouse(cc.Input.EventType.MOUSE_DOWN, scenePoint.x, scenePoint.y);
+  mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y - travel * input.pixelY); await tick(2);
+  const outsideStart = inputState();
+  assert.equal(outsideStart.dragging, false, 'A scene-origin gesture must not acquire the joystick after moving over it.');
+  mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y - travel * input.pixelY);
+  const sceneRelease = await assertIdle('Scene-origin drag');
+  const nonPrimaryButtons = [];
+  for (const [name, button] of [['right', 2], ['middle', 1]]) {
+    mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y, button); await tick(2);
+    const pressed = inputState();
+    assert.equal(pressed.dragging, false, `${name} mouse button started a joystick gesture: ${JSON.stringify(pressed)}`);
+    mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y - travel * input.pixelY, button); await tick(2);
+    const moved = inputState();
+    assert.ok(!moved.dragging && moved.power === 0 && moved.visibleDots === 0 && moved.shots === 0,
+      `${name} mouse drag changed the aim: ${JSON.stringify(moved)}`);
+    mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y - travel * input.pixelY, button);
+    const released = await assertIdle(`${name} mouse button release`);
+    nonPrimaryButtons.push({ button: name, cannotAimOrLaunch: true, pressed, moved, released });
+  }
+  result.joystickBoundaries = { method: 'DOM MouseEvent through Cocos input; EmptyDevice host fixture', input,
+    centerTapDoesNotLaunch: true, deadZoneDoesNotLaunch: true, recenterCancels: true, sceneStartRejected: true,
+    nonPrimaryButtons,
+    evidence: { centerTap, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
+  mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+  mouse(cc.Input.EventType.MOUSE_MOVE, input.x, input.y - travel * input.pixelY);
   result.inputFixture = { dragging: controller.dragging, dragPower: controller.dragPower, height: controller.height,
     scaleX: cc.view.getScaleX(), scaleY: cc.view.getScaleY(), visibleSize: cc.view.getVisibleSize(),
+    joystick: input,
     mouseSupported: cc.sys.hasFeature(cc.sys.Feature.EVENT_MOUSE), overlayChildren: controller.overlay.children.length,
     dragStart: { x: controller.dragStart.x, y: controller.dragStart.y }, dragNow: { x: controller.dragNow.x, y: controller.dragNow.y } };
   assert.ok(controller.dragging && controller.dragPower > .95, 'Controller input did not build a full-power aim.');
   assert.ok(controller.aimNodes.some(node => node.active), 'Native aim mesh nodes were not shown.');
-  mouse(cc.Input.EventType.MOUSE_UP, 360, 395);
+  mouse(cc.Input.EventType.MOUSE_UP, input.x, input.y - travel * input.pixelY);
   assert.equal(api.model.state.shots, 1);
   const phases = new Set();
   for (let i = 0; i < 420; i++) { await tick(); phases.add(api.model.state.phase); if (i > 30 && api.model.state.phase === 'aiming') break; }
@@ -186,8 +295,8 @@ process.on('unhandledRejection', onUnhandled);
   assert.ok(api.model.state.obstacles.find(obstacle => obstacle.kind === 'board').destroyed, 'First-room shot did not run the board collision branch.');
   result.realInputShot = { accepted: true, observedPhases: [...phases], shots: api.model.state.shots,
     movedDistance: Math.hypot(api.model.state.player.x - playerBefore.x, api.model.state.player.y - playerBefore.y), boardDestroyed: true };
-  checkpoint('controller mouse aim, launch, board break, and return to aiming');
-  // Use the authored core-test route, with the UI's actual minimum drag power.
+  checkpoint('controller fixed joystick aim, launch, board break, and return to aiming');
+  // Use the authored core-test route with current launch tuning and fine joystick travel.
   // This establishes controller/render integration, not human fun or balance.
   const routes = [
     [[0, 1.6, 1], [0, 5.6]],
@@ -196,25 +305,36 @@ process.on('unhandledRejection', onUnhandled);
     [[2, -4], [4.1, 1], [4.1, 4.5], [3.6, 4.5], [-3.5, 5.7]],
     [[3.8, -4], [4.2, 2], [2, 3.8], [0, 3.8], [0, 5.9]],
   ];
-  result.route = { source: 'Documented 21-shot core regression route; all drag powers at least 11%', rooms: [] };
+  result.route = { source: 'Documented 21-shot core regression route; fixed joystick power may be as low as 1%', rooms: [],
+    shots: [{ room: 1, shot: 1, target: { x: 0, y: 1.6 }, power: 1, effectivePower: 1,
+      phase: api.model.state.phase, hp: api.model.state.player.hp, score: api.model.state.score,
+      player: { x: api.model.state.player.x, y: api.model.state.player.y } }] };
   for (let room = 0; room < 5; room++) {
     assert.equal(api.model.state.roomIndex, room);
     checkpoint(`room ${room + 1} actual scene, enemy prefabs and animation update`);
     for (const [targetX, targetY, explicitPower] of room === 0 ? routes[room].slice(1) : routes[room]) {
       assert.equal(api.model.state.phase, 'aiming');
       const player = api.model.state.player, dx = targetX - player.x, dy = targetY - player.y;
-      const distance = Math.hypot(dx, dy), drag = 1.36 * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
-      const power = explicitPower ?? Math.max(.11, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - 1.9) / 10.9));
-      const projectedY = dy * Math.sin(Math.atan2(controller.cameraBase.y, controller.cameraBase.z)), projectedLength = Math.hypot(dx, projectedY);
+      const input = inputGeometry(), tuning = input.gameplayTuning;
+      const distance = Math.hypot(dx, dy), drag = tuning.drag * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
+      const power = explicitPower ?? Math.max(.01, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - tuning.launchMin) / (tuning.launchMax - tuning.launchMin)));
+      const end = joystickEndpoint(input, dx, dy, power);
       const before = api.model.state.shots;
-      mouse(cc.Input.EventType.MOUSE_DOWN, 360, 560);
-      mouse(cc.Input.EventType.MOUSE_MOVE, 360 - dx / projectedLength * power * 165, 560 - projectedY / projectedLength * power * 165);
-      mouse(cc.Input.EventType.MOUSE_UP, 360 - dx / projectedLength * power * 165, 560 - projectedY / projectedLength * power * 165);
-      assert.equal(api.model.state.shots, before + 1, `Room ${room + 1}: DOM drag was not accepted`);
+      mouse(cc.Input.EventType.MOUSE_DOWN, input.x, input.y);
+      mouse(cc.Input.EventType.MOUSE_MOVE, end.x, end.y);
+      assert.ok(controller.dragging && controller.aimNodes.some(node => node.active) && Math.abs(controller.dragPower - end.effectivePower) < .015,
+        `Room ${room + 1}: joystick did not produce expected power: ${JSON.stringify({ requested: power, actual: controller.dragPower, end })}`);
+      const effectivePower = controller.dragPower;
+      mouse(cc.Input.EventType.MOUSE_UP, end.x, end.y);
+      assert.equal(api.model.state.shots, before + 1, `Room ${room + 1}: DOM joystick push was not accepted`);
       for (let frame = 0; frame < 1200; frame++) {
         await tick();
         if (['aiming', 'room_clear', 'victory', 'game_over'].includes(api.model.state.phase)) break;
       }
+      result.route.shots.push({ room: room + 1, shot: api.model.state.shots, target: { x: targetX, y: targetY }, power,
+        effectivePower, pointer: end,
+        phase: api.model.state.phase, hp: api.model.state.player.hp, score: api.model.state.score,
+        player: { x: api.model.state.player.x, y: api.model.state.player.y } });
     }
     assert.equal(api.model.state.phase, room === 4 ? 'victory' : 'room_clear');
     assert.ok(api.model.state.enemies.some(enemy => enemy.alive));

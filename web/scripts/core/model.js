@@ -82,7 +82,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                 const n = length(x, y);
                 return n > EPS ? { x: x / n, y: y / n } : { x: 0, y: 1 };
             };
-            /** Pure deterministic simulation. Feed seconds to step; render state without mutating it. */
+            /** Pure deterministic simulation. step() takes real seconds; pacing is applied at fixed clock ticks. */
             GameModel = class GameModel {
                 constructor(options = {}) {
                     this.events = [];
@@ -95,7 +95,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                 }
                 restart() {
                     this.runtime = {
-                        accumulator: 0, flightTime: 0, settledTime: 0, lastShotStart: { x: 0, y: 0 },
+                        accumulator: 0, actionAccumulator: 0, flightRealTime: 0,
+                        flightTime: 0, settledTime: 0, lastShotStart: { x: 0, y: 0 },
                         hitEnemies: [], hitBoards: [], continuingTurn: false, nextProjectileId: 0, exitWarning: false,
                     };
                     this.events = [];
@@ -131,6 +132,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     this.runtime.lastShotStart = { x: p.x, y: p.y };
                     this.runtime.flightTime = 0;
                     this.runtime.settledTime = 0;
+                    this.runtime.flightRealTime = 0;
+                    this.runtime.actionAccumulator = 0;
                     this.emit('shot', p.x, p.y, { amount: clamp(power, 0, 1), tool: p.tool });
                     return true;
                 }
@@ -147,6 +150,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         this.runtime.continuingTurn = true;
                         this.runtime.flightTime = 0;
                         this.runtime.settledTime = 0;
+                        this.runtime.flightRealTime = 0;
+                        this.runtime.actionAccumulator = 0;
                     }
                     else if (p.tool === 'return') {
                         const dx = this.runtime.lastShotStart.x - p.x, dy = this.runtime.lastShotStart.y - p.y;
@@ -159,6 +164,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         p.toolReady = false;
                         this.runtime.flightTime = 0;
                         this.runtime.settledTime = 0;
+                        this.runtime.flightRealTime = 0;
+                        this.runtime.actionAccumulator = 0;
                     }
                     else
                         return false;
@@ -265,10 +272,27 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         this.runtime.accumulator -= rooms_1.TUNING.fixedStep;
                         if (this.runtime.accumulator < 1e-10)
                             this.runtime.accumulator = 0;
-                        this.tick(rooms_1.TUNING.fixedStep);
+                        // Sample pacing at a fixed real-time cadence, never once per rendered frame.
+                        // Every movement/collision still uses the exact original 1/120 physics step.
+                        this.state.elapsed += rooms_1.TUNING.fixedStep;
+                        if (this.state.phase === 'moving')
+                            this.runtime.flightRealTime += rooms_1.TUNING.fixedStep;
+                        this.runtime.actionAccumulator += this.actionScale();
+                        let physicsSteps = 0;
+                        const maxPhysicsSteps = Math.ceil(Math.max(rooms_1.ACTION_PACING.flight, rooms_1.ACTION_PACING.tail, rooms_1.ACTION_PACING.enemies)) + 1;
+                        while (this.runtime.actionAccumulator + EPS >= 1 && physicsSteps < maxPhysicsSteps) {
+                            this.runtime.actionAccumulator -= 1;
+                            if (this.runtime.actionAccumulator < 1e-10)
+                                this.runtime.actionAccumulator = 0;
+                            this.tick(rooms_1.TUNING.fixedStep);
+                            physicsSteps++;
+                            if (this.isTerminal())
+                                break;
+                        }
                         steps++;
                         if (this.isTerminal()) {
                             this.runtime.accumulator = 0;
+                            this.runtime.actionAccumulator = 0;
                             break;
                         }
                     }
@@ -297,6 +321,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     this.state.rescuesUsed++;
                     this.state.phase = 'aiming';
                     this.state.projectiles = [];
+                    this.runtime.actionAccumulator = 0;
+                    this.runtime.flightRealTime = 0;
                     this.runtime.continuingTurn = false;
                     this.runtime.hitEnemies = [];
                     this.runtime.hitBoards = [];
@@ -323,6 +349,12 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     this.state = copy(snapshot.state);
                     this.runtime = copy(snapshot.runtime);
                     this.events = [];
+                    // v1 saves written before action pacing have neither field; retain their playable run.
+                    if (!Number.isFinite(this.runtime.actionAccumulator) || this.runtime.actionAccumulator < 0 || this.runtime.actionAccumulator >= 1)
+                        this.runtime.actionAccumulator = 0;
+                    if (!Number.isFinite(this.runtime.flightRealTime) || this.runtime.flightRealTime < 0) {
+                        this.runtime.flightRealTime = Number.isFinite(this.runtime.flightTime) ? Math.max(0, this.runtime.flightTime) : 0;
+                    }
                 }
                 loadRoom(index, hp, tool, score, rescues, shots, elapsed, turn) {
                     const room = this.rooms[index];
@@ -341,6 +373,8 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     this.runtime.accumulator = 0;
                     this.runtime.flightTime = 0;
                     this.runtime.settledTime = 0;
+                    this.runtime.actionAccumulator = 0;
+                    this.runtime.flightRealTime = 0;
                     this.runtime.hitEnemies = [];
                     this.runtime.hitBoards = [];
                     this.runtime.continuingTurn = false;
@@ -358,8 +392,20 @@ System.register(["./rooms"], function (exports_1, context_1) {
                 }
                 playerDrag() { return rooms_1.TUNING.drag * (this.state.player.tool === 'heavy' ? 1.07 : 1); }
                 restitution() { return this.state.player.tool === 'heavy' ? 0.38 : rooms_1.TUNING.restitution; }
+                actionScale() {
+                    if (this.state.phase === 'enemies')
+                        return rooms_1.ACTION_PACING.enemies;
+                    if (this.state.phase !== 'moving')
+                        return 1;
+                    const p = this.state.player;
+                    if (p.toolReady && (p.tool === 'grip' || p.tool === 'return') && this.runtime.flightRealTime <= rooms_1.ACTION_PACING.toolWindow)
+                        return 1;
+                    const tailBlend = clamp(1 - length(p.vx, p.vy) / rooms_1.ACTION_PACING.tailBelowSpeed, 0, 1);
+                    // Smoothly compress the low-speed tail instead of snapping to an invented landing.
+                    // tail <= 2 * flight keeps rendered travel speed monotonic as physical speed falls.
+                    return rooms_1.ACTION_PACING.flight + (rooms_1.ACTION_PACING.tail - rooms_1.ACTION_PACING.flight) * tailBlend;
+                }
                 tick(dt) {
-                    this.state.elapsed += dt;
                     const p = this.state.player;
                     p.invulnerable = Math.max(0, p.invulnerable - dt);
                     this.moveCabinets(dt);
@@ -577,6 +623,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                 beginEnemyPhase() {
                     this.state.phase = 'enemies';
                     this.state.enemyTime = 0;
+                    this.runtime.actionAccumulator = 0;
                     this.state.player.toolReady = false;
                     for (const e of this.state.enemies) {
                         e.vx = 0;
@@ -657,6 +704,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         p.vx = 0;
                         p.vy = 0;
                         this.state.phase = 'aiming';
+                        this.runtime.actionAccumulator = 0;
                         for (const obstacle of this.state.obstacles) {
                             if (obstacle.kind === 'cabinet') {
                                 obstacle.vx = 0;

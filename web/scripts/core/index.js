@@ -12,7 +12,9 @@ System.register(["./model", "./rooms"], function (exports_1, context_1) {
                 exports_1({
                     "ROOMS": rooms_1_1["ROOMS"],
                     "TOOLS": rooms_1_1["TOOLS"],
-                    "TUNING": rooms_1_1["TUNING"]
+                    "TUNING": rooms_1_1["TUNING"],
+                    "JOYSTICK_TUNING": rooms_1_1["JOYSTICK_TUNING"],
+                    "ACTION_PACING": rooms_1_1["ACTION_PACING"]
                 });
             }
         ],

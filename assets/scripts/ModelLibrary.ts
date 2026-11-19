@@ -17,7 +17,8 @@ class OwnedMesh extends Component {
 
 export async function loadGameJson(path:string):Promise<any> {
   if ((globalThis as any).__monsterDenRuntime) {
-    const response=await fetch(`./resources/${path}.json`);
+    const version=(globalThis as any).__monsterDenRuntime.version;
+    const response=await fetch(`./resources/${path}.json${version?`?v=${encodeURIComponent(version)}`:''}`);
     if(!response.ok) throw new Error(`Resource unavailable: ${path}`);
     return response.json();
   }

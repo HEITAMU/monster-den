@@ -1,0 +1,660 @@
+{
+  "baselineCommit": "7aa58e51d17803835ada6299e47cb40e936c634d",
+  "method": "Deterministic core at wall-clock 120 Hz. No-contact shot in a 100x100 room; distant guard acts without reaching the player. Stop at next aiming. Includes real wall time, slow-tail time below 2.8m/s and distance. This is simulation timing, not measured rendering FPS or subjective feel.",
+  "before": {
+    "tuning": {
+      "fixedStep": 0.008333333333333333,
+      "maxFrameTime": 0.25,
+      "playerRadius": 0.38,
+      "maxHp": 5,
+      "launchMin": 1.9,
+      "launchMax": 12.8,
+      "drag": 1.36,
+      "stopSpeed": 0.24,
+      "cabinetDrag": 2.7,
+      "cabinetMaxSpeed": 8.5,
+      "restitution": 0.7,
+      "enemyWindup": 0.34,
+      "arrowSpeed": 15,
+      "invulnerableTime": 0.85,
+      "treasureRadius": 0.48,
+      "exitRadius": 0.8,
+      "maxFlightTime": 5.5
+    },
+    "shots": [
+      {
+        "power": 0.03,
+        "tool": "none",
+        "realSeconds": 2.6333333333333333,
+        "flightSeconds": 1.7166666666666666,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.7166666666666666,
+        "distance": 1.4873163601280286,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.11,
+        "tool": "none",
+        "realSeconds": 2.875,
+        "flightSeconds": 1.9583333333333333,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.8833333333333333,
+        "distance": 2.131852506028505,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.5,
+        "tool": "none",
+        "realSeconds": 3.5083333333333333,
+        "flightSeconds": 2.591666666666667,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.875,
+        "distance": 5.2749678855840685,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 1,
+        "tool": "none",
+        "realSeconds": 3.9166666666666665,
+        "flightSeconds": 3,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.875,
+        "distance": 9.305166256476285,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      }
+    ],
+    "tools": [
+      {
+        "power": 0.03,
+        "tool": "grip",
+        "realSeconds": 2.6333333333333333,
+        "flightSeconds": 1.7166666666666666,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.7166666666666666,
+        "distance": 1.4873163601280286,
+        "toolAvailableSeconds": 1.7166666666666666,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.11,
+        "tool": "grip",
+        "realSeconds": 2.875,
+        "flightSeconds": 1.9583333333333333,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.8833333333333333,
+        "distance": 2.131852506028505,
+        "toolAvailableSeconds": 1.9583333333333333,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.5,
+        "tool": "grip",
+        "realSeconds": 3.5083333333333333,
+        "flightSeconds": 2.591666666666667,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.875,
+        "distance": 5.2749678855840685,
+        "toolAvailableSeconds": 2.591666666666667,
+        "phase": "aiming"
+      },
+      {
+        "power": 1,
+        "tool": "grip",
+        "realSeconds": 3.9166666666666665,
+        "flightSeconds": 3,
+        "enemySeconds": 0.9166666666666666,
+        "tailBelow2_8Seconds": 1.875,
+        "distance": 9.305166256476285,
+        "toolAvailableSeconds": 3,
+        "phase": "aiming"
+      }
+    ]
+  },
+  "after": {
+    "tuning": {
+      "fixedStep": 0.008333333333333333,
+      "maxFrameTime": 0.25,
+      "playerRadius": 0.38,
+      "maxHp": 5,
+      "launchMin": 0.55,
+      "launchMax": 12.8,
+      "drag": 1.36,
+      "stopSpeed": 0.24,
+      "cabinetDrag": 2.7,
+      "cabinetMaxSpeed": 8.5,
+      "restitution": 0.7,
+      "enemyWindup": 0.34,
+      "arrowSpeed": 15,
+      "invulnerableTime": 0.85,
+      "treasureRadius": 0.48,
+      "exitRadius": 0.8,
+      "maxFlightTime": 5.5
+    },
+    "pacing": {
+      "flight": 1.5,
+      "tail": 3,
+      "tailBelowSpeed": 2.8,
+      "enemies": 1.5,
+      "toolWindow": 0.45
+    },
+    "joystick": {
+      "deadZone": 7,
+      "travel": 75
+    },
+    "stepSemantics": "GameModel.step(dt) accepts real elapsed seconds; state.elapsed uses the fixed real-time clock. Physics flightTime, enemyTime, invulnerability and enemy actionTime retain nominal physics seconds. A saved fractional actionAccumulator preserves deterministic pacing; old v1 saves default missing budget to zero and flightRealTime to legacy flightTime.",
+    "shots": [
+      {
+        "power": 0.03,
+        "tool": "none",
+        "realSeconds": 1.0083333333333333,
+        "flightSeconds": 0.39166666666666666,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.39166666666666666,
+        "distance": 0.5194214114993274,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.11,
+        "tool": "none",
+        "realSeconds": 1.25,
+        "flightSeconds": 0.6333333333333333,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.6333333333333333,
+        "distance": 1.2438927548180745,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.5,
+        "tool": "none",
+        "realSeconds": 1.8416666666666666,
+        "flightSeconds": 1.225,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.7916666666666666,
+        "distance": 4.776731008218569,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      },
+      {
+        "power": 1,
+        "tool": "none",
+        "realSeconds": 2.158333333333333,
+        "flightSeconds": 1.5416666666666667,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.7916666666666666,
+        "distance": 9.305166256476285,
+        "toolAvailableSeconds": 0,
+        "phase": "aiming"
+      }
+    ],
+    "tools": [
+      {
+        "power": 0.03,
+        "tool": "grip",
+        "realSeconds": 1.2833333333333334,
+        "flightSeconds": 0.6666666666666666,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.6666666666666666,
+        "distance": 0.5194214114993274,
+        "toolAvailableSeconds": 0.6666666666666666,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.11,
+        "tool": "grip",
+        "realSeconds": 1.4916666666666667,
+        "flightSeconds": 0.875,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.875,
+        "distance": 1.2438927548180745,
+        "toolAvailableSeconds": 0.875,
+        "phase": "aiming"
+      },
+      {
+        "power": 0.5,
+        "tool": "grip",
+        "realSeconds": 1.9833333333333334,
+        "flightSeconds": 1.3666666666666667,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.7916666666666666,
+        "distance": 4.776731008218569,
+        "toolAvailableSeconds": 1.3666666666666667,
+        "phase": "aiming"
+      },
+      {
+        "power": 1,
+        "tool": "grip",
+        "realSeconds": 2.308333333333333,
+        "flightSeconds": 1.6916666666666667,
+        "enemySeconds": 0.6166666666666667,
+        "tailBelow2_8Seconds": 0.7916666666666666,
+        "distance": 9.305166256476285,
+        "toolAvailableSeconds": 1.6916666666666667,
+        "phase": "aiming"
+      }
+    ],
+    "minimum": {
+      "power": 0,
+      "tool": "none",
+      "realSeconds": 0.8666666666666667,
+      "flightSeconds": 0.25,
+      "enemySeconds": 0.6166666666666667,
+      "tailBelow2_8Seconds": 0.25,
+      "distance": 0.24794226707956055,
+      "toolAvailableSeconds": 0,
+      "phase": "aiming"
+    },
+    "firstJoystickPixel": {
+      "power": 0.014705882352941176,
+      "tool": "none",
+      "realSeconds": 0.95,
+      "flightSeconds": 0.3333333333333333,
+      "enemySeconds": 0.6166666666666667,
+      "tailBelow2_8Seconds": 0.3333333333333333,
+      "distance": 0.3811562668979626,
+      "toolAvailableSeconds": 0,
+      "phase": "aiming"
+    },
+    "fullRoute": {
+      "shots": [
+        {
+          "room": 1,
+          "power": 1,
+          "seconds": 2.1083333333333334,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 1,
+          "power": 0.22832641559030947,
+          "seconds": 0.38333333333333336,
+          "hp": 5,
+          "phase": "room_clear"
+        },
+        {
+          "room": 2,
+          "power": 1,
+          "seconds": 0.8916666666666667,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 2,
+          "power": 0.285723822507154,
+          "seconds": 1.2416666666666667,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 2,
+          "power": 0.8347851889425526,
+          "seconds": 1.6916666666666667,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 2,
+          "power": 0.15273410660437647,
+          "seconds": 1.1833333333333333,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 2,
+          "power": 0.37548752616767755,
+          "seconds": 0.5166666666666667,
+          "hp": 5,
+          "phase": "room_clear"
+        },
+        {
+          "room": 3,
+          "power": 0.4563565599760015,
+          "seconds": 1.8666666666666667,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 3,
+          "power": 1,
+          "seconds": 2.05,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 3,
+          "power": 0.3500332373564696,
+          "seconds": 1.65,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 3,
+          "power": 0.24769616429107125,
+          "seconds": 0.35,
+          "hp": 4,
+          "phase": "room_clear"
+        },
+        {
+          "room": 4,
+          "power": 0.2988821119183101,
+          "seconds": 1.5833333333333333,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 4,
+          "power": 0.6406974858810307,
+          "seconds": 2.05,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 4,
+          "power": 0.484515272590473,
+          "seconds": 1.7333333333333334,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 4,
+          "power": 0.03730729248395093,
+          "seconds": 1,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 4,
+          "power": 0.8591417706661056,
+          "seconds": 0.8666666666666667,
+          "hp": 4,
+          "phase": "room_clear"
+        },
+        {
+          "room": 5,
+          "power": 0.48806769507216624,
+          "seconds": 1.6,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 5,
+          "power": 0.7143353380365258,
+          "seconds": 2.15,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 5,
+          "power": 0.3240050343085716,
+          "seconds": 1.6416666666666666,
+          "hp": 5,
+          "phase": "aiming"
+        },
+        {
+          "room": 5,
+          "power": 0.21991986099771071,
+          "seconds": 1.5833333333333333,
+          "hp": 4,
+          "phase": "aiming"
+        },
+        {
+          "room": 5,
+          "power": 0.2582764084280945,
+          "seconds": 0.36666666666666664,
+          "hp": 4,
+          "phase": "victory"
+        }
+      ],
+      "totalRealSeconds": 28.508333333333333,
+      "phase": "victory",
+      "hp": 4,
+      "score": 1065,
+      "rescues": 0,
+      "targets": [
+        [
+          [
+            0,
+            1.6,
+            1
+          ],
+          [
+            0,
+            5.6
+          ]
+        ],
+        [
+          [
+            0,
+            3,
+            1
+          ],
+          [
+            -1.4,
+            -2.5
+          ],
+          [
+            -1.4,
+            4.5
+          ],
+          [
+            0,
+            4.2
+          ],
+          [
+            2.9,
+            5.7
+          ]
+        ],
+        [
+          [
+            0,
+            -3
+          ],
+          [
+            0,
+            3,
+            1
+          ],
+          [
+            3,
+            3.6
+          ],
+          [
+            3,
+            5.8
+          ]
+        ],
+        [
+          [
+            2,
+            -4
+          ],
+          [
+            4.1,
+            1
+          ],
+          [
+            4.1,
+            4.5
+          ],
+          [
+            3.6,
+            4.5
+          ],
+          [
+            -3.5,
+            5.7
+          ]
+        ],
+        [
+          [
+            3.8,
+            -4
+          ],
+          [
+            4.2,
+            2
+          ],
+          [
+            2,
+            3.8
+          ],
+          [
+            0,
+            3.8
+          ],
+          [
+            0,
+            5.9
+          ]
+        ]
+      ],
+      "conditions": "No starting tool; choose heavy after each room; no rescue; target coordinates are converted to directions from the current position. An optional third target value forces power=1. Other powers use the tests/core.test.mjs fireAt calculation. Times exclude aiming and tool-card reading. This is an automated target route, not human player performance."
+    }
+  },
+  "comparisons": [
+    {
+      "power": 0.03,
+      "beforeSeconds": 2.6333333333333333,
+      "afterSeconds": 1.0083333333333333,
+      "reductionPercent": 61.70886075949367,
+      "beforeDistance": 1.4873163601280286,
+      "afterDistance": 0.5194214114993274
+    },
+    {
+      "power": 0.11,
+      "beforeSeconds": 2.875,
+      "afterSeconds": 1.25,
+      "reductionPercent": 56.52173913043479,
+      "beforeDistance": 2.131852506028505,
+      "afterDistance": 1.2438927548180745
+    },
+    {
+      "power": 0.5,
+      "beforeSeconds": 3.5083333333333333,
+      "afterSeconds": 1.8416666666666666,
+      "reductionPercent": 47.50593824228029,
+      "beforeDistance": 5.2749678855840685,
+      "afterDistance": 4.776731008218569
+    },
+    {
+      "power": 1,
+      "beforeSeconds": 3.9166666666666665,
+      "afterSeconds": 2.158333333333333,
+      "reductionPercent": 44.8936170212766,
+      "beforeDistance": 9.305166256476285,
+      "afterDistance": 9.305166256476285
+    }
+  ],
+  "validation": {
+    "coreTests": 23,
+    "passed": 23,
+    "failed": 0,
+    "checks": [
+      "aim endpoint equals actual fixed-step endpoint",
+      "30/60 FPS snapshots and events identical throughout flight, tool activation and enemy turns",
+      "fractional pacing budget survives JSON save/restore",
+      "legacy v1 snapshot defaults without resetting the run",
+      "half-second tool activation possible at 3%,11%,50%,100%",
+      "all five authored rooms traversed through actual shots with live enemies retained"
+    ],
+    "command": "node --test tests/core.test.mjs"
+  },
+  "reportVersion": 1,
+  "measuredDate": "2026-11-19",
+  "candidate": {
+    "version": "0.2.0",
+    "commit": null,
+    "worktreeBasedOn": "7aa58e51d17803835ada6299e47cb40e936c634d",
+    "status": "Measurements taken from the uncommitted 0.2.0 core worktree; no final release commit is asserted.",
+    "sourceFiles": [
+      {
+        "path": "assets/scripts/core/index.ts",
+        "sha256": "7c90b7e62d26113ec2705d087b6fbf6f91904a326632045fa11fc5985f2df0c7"
+      },
+      {
+        "path": "assets/scripts/core/model.ts",
+        "sha256": "382d15447e35a130892d018d0e75851920adbfa55c9ab731feff347573db71d5"
+      },
+      {
+        "path": "assets/scripts/core/rooms.ts",
+        "sha256": "d334ce67724463f56c5d52dedb2294921e9e41b2e660f4661d26ea42e3a35050"
+      },
+      {
+        "path": "assets/scripts/core/types.ts",
+        "sha256": "499c071669a3f989b3ea166dec310766bfb411666a97f94b9ab6d37d51125ca8"
+      },
+      {
+        "path": "tests/core.test.mjs",
+        "sha256": "cf68982e06700756aa9ee69d5d85cae0b5eb5ffd8f61da7b109db19dae6d25ad"
+      }
+    ]
+  },
+  "environment": {
+    "runtime": "v24.22.3",
+    "inputClockHz": 120,
+    "renderer": "none",
+    "browser": null,
+    "physicalDevice": null,
+    "measuresRenderedFPS": false,
+    "humanPlaytest": false
+  },
+  "caseConfiguration": {
+    "room": {
+      "id": "feel-empty",
+      "width": 100,
+      "height": 100,
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "treasure": {
+        "x": 40,
+        "y": 40
+      },
+      "exit": {
+        "x": -40,
+        "y": 40
+      },
+      "obstacles": [],
+      "enemies": [
+        {
+          "id": "distant-guard",
+          "kind": "guard",
+          "x": 30,
+          "y": 30
+        }
+      ]
+    },
+    "direction": {
+      "x": 0,
+      "y": 1
+    },
+    "powers": [
+      0.03,
+      0.11,
+      0.5,
+      1
+    ],
+    "toolProfiles": [
+      "none",
+      "grip"
+    ],
+    "endpoint": "Stop counting at the next aiming phase; enemy response is included.",
+    "timeMeaning": "realSeconds sums the fixed real-time dt fed to GameModel.step; it is neither CPU execution time nor a phone stopwatch measurement.",
+    "distanceMeaning": "Player displacement in core world units; not a measurement in physical metres.",
+    "toolActivationCheck": "Separate regression assertions cover both grip and return at 3%,11%,50%,100%, activating successfully 0.5s after launch."
+  },
+  "limitations": [
+    "Core-only simulation: no UI, renderer, phone hardware or WeChat runtime was measured.",
+    "Lower initial speed deliberately changes weak and medium shot distance; full-power distance is unchanged.",
+    "The time comparison describes engine action pacing; it does not establish subjective game feel.",
+    "Tool activation assertions do not establish that a real thumb can comfortably reach the UI.",
+    "If any candidate source-file hash changes, recheck the affected result before attributing it to the new source."
+  ]
+}

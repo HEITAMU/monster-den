@@ -4,7 +4,7 @@
   "pixelValidation": false,
   "gpuShaderCompilation": false,
   "audibleOutputValidation": false,
-  "testMethod": "Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.",
+  "testMethod": "Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through the rendered fixed joystick and real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.",
   "errors": [],
   "warnings": [
     "[MonsterDen audio] 音频：当前环境没有可用音频后端。"
@@ -15,12 +15,15 @@
       "page": "home",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 59,
-      "uniqueMeshes": 54,
+      "nodeMeshRenderers": 110,
+      "uniqueMeshes": 81,
       "labels": 11,
+      "activeMeshRenderers": 27,
+      "homeActorVisible": true,
+      "heroVisible": false,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 54,
+      "liveMeshes": 81,
       "totalCocosFrames": 1
     },
     {
@@ -28,130 +31,160 @@
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 59,
-      "uniqueMeshes": 54,
-      "labels": 16,
+      "nodeMeshRenderers": 110,
+      "uniqueMeshes": 81,
+      "labels": 17,
+      "activeMeshRenderers": 34,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 54,
+      "liveMeshes": 81,
       "totalCocosFrames": 4
     },
     {
-      "label": "controller mouse aim, launch, board break, and return to aiming",
+      "label": "controller fixed joystick aim, launch, board break, and return to aiming",
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 59,
-      "uniqueMeshes": 54,
-      "labels": 15,
+      "nodeMeshRenderers": 110,
+      "uniqueMeshes": 81,
+      "labels": 17,
+      "activeMeshRenderers": 31,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 54,
-      "totalCocosFrames": 235
+      "liveMeshes": 81,
+      "totalCocosFrames": 167
     },
     {
       "label": "room 1 actual scene, enemy prefabs and animation update",
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 59,
-      "uniqueMeshes": 54,
-      "labels": 15,
+      "nodeMeshRenderers": 110,
+      "uniqueMeshes": 81,
+      "labels": 17,
+      "activeMeshRenderers": 31,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 54,
-      "totalCocosFrames": 235
+      "liveMeshes": 81,
+      "totalCocosFrames": 167
     },
     {
       "label": "room 2 actual scene, enemy prefabs and animation update",
       "page": "game",
       "room": 2,
       "phase": "aiming",
-      "nodeMeshRenderers": 70,
-      "uniqueMeshes": 65,
-      "labels": 15,
+      "nodeMeshRenderers": 124,
+      "uniqueMeshes": 94,
+      "labels": 17,
+      "activeMeshRenderers": 48,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 66,
-      "totalCocosFrames": 281
+      "liveMeshes": 95,
+      "totalCocosFrames": 193
     },
     {
       "label": "room 3 actual scene, enemy prefabs and animation update",
       "page": "game",
       "room": 3,
       "phase": "aiming",
-      "nodeMeshRenderers": 71,
-      "uniqueMeshes": 66,
-      "labels": 15,
+      "nodeMeshRenderers": 123,
+      "uniqueMeshes": 100,
+      "labels": 16,
+      "activeMeshRenderers": 47,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 73,
-      "totalCocosFrames": 947
+      "liveMeshes": 100,
+      "totalCocosFrames": 539
     },
     {
       "label": "room 4 actual scene, enemy prefabs and animation update",
       "page": "game",
       "room": 4,
       "phase": "aiming",
-      "nodeMeshRenderers": 69,
-      "uniqueMeshes": 65,
-      "labels": 15,
+      "nodeMeshRenderers": 123,
+      "uniqueMeshes": 94,
+      "labels": 16,
+      "activeMeshRenderers": 47,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 73,
-      "totalCocosFrames": 1606
+      "liveMeshes": 102,
+      "totalCocosFrames": 902
     },
     {
       "label": "room 5 actual scene, enemy prefabs and animation update",
       "page": "game",
       "room": 5,
       "phase": "aiming",
-      "nodeMeshRenderers": 70,
-      "uniqueMeshes": 65,
-      "labels": 15,
+      "nodeMeshRenderers": 121,
+      "uniqueMeshes": 97,
+      "labels": 16,
+      "activeMeshRenderers": 45,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 73,
-      "totalCocosFrames": 2449
+      "liveMeshes": 99,
+      "totalCocosFrames": 1346
     },
     {
       "label": "victory settlement UI reached by 21 actual controller shots",
       "page": "game",
       "room": 5,
       "phase": "victory",
-      "nodeMeshRenderers": 70,
-      "uniqueMeshes": 65,
-      "labels": 21,
+      "nodeMeshRenderers": 125,
+      "uniqueMeshes": 101,
+      "labels": 22,
+      "activeMeshRenderers": 46,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 73,
-      "totalCocosFrames": 3274
+      "liveMeshes": 103,
+      "totalCocosFrames": 1777
     },
     {
       "label": "tool cabinet UI rendered",
       "page": "tools",
       "room": 5,
       "phase": "victory",
-      "nodeMeshRenderers": 70,
-      "uniqueMeshes": 65,
+      "nodeMeshRenderers": 122,
+      "uniqueMeshes": 98,
       "labels": 14,
+      "activeMeshRenderers": 0,
+      "homeActorVisible": false,
+      "heroVisible": false,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 73,
-      "totalCocosFrames": 3285
+      "liveMeshes": 100,
+      "totalCocosFrames": 1788
     },
     {
       "label": "game-over UI via explicit terminal-state fixture",
       "page": "game",
       "room": 1,
       "phase": "game_over",
-      "nodeMeshRenderers": 59,
-      "uniqueMeshes": 54,
-      "labels": 22,
+      "nodeMeshRenderers": 111,
+      "uniqueMeshes": 82,
+      "labels": 23,
+      "activeMeshRenderers": 34,
+      "homeActorVisible": false,
+      "heroVisible": true,
       "cameras": 2,
       "loadedGameModules": 12,
-      "liveMeshes": 71,
-      "totalCocosFrames": 3291
+      "liveMeshes": 98,
+      "totalCocosFrames": 1794
     }
   ],
   "sourceFiles": {
@@ -164,20 +197,20 @@
       "sha256": "37feb73b7a7f58608b926c3bbc0247a129eb4823fd18aa062c0458d21212cebf"
     },
     "assets/scripts/GameMain.ts": {
-      "bytes": 41692,
-      "sha256": "a9826ece6a6a7e903ec1d581cea311a3910ff509ad96da6c6f251ad8cecfd3e8"
+      "bytes": 49859,
+      "sha256": "09601d3a9ab04a149cc851af2a5fc5d9210e924b9bd9fe270c2af31cdffd8fba"
     },
     "assets/scripts/core/index.ts": {
-      "bytes": 367,
-      "sha256": "eb8dd6cabcc914a461d7c50d71a08267c1c4e8c1c812da6665c77922d20da477"
+      "bytes": 399,
+      "sha256": "7c90b7e62d26113ec2705d087b6fbf6f91904a326632045fa11fc5985f2df0c7"
     },
     "assets/scripts/core/model.ts": {
-      "bytes": 30391,
-      "sha256": "ef7e92c7012832ec3fafc5540082989fa257f08355672fe76326590116e5a12e"
+      "bytes": 32895,
+      "sha256": "382d15447e35a130892d018d0e75851920adbfa55c9ab731feff347573db71d5"
     },
     "assets/scripts/core/rooms.ts": {
-      "bytes": 4707,
-      "sha256": "9eabb7a3ef3a5be3c0d61a72773d6e740523047bf88a14d54df30f9641c32e00"
+      "bytes": 5165,
+      "sha256": "d334ce67724463f56c5d52dedb2294921e9e41b2e660f4661d26ea42e3a35050"
     },
     "assets/scripts/platform/SaveStore.ts": {
       "bytes": 16946,
@@ -200,28 +233,28 @@
       "sha256": "9d3a071c53f7167b1da9d4fe9f79367e30ed0c58e9e3a547f9af8b6dc24a09d8"
     },
     "assets/scripts/ModelLibrary.ts": {
-      "bytes": 6549,
-      "sha256": "8ad1958beeed7c52a3b9c154cc913b015ffb5159462d3967907b469a189da9e1"
+      "bytes": 6665,
+      "sha256": "6b89848620fb6623c67d4f99a0e109d830e37d86f70a0f32f1b770071cdc29dc"
     },
     "assets/scripts/MeshCodec.ts": {
       "bytes": 2526,
       "sha256": "3c0c5c8a7d077cb52d28bbf7100ac6651e372487f14741ba56083513d74f6c56"
     },
     "assets/scripts/GameUI.ts": {
-      "bytes": 2870,
-      "sha256": "0292ed44cbf0a4f3492bb2a8a0bbde4e44b40add80a69101fbae98e153408237"
+      "bytes": 5468,
+      "sha256": "22348390584e9b2b1249c94e3a0c8aa5cc84bc64856dffa76d00d94fb0b0e722"
     },
     "assets/Boot.scene": {
       "bytes": 1470,
       "sha256": "25dce343aaaf49ceae455e0f9fe16d566135dd4e46bed120a1577aa9dc4a10f6"
     },
     "web/resources/models/environment.json": {
-      "bytes": 876119,
-      "sha256": "a5ba97fd5e65c7114fdb40ca93a7bc3adc25e8f1bde1e6d81d152848be5a594e"
+      "bytes": 1567873,
+      "sha256": "ef8ec0e1f85a44fdeffd9c29ae08cf9e1639fddeb4b3a05d884427d7a2f884a1"
     },
     "web/resources/models/characters.json": {
-      "bytes": 525426,
-      "sha256": "895335588c85013abd5fbd57b54b2be87144da1bc466569cb0c08a87a19b5224"
+      "bytes": 603556,
+      "sha256": "2b10b4ddfb80d7d827beee6fff056f21ac894e92cc2c548241a995ff96dcdc0e"
     }
   },
   "assetRequests": [
@@ -251,6 +284,258 @@
       "boss"
     ]
   },
+  "joystickBoundaries": {
+    "method": "DOM MouseEvent through Cocos input; EmptyDevice host fixture",
+    "input": {
+      "x": 224,
+      "y": 1097,
+      "coordinateSource": "Actual joystick UI-node position and Cocos view scale; EmptyDevice cannot project a render camera",
+      "pixelX": 1,
+      "pixelY": 1,
+      "groundProjection": 0.8262273428075476,
+      "joystickTuning": {
+        "deadZone": 7,
+        "travel": 75
+      },
+      "gameplayTuning": {
+        "fixedStep": 0.008333333333333333,
+        "maxFrameTime": 0.25,
+        "playerRadius": 0.38,
+        "maxHp": 5,
+        "launchMin": 0.55,
+        "launchMax": 12.8,
+        "drag": 1.36,
+        "stopSpeed": 0.24,
+        "cabinetDrag": 2.7,
+        "cabinetMaxSpeed": 8.5,
+        "restitution": 0.7,
+        "enemyWindup": 0.34,
+        "arrowSpeed": 15,
+        "invulnerableTime": 0.85,
+        "treasureRadius": 0.48,
+        "exitRadius": 0.8,
+        "maxFlightTime": 5.5
+      },
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 720,
+        "height": 1280
+      }
+    },
+    "centerTapDoesNotLaunch": true,
+    "deadZoneDoesNotLaunch": true,
+    "recenterCancels": true,
+    "sceneStartRejected": true,
+    "nonPrimaryButtons": [
+      {
+        "button": "right",
+        "cannotAimOrLaunch": true,
+        "pressed": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "moved": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "released": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "button": "middle",
+        "cannotAimOrLaunch": true,
+        "pressed": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "moved": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "released": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 0,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    ],
+    "evidence": {
+      "centerTap": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 0,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "insideDeadZone": {
+        "dragging": true,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 3,
+          "y": 0
+        },
+        "thumb": {
+          "x": 3,
+          "y": 0
+        }
+      },
+      "deadZoneRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 3,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0.9035826357366062,
+          "y": 0
+        }
+      },
+      "pushed": {
+        "dragging": true,
+        "power": 1,
+        "shots": 0,
+        "visibleDots": 13,
+        "aim": {
+          "x": 0,
+          "y": 90.77404742518874
+        },
+        "thumb": {
+          "x": 0,
+          "y": 75
+        }
+      },
+      "recentered": {
+        "dragging": true,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 0,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "recenterRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 0,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "outsideStart": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 0,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "sceneRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 0,
+          "y": 0
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  },
   "inputFixture": {
     "dragging": true,
     "dragPower": 1,
@@ -261,15 +546,52 @@
       "width": 720,
       "height": 1280
     },
+    "joystick": {
+      "x": 224,
+      "y": 1097,
+      "coordinateSource": "Actual joystick UI-node position and Cocos view scale; EmptyDevice cannot project a render camera",
+      "pixelX": 1,
+      "pixelY": 1,
+      "groundProjection": 0.8262273428075476,
+      "joystickTuning": {
+        "deadZone": 7,
+        "travel": 75
+      },
+      "gameplayTuning": {
+        "fixedStep": 0.008333333333333333,
+        "maxFrameTime": 0.25,
+        "playerRadius": 0.38,
+        "maxHp": 5,
+        "launchMin": 0.55,
+        "launchMax": 12.8,
+        "drag": 1.36,
+        "stopSpeed": 0.24,
+        "cabinetDrag": 2.7,
+        "cabinetMaxSpeed": 8.5,
+        "restitution": 0.7,
+        "enemyWindup": 0.34,
+        "arrowSpeed": 15,
+        "invulnerableTime": 0.85,
+        "treasureRadius": 0.48,
+        "exitRadius": 0.8,
+        "maxFlightTime": 5.5
+      },
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 720,
+        "height": 1280
+      }
+    },
     "mouseSupported": true,
     "overlayChildren": 0,
     "dragStart": {
-      "x": 360,
-      "y": 560
+      "x": 224,
+      "y": 183
     },
     "dragNow": {
-      "x": 360,
-      "y": 395
+      "x": 224,
+      "y": 258
     }
   },
   "realInputShot": {
@@ -284,7 +606,7 @@
     "boardDestroyed": true
   },
   "route": {
-    "source": "Documented 21-shot core regression route; all drag powers at least 11%",
+    "source": "Documented 21-shot core regression route; fixed joystick power may be as low as 1%",
     "rooms": [
       {
         "room": 1,
@@ -326,6 +648,485 @@
         "score": 1065,
         "livingEnemies": 2
       }
+    ],
+    "shots": [
+      {
+        "room": 1,
+        "shot": 1,
+        "target": {
+          "x": 0,
+          "y": 1.6
+        },
+        "power": 1,
+        "effectivePower": 1,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 115,
+        "player": {
+          "x": 0,
+          "y": 3.294205454024133
+        }
+      },
+      {
+        "room": 1,
+        "shot": 2,
+        "target": {
+          "x": 0,
+          "y": 5.6
+        },
+        "power": 0.22832641559030947,
+        "effectivePower": 0.23529411764705882,
+        "pointer": {
+          "x": 224,
+          "y": 1074,
+          "effectivePower": 0.23529411764705882,
+          "error": 0.4738037398589583
+        },
+        "phase": "room_clear",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": 0,
+          "y": 4.807257929468028
+        }
+      },
+      {
+        "room": 2,
+        "shot": 3,
+        "target": {
+          "x": 0,
+          "y": 3
+        },
+        "power": 1,
+        "effectivePower": 1,
+        "pointer": {
+          "x": 224,
+          "y": 1022,
+          "effectivePower": 1,
+          "error": 0
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": 0,
+          "y": -4.592809278140014
+        }
+      },
+      {
+        "room": 2,
+        "shot": 4,
+        "target": {
+          "x": -1.4,
+          "y": -2.5
+        },
+        "power": 0.285723822507154,
+        "effectivePower": 0.29438988488547935,
+        "pointer": {
+          "x": 207,
+          "y": 1076,
+          "effectivePower": 0.29438988488547935,
+          "error": 0.5892959200866131
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": -1.4511366640044212,
+          "y": -2.423212011054433
+        }
+      },
+      {
+        "room": 2,
+        "shot": 5,
+        "target": {
+          "x": -1.4,
+          "y": 4.5
+        },
+        "power": 0.8276150017998363,
+        "effectivePower": 0.8236461177660802,
+        "pointer": {
+          "x": 225,
+          "y": 1034,
+          "effectivePower": 0.8236461177660802,
+          "error": 0.5142298825535283
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": -1.360467514615399,
+          "y": 4.49032874892384
+        }
+      },
+      {
+        "room": 2,
+        "shot": 6,
+        "target": {
+          "x": 0,
+          "y": 4.2
+        },
+        "power": 0.14712291847805054,
+        "effectivePower": 0.15092171325929513,
+        "pointer": {
+          "x": 241,
+          "y": 1100,
+          "effectivePower": 0.15092171325929513,
+          "error": 0.2583301730405726
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 265,
+        "player": {
+          "x": 0.0519609537003654,
+          "y": 4.188653810647176
+        }
+      },
+      {
+        "room": 2,
+        "shot": 7,
+        "target": {
+          "x": 2.9,
+          "y": 5.7
+        },
+        "power": 0.3726009736864647,
+        "effectivePower": 0.37787596247858285,
+        "pointer": {
+          "x": 254,
+          "y": 1084,
+          "effectivePower": 0.37787596247858285,
+          "error": 0.38495746190388275
+        },
+        "phase": "room_clear",
+        "hp": 5,
+        "score": 315,
+        "player": {
+          "x": 2.201634995708634,
+          "y": 5.316098243844252
+        }
+      },
+      {
+        "room": 3,
+        "shot": 8,
+        "target": {
+          "x": 0,
+          "y": -3
+        },
+        "power": 0.4563565599760015,
+        "effectivePower": 0.45607581790435925,
+        "pointer": {
+          "x": 255,
+          "y": 1075,
+          "effectivePower": 0.45607581790435925,
+          "error": 0.5406298315057233
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 315,
+        "player": {
+          "x": -0.6817395242803499,
+          "y": -2.9428918574876626
+        }
+      },
+      {
+        "room": 3,
+        "shot": 9,
+        "target": {
+          "x": 0,
+          "y": 3
+        },
+        "power": 1,
+        "effectivePower": 1,
+        "pointer": {
+          "x": 234,
+          "y": 1022,
+          "effectivePower": 1,
+          "error": 0.778805710226623
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 330,
+        "player": {
+          "x": 0.17119891763855313,
+          "y": 4.799575600263642
+        }
+      },
+      {
+        "room": 3,
+        "shot": 10,
+        "target": {
+          "x": 3,
+          "y": 3.6
+        },
+        "power": 0.3539576433888116,
+        "effectivePower": 0.3481724014758226,
+        "pointer": {
+          "x": 253,
+          "y": 1107,
+          "effectivePower": 0.3481724014758226,
+          "error": 0.421960938183362
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 430,
+        "player": {
+          "x": 2.983313316629033,
+          "y": 3.62593419419919
+        }
+      },
+      {
+        "room": 3,
+        "shot": 11,
+        "target": {
+          "x": 3,
+          "y": 5.8
+        },
+        "power": 0.2434381590763914,
+        "effectivePower": 0.25,
+        "pointer": {
+          "x": 224,
+          "y": 1073,
+          "effectivePower": 0.25,
+          "error": 0.49787429708075454
+        },
+        "phase": "room_clear",
+        "hp": 4,
+        "score": 480,
+        "player": {
+          "x": 2.983313316629033,
+          "y": 5.010000868710751
+        }
+      },
+      {
+        "room": 4,
+        "shot": 12,
+        "target": {
+          "x": 2,
+          "y": -4
+        },
+        "power": 0.2988821119183101,
+        "effectivePower": 0.2971020737863366,
+        "pointer": {
+          "x": 246,
+          "y": 1081,
+          "effectivePower": 0.2971020737863366,
+          "error": 0.46670730643826436
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 480,
+        "player": {
+          "x": 1.9762732030113517,
+          "y": -3.9604187398275736
+        }
+      },
+      {
+        "room": 4,
+        "shot": 13,
+        "target": {
+          "x": 4.1,
+          "y": 1
+        },
+        "power": 0.639729739567028,
+        "effectivePower": 0.6402516922643103,
+        "pointer": {
+          "x": 247,
+          "y": 1052,
+          "effectivePower": 0.6402516922643103,
+          "error": 0.2845624586073811
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 515,
+        "player": {
+          "x": 4.4770293457669865,
+          "y": 0.40136748486840645
+        }
+      },
+      {
+        "room": 4,
+        "shot": 14,
+        "target": {
+          "x": 4.1,
+          "y": 4.5
+        },
+        "power": 0.4822872220135109,
+        "effectivePower": 0.48822797771299353,
+        "pointer": {
+          "x": 220,
+          "y": 1057,
+          "effectivePower": 0.48822797771299353,
+          "error": 0.6035376885978785
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 615,
+        "player": {
+          "x": 4.132223888853388,
+          "y": 4.574619071313574
+        }
+      },
+      {
+        "room": 4,
+        "shot": 15,
+        "target": {
+          "x": 3.6,
+          "y": 4.5
+        },
+        "power": 0.04211830598238783,
+        "effectivePower": 0.0448511120753072,
+        "pointer": {
+          "x": 214,
+          "y": 1098,
+          "effectivePower": 0.0448511120753072,
+          "error": 0.2425535836078064
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 615,
+        "player": {
+          "x": 3.553960606403835,
+          "y": 4.504630673146485
+        }
+      },
+      {
+        "room": 4,
+        "shot": 16,
+        "target": {
+          "x": -3.5,
+          "y": 5.7
+        },
+        "power": 0.8560444186015056,
+        "effectivePower": 0.8620605715601717,
+        "pointer": {
+          "x": 159,
+          "y": 1088,
+          "effectivePower": 0.8620605715601717,
+          "error": 0.4210399756034919
+        },
+        "phase": "room_clear",
+        "hp": 4,
+        "score": 665,
+        "player": {
+          "x": -2.723268834967585,
+          "y": 5.556586715626197
+        }
+      },
+      {
+        "room": 5,
+        "shot": 17,
+        "target": {
+          "x": 3.8,
+          "y": -4
+        },
+        "power": 0.48806769507216624,
+        "effectivePower": 0.4926016685681349,
+        "pointer": {
+          "x": 262,
+          "y": 1083,
+          "effectivePower": 0.4926016685681349,
+          "error": 0.3112745021599706
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 3.855855892660665,
+          "y": -3.9806445476101664
+        }
+      },
+      {
+        "room": 5,
+        "shot": 18,
+        "target": {
+          "x": 4.2,
+          "y": 2
+        },
+        "power": 0.7128696153821322,
+        "effectivePower": 0.7080185693507198,
+        "pointer": {
+          "x": 228,
+          "y": 1042,
+          "effectivePower": 0.7080185693507198,
+          "error": 0.3709145591282541
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 4.214161069389355,
+          "y": 1.9822374883176204
+        }
+      },
+      {
+        "room": 5,
+        "shot": 19,
+        "target": {
+          "x": 2,
+          "y": 3.8
+        },
+        "power": 0.32838634994203536,
+        "effectivePower": 0.32124132652517523,
+        "pointer": {
+          "x": 200,
+          "y": 1081,
+          "effectivePower": 0.32124132652517523,
+          "error": 0.5389182743582676
+        },
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 2.011895724038108,
+          "y": 3.759202278555521
+        }
+      },
+      {
+        "room": 5,
+        "shot": 20,
+        "target": {
+          "x": 0,
+          "y": 3.8
+        },
+        "power": 0.22353367413207306,
+        "effectivePower": 0.22058823529411764,
+        "pointer": {
+          "x": 202,
+          "y": 1097,
+          "effectivePower": 0.22058823529411764,
+          "error": 0.42093750979871986
+        },
+        "phase": "aiming",
+        "hp": 4,
+        "score": 765,
+        "player": {
+          "x": 0.6505104801367855,
+          "y": 3.6468204934066533
+        }
+      },
+      {
+        "room": 5,
+        "shot": 21,
+        "target": {
+          "x": 0,
+          "y": 5.9
+        },
+        "power": 0.2644808742898955,
+        "effectivePower": 0.26909148943157407,
+        "pointer": {
+          "x": 216,
+          "y": 1073,
+          "effectivePower": 0.26909148943157407,
+          "error": 0.4792091725055467
+        },
+        "phase": "victory",
+        "hp": 4,
+        "score": 1065,
+        "player": {
+          "x": 0.23910761430542435,
+          "y": 5.140608623560032
+        }
+      }
     ]
   },
   "unavailableAd": {
@@ -353,7 +1154,7 @@
     }
   },
   "expectedWarnings": [
-    "Run restore failed Error: Invalid or unsupported Monster Den snapshot.\n    at GameModel.restore ([project]/assets/scripts/core/model.ts:314:19)\n    at GameMain.restoreRun ([project]/assets/scripts/GameMain.ts:380:28)\n    at [project]/tools/check-game-headless.cjs:272:14"
+    "Run restore failed Error: Invalid or unsupported Monster Den snapshot.\n    at GameModel.restore (/workspace/scratch/47c64d0088ec/monster-den/assets/scripts/core/model.ts:340:19)\n    at GameMain.restoreRun (/workspace/scratch/47c64d0088ec/monster-den/assets/scripts/GameMain.ts:451:28)\n    at /workspace/scratch/47c64d0088ec/monster-den/tools/check-game-headless.cjs:392:14"
   ],
   "save": {
     "backend": "web",
@@ -365,12 +1166,36 @@
   },
   "teardown": {
     "destroyed": true,
-    "frames": 3301
+    "frames": 1804
   },
   "meshLifecycle": {
-    "initialized": 307,
+    "initialized": 425,
     "liveAfterSceneDestroy": 0,
     "instrumentation": "Counters wrap Mesh.initialize/destroy and call the original implementations without changing behavior."
   },
-  "passed": true
+  "passed": true,
+  "evidenceContext": {
+    "candidateVersion": "0.2.0",
+    "candidateStatus": "0.2.0 working-tree candidate",
+    "recordedAtUtc": "2026-11-19T07:02:19.192Z",
+    "commitBinding": "No Git commit SHA is asserted. Source file SHA-256 fingerprints identify the verified working-tree candidate.",
+    "localWebGLValidationPerformed": false,
+    "localBrowserLaunched": false,
+    "validationLimit": "These are local strict-type and Cocos EmptyDevice results. No WebGL, GPU shader, pixel, real-phone, or audible-output validation is claimed by these reports.",
+    "domPrimaryMouseGuard": {
+      "source": "assets/scripts/GameMain.ts",
+      "bytes": 49859,
+      "sha256": "09601d3a9ab04a149cc851af2a5fc5d9210e924b9bd9fe270c2af31cdffd8fba",
+      "capturePhaseGuardPresent": true
+    },
+    "validationKind": "Cocos 3.8.8 EmptyDevice lifecycle and DOM input integration",
+    "sourceReport": {
+      "path": ".build/game-headless/result.json",
+      "bytes": 28327,
+      "sha256": "8b1f8427154621a1ad2878fec54b7a3129c40632e9317646570e0092922029ce"
+    },
+    "originalReportFieldsPreserved": true,
+    "allRecordedSourcesMatchCurrentFiles": true,
+    "verifiedSourceFileCount": 17
+  }
 }
