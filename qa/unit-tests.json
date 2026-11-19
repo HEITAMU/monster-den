@@ -1,26 +1,103 @@
 {
-  "candidateVersion": "0.2.0",
-  "command": "node --test --test-reporter=dot tests/*.test.mjs",
+  "candidateVersion": "0.3.0",
+  "testedCommit": "cb2fbffc4afa89de849e6e4ec56b2748dc3d407e",
+  "recordedAtUtc": "2026-11-19T09:30:56.131509+00:00",
+  "command": "node --test --test-reporter=tap tests/*.test.mjs",
   "exitCode": 0,
-  "total": 98,
-  "passed": 98,
+  "total": 110,
+  "passed": 110,
   "failed": 0,
-  "environment": "Node.js v24.22.3, local test runner; no browser or phone",
+  "cancelled": 0,
+  "skipped": 0,
+  "environment": {
+    "node": "v24.22.3",
+    "rendering": "none"
+  },
+  "sourceReport": {
+    "path": ".build/unit-tests-0.3.0.tap",
+    "bytes": 27566,
+    "sha256": "25d92a5f264d253832241be9f2451eb03988401ce9338f646ac29e79c414fadd"
+  },
   "sourceFiles": {
     "tests/audio-catalog.test.mjs": {
+      "bytes": 3833,
       "sha256": "ace1633abc3756da32eee05f70db8a56c32a551148532a1b7cbaeb68a547731e"
     },
     "tests/core.test.mjs": {
-      "sha256": "cf68982e06700756aa9ee69d5d85cae0b5eb5ffd8f61da7b109db19dae6d25ad"
+      "bytes": 27833,
+      "sha256": "02ad5e1b2bfcfec11e4ad869661f13eef63464aeac511f11b06931a8b477af3c"
+    },
+    "tests/guide.test.mjs": {
+      "bytes": 5235,
+      "sha256": "5df4e0ee72f582c3679a56ef9f41192f397f4ebe02ca85993283cb610f54888c"
     },
     "tests/mesh-codec.test.mjs": {
-      "sha256": "c29141ee13af74024b9544eb76593ca0ebb7753da88cd047d02043cba788e1b3"
+      "bytes": 2321,
+      "sha256": "1839f6d11316dcec87a5f9a3c9f314f7e8fe8ee3c2f0e43d7d8f2fb31fa54c9d"
     },
     "tests/platform.audio.test.mjs": {
+      "bytes": 31120,
       "sha256": "5813dd773f0bfe5b873ddbf24f85a045761ecff6459dbc256b70c957ab991dab"
     },
     "tests/platform.test.mjs": {
+      "bytes": 20531,
       "sha256": "03bb0d48f3356bd754eb94c9b15df69dcbd642d32396e9d63966f7610dcfe918"
+    },
+    "assets/scripts/AdventureGuide.ts": {
+      "bytes": 3985,
+      "sha256": "a12bfa21c96d688c06cf5ff1008ce1d56861818ed28a46da818123314a634da2"
+    },
+    "assets/scripts/AudioCatalog.ts": {
+      "bytes": 2423,
+      "sha256": "f211f9b89ee36e4afd9931702814e5b147ab8238c12a5fcf2ce9078be71de272"
+    },
+    "assets/scripts/GameMain.ts": {
+      "bytes": 55192,
+      "sha256": "8a53c05e79b19f0643c74be0895cd362624ce08da63e352803bd480edac8d352"
+    },
+    "assets/scripts/GameUI.ts": {
+      "bytes": 7438,
+      "sha256": "3c9a43b3126a894cd034534fb22916962ce97180258abda49d41a56a7d3bd02e"
+    },
+    "assets/scripts/MeshCodec.ts": {
+      "bytes": 2526,
+      "sha256": "3c0c5c8a7d077cb52d28bbf7100ac6651e372487f14741ba56083513d74f6c56"
+    },
+    "assets/scripts/ModelLibrary.ts": {
+      "bytes": 6938,
+      "sha256": "4770575ab1b283c25ed336254ec4a789b0d1dd125954d1899057ca2bc98952b0"
+    },
+    "assets/scripts/ResourceBundles.ts": {
+      "bytes": 1042,
+      "sha256": "9d3a071c53f7167b1da9d4fe9f79367e30ed0c58e9e3a547f9af8b6dc24a09d8"
+    },
+    "assets/scripts/core/index.ts": {
+      "bytes": 424,
+      "sha256": "65f3710e61319b80ea8ee0c93df1af2abe9f1ff1d5db5be41c8f323cd237b37a"
+    },
+    "assets/scripts/core/model.ts": {
+      "bytes": 35032,
+      "sha256": "98edb43beac27319ad249a141322328308f6e2cb59573552e997c522e66ebd47"
+    },
+    "assets/scripts/core/rooms.ts": {
+      "bytes": 5293,
+      "sha256": "81db1dda638bc635ce5649b0442d551ea07e827c570e08d8a57a5777dd9c29f5"
+    },
+    "assets/scripts/core/types.ts": {
+      "bytes": 3986,
+      "sha256": "780eb2cff6cd814271b52bf04161e5e543b72b87a76347500e7a35c6b0ba8291"
+    },
+    "assets/scripts/platform/GameAudio.ts": {
+      "bytes": 47489,
+      "sha256": "d4ba32d29a88d01c315f8f83b0054e8865abc27a3c2acd037dfb5a8959d6580c"
+    },
+    "assets/scripts/platform/RewardedAds.ts": {
+      "bytes": 15987,
+      "sha256": "717079c8673a16091fc633981f5b4001027baee6c8770d9d83b9810c300148ee"
+    },
+    "assets/scripts/platform/SaveStore.ts": {
+      "bytes": 16946,
+      "sha256": "e6025387b02f6c048bf6c8f9f65d7f16d2663dc284f88902856fcefe65658d05"
     }
   }
 }

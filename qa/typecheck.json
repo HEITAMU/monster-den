@@ -5,6 +5,7 @@
   "strict": true,
   "noImplicitAny": true,
   "files": [
+    "assets/scripts/AdventureGuide.ts",
     "assets/scripts/AudioCatalog.ts",
     "assets/scripts/GameMain.ts",
     "assets/scripts/GameUI.ts",
@@ -485,68 +486,62 @@
   "scope": "All project scripts. Engine implementation diagnostics and unavailable native-platform SDK declarations are not project build gates. No API shim or any-typed cc module is used.",
   "passed": true,
   "evidenceContext": {
-    "candidateVersion": "0.2.0",
-    "candidateStatus": "0.2.0 working-tree candidate",
-    "recordedAtUtc": "2026-11-19T07:02:19.192Z",
-    "commitBinding": "No Git commit SHA is asserted. Source file SHA-256 fingerprints identify the verified working-tree candidate.",
-    "localWebGLValidationPerformed": false,
-    "localBrowserLaunched": false,
-    "validationLimit": "These are local strict-type and Cocos EmptyDevice results. No WebGL, GPU shader, pixel, real-phone, or audible-output validation is claimed by these reports.",
-    "domPrimaryMouseGuard": {
-      "source": "assets/scripts/GameMain.ts",
-      "bytes": 49859,
-      "sha256": "09601d3a9ab04a149cc851af2a5fc5d9210e924b9bd9fe270c2af31cdffd8fba",
-      "capturePhaseGuardPresent": true
-    },
+    "candidateVersion": "0.3.0",
+    "testedCommit": "cb2fbffc4afa89de849e6e4ec56b2748dc3d407e",
+    "recordedAtUtc": "2026-11-19T09:30:56.131509+00:00",
     "validationKind": "strict TypeScript against official Cocos 3.8.8 APIs",
     "sourceReport": {
       "path": ".build/typecheck/result.json",
-      "bytes": 12055,
-      "sha256": "1d7ecfe9edd2e5e272ae23293d23d3853aa0c72921640689638d557045994834"
+      "bytes": 12095,
+      "sha256": "11e86b3c76c95c86f380b89dbd3e064f26d2f6e770d6756f9cb9241374c13c63"
     },
     "originalReportFieldsPreserved": true,
     "allRecordedSourcesMatchCurrentFiles": true,
-    "verifiedSourceFileCount": 13,
+    "verifiedSourceFileCount": 14,
     "sourceFiles": {
+      "assets/scripts/AdventureGuide.ts": {
+        "bytes": 3985,
+        "sha256": "a12bfa21c96d688c06cf5ff1008ce1d56861818ed28a46da818123314a634da2"
+      },
       "assets/scripts/AudioCatalog.ts": {
         "bytes": 2423,
         "sha256": "f211f9b89ee36e4afd9931702814e5b147ab8238c12a5fcf2ce9078be71de272"
       },
       "assets/scripts/GameMain.ts": {
-        "bytes": 49859,
-        "sha256": "09601d3a9ab04a149cc851af2a5fc5d9210e924b9bd9fe270c2af31cdffd8fba"
+        "bytes": 55192,
+        "sha256": "8a53c05e79b19f0643c74be0895cd362624ce08da63e352803bd480edac8d352"
       },
       "assets/scripts/GameUI.ts": {
-        "bytes": 5468,
-        "sha256": "22348390584e9b2b1249c94e3a0c8aa5cc84bc64856dffa76d00d94fb0b0e722"
+        "bytes": 7438,
+        "sha256": "3c9a43b3126a894cd034534fb22916962ce97180258abda49d41a56a7d3bd02e"
       },
       "assets/scripts/MeshCodec.ts": {
         "bytes": 2526,
         "sha256": "3c0c5c8a7d077cb52d28bbf7100ac6651e372487f14741ba56083513d74f6c56"
       },
       "assets/scripts/ModelLibrary.ts": {
-        "bytes": 6665,
-        "sha256": "6b89848620fb6623c67d4f99a0e109d830e37d86f70a0f32f1b770071cdc29dc"
+        "bytes": 6938,
+        "sha256": "4770575ab1b283c25ed336254ec4a789b0d1dd125954d1899057ca2bc98952b0"
       },
       "assets/scripts/ResourceBundles.ts": {
         "bytes": 1042,
         "sha256": "9d3a071c53f7167b1da9d4fe9f79367e30ed0c58e9e3a547f9af8b6dc24a09d8"
       },
       "assets/scripts/core/index.ts": {
-        "bytes": 399,
-        "sha256": "7c90b7e62d26113ec2705d087b6fbf6f91904a326632045fa11fc5985f2df0c7"
+        "bytes": 424,
+        "sha256": "65f3710e61319b80ea8ee0c93df1af2abe9f1ff1d5db5be41c8f323cd237b37a"
       },
       "assets/scripts/core/model.ts": {
-        "bytes": 32895,
-        "sha256": "382d15447e35a130892d018d0e75851920adbfa55c9ab731feff347573db71d5"
+        "bytes": 35032,
+        "sha256": "98edb43beac27319ad249a141322328308f6e2cb59573552e997c522e66ebd47"
       },
       "assets/scripts/core/rooms.ts": {
-        "bytes": 5165,
-        "sha256": "d334ce67724463f56c5d52dedb2294921e9e41b2e660f4661d26ea42e3a35050"
+        "bytes": 5293,
+        "sha256": "81db1dda638bc635ce5649b0442d551ea07e827c570e08d8a57a5777dd9c29f5"
       },
       "assets/scripts/core/types.ts": {
-        "bytes": 3651,
-        "sha256": "499c071669a3f989b3ea166dec310766bfb411666a97f94b9ab6d37d51125ca8"
+        "bytes": 3986,
+        "sha256": "780eb2cff6cd814271b52bf04161e5e543b72b87a76347500e7a35c6b0ba8291"
       },
       "assets/scripts/platform/GameAudio.ts": {
         "bytes": 47489,
@@ -560,6 +555,9 @@
         "bytes": 16946,
         "sha256": "e6025387b02f6c048bf6c8f9f65d7f16d2663dc284f88902856fcefe65658d05"
       }
-    }
+    },
+    "localBrowserLaunched": false,
+    "localWebGLValidationPerformed": false,
+    "validationLimit": "Local type and EmptyDevice integration evidence. No pixel, WebGL shader, physical-phone, WeChat runtime or audible-output validation is claimed by these reports."
   }
 }
