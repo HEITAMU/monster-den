@@ -6,19 +6,21 @@
   "audibleOutputValidation": false,
   "testMethod": "Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.",
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "[MonsterDen audio] 音频：当前环境没有可用音频后端。"
+  ],
   "checkpoints": [
     {
       "label": "home loaded by actual async start lifecycle",
       "page": "home",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 58,
-      "uniqueMeshes": 53,
-      "labels": 9,
+      "nodeMeshRenderers": 59,
+      "uniqueMeshes": 54,
+      "labels": 11,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 53,
+      "loadedGameModules": 12,
+      "liveMeshes": 54,
       "totalCocosFrames": 1
     },
     {
@@ -26,12 +28,12 @@
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 58,
-      "uniqueMeshes": 53,
-      "labels": 14,
+      "nodeMeshRenderers": 59,
+      "uniqueMeshes": 54,
+      "labels": 16,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 53,
+      "loadedGameModules": 12,
+      "liveMeshes": 54,
       "totalCocosFrames": 4
     },
     {
@@ -39,12 +41,12 @@
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 58,
-      "uniqueMeshes": 53,
-      "labels": 14,
+      "nodeMeshRenderers": 59,
+      "uniqueMeshes": 54,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 53,
+      "loadedGameModules": 12,
+      "liveMeshes": 54,
       "totalCocosFrames": 235
     },
     {
@@ -52,12 +54,12 @@
       "page": "game",
       "room": 1,
       "phase": "aiming",
-      "nodeMeshRenderers": 58,
-      "uniqueMeshes": 53,
-      "labels": 14,
+      "nodeMeshRenderers": 59,
+      "uniqueMeshes": 54,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 53,
+      "loadedGameModules": 12,
+      "liveMeshes": 54,
       "totalCocosFrames": 235
     },
     {
@@ -65,12 +67,12 @@
       "page": "game",
       "room": 2,
       "phase": "aiming",
-      "nodeMeshRenderers": 69,
-      "uniqueMeshes": 64,
-      "labels": 14,
+      "nodeMeshRenderers": 70,
+      "uniqueMeshes": 65,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 65,
+      "loadedGameModules": 12,
+      "liveMeshes": 66,
       "totalCocosFrames": 281
     },
     {
@@ -78,12 +80,12 @@
       "page": "game",
       "room": 3,
       "phase": "aiming",
-      "nodeMeshRenderers": 70,
-      "uniqueMeshes": 65,
-      "labels": 14,
+      "nodeMeshRenderers": 71,
+      "uniqueMeshes": 66,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 72,
+      "loadedGameModules": 12,
+      "liveMeshes": 73,
       "totalCocosFrames": 947
     },
     {
@@ -91,12 +93,12 @@
       "page": "game",
       "room": 4,
       "phase": "aiming",
-      "nodeMeshRenderers": 68,
-      "uniqueMeshes": 64,
-      "labels": 14,
+      "nodeMeshRenderers": 69,
+      "uniqueMeshes": 65,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 72,
+      "loadedGameModules": 12,
+      "liveMeshes": 73,
       "totalCocosFrames": 1606
     },
     {
@@ -104,74 +106,74 @@
       "page": "game",
       "room": 5,
       "phase": "aiming",
-      "nodeMeshRenderers": 69,
-      "uniqueMeshes": 64,
-      "labels": 14,
+      "nodeMeshRenderers": 70,
+      "uniqueMeshes": 65,
+      "labels": 15,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 72,
-      "totalCocosFrames": 2448
+      "loadedGameModules": 12,
+      "liveMeshes": 73,
+      "totalCocosFrames": 2449
     },
     {
       "label": "victory settlement UI reached by 21 actual controller shots",
       "page": "game",
       "room": 5,
       "phase": "victory",
-      "nodeMeshRenderers": 69,
-      "uniqueMeshes": 64,
-      "labels": 20,
+      "nodeMeshRenderers": 70,
+      "uniqueMeshes": 65,
+      "labels": 21,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 72,
-      "totalCocosFrames": 3271
+      "loadedGameModules": 12,
+      "liveMeshes": 73,
+      "totalCocosFrames": 3274
     },
     {
       "label": "tool cabinet UI rendered",
       "page": "tools",
       "room": 5,
       "phase": "victory",
-      "nodeMeshRenderers": 69,
-      "uniqueMeshes": 64,
-      "labels": 13,
+      "nodeMeshRenderers": 70,
+      "uniqueMeshes": 65,
+      "labels": 14,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 72,
-      "totalCocosFrames": 3282
+      "loadedGameModules": 12,
+      "liveMeshes": 73,
+      "totalCocosFrames": 3285
     },
     {
       "label": "game-over UI via explicit terminal-state fixture",
       "page": "game",
       "room": 1,
       "phase": "game_over",
-      "nodeMeshRenderers": 58,
-      "uniqueMeshes": 53,
-      "labels": 21,
+      "nodeMeshRenderers": 59,
+      "uniqueMeshes": 54,
+      "labels": 22,
       "cameras": 2,
-      "loadedGameModules": 9,
-      "liveMeshes": 70,
-      "totalCocosFrames": 3288
+      "loadedGameModules": 12,
+      "liveMeshes": 71,
+      "totalCocosFrames": 3291
     }
   ],
   "sourceFiles": {
     "web/engine-effects.js": {
-      "bytes": 9858,
-      "sha256": "36e1e2eb558d523496ff4c64c5f8e4bc24f63ac576aa671ff2e28859e6014a01"
+      "bytes": 10036,
+      "sha256": "b807187db73e12f6c27e509153e518527d0c9fd19e4b2b384e9a3dc11c6e38f6"
     },
     "web/vendor/uniform-chunks.json": {
       "bytes": 3047,
       "sha256": "37feb73b7a7f58608b926c3bbc0247a129eb4823fd18aa062c0458d21212cebf"
     },
     "assets/scripts/GameMain.ts": {
-      "bytes": 36336,
-      "sha256": "a329c291ee8607b227e9fe6e5e46b6cfd69965b90487b2c8b8f222eeadca5570"
+      "bytes": 41692,
+      "sha256": "a9826ece6a6a7e903ec1d581cea311a3910ff509ad96da6c6f251ad8cecfd3e8"
     },
     "assets/scripts/core/index.ts": {
       "bytes": 367,
       "sha256": "eb8dd6cabcc914a461d7c50d71a08267c1c4e8c1c812da6665c77922d20da477"
     },
     "assets/scripts/core/model.ts": {
-      "bytes": 28229,
-      "sha256": "7f2c548ff1cf06cccfaa71bca0c260f08765cc52e1ea9051b53f9e16fa2165e7"
+      "bytes": 30391,
+      "sha256": "ef7e92c7012832ec3fafc5540082989fa257f08355672fe76326590116e5a12e"
     },
     "assets/scripts/core/rooms.ts": {
       "bytes": 4707,
@@ -186,12 +188,24 @@
       "sha256": "717079c8673a16091fc633981f5b4001027baee6c8770d9d83b9810c300148ee"
     },
     "assets/scripts/platform/GameAudio.ts": {
-      "bytes": 18871,
-      "sha256": "bea99dab922c08f298644b43351f855b1a2c1d018a1e50283dc9b2146a104580"
+      "bytes": 47489,
+      "sha256": "d4ba32d29a88d01c315f8f83b0054e8865abc27a3c2acd037dfb5a8959d6580c"
+    },
+    "assets/scripts/AudioCatalog.ts": {
+      "bytes": 2423,
+      "sha256": "f211f9b89ee36e4afd9931702814e5b147ab8238c12a5fcf2ce9078be71de272"
+    },
+    "assets/scripts/ResourceBundles.ts": {
+      "bytes": 1042,
+      "sha256": "9d3a071c53f7167b1da9d4fe9f79367e30ed0c58e9e3a547f9af8b6dc24a09d8"
     },
     "assets/scripts/ModelLibrary.ts": {
-      "bytes": 6076,
-      "sha256": "728a6c9120a5d66c9d8755b6736eb3499ff140e42506732439384437d8c7424b"
+      "bytes": 6549,
+      "sha256": "8ad1958beeed7c52a3b9c154cc913b015ffb5159462d3967907b469a189da9e1"
+    },
+    "assets/scripts/MeshCodec.ts": {
+      "bytes": 2526,
+      "sha256": "3c0c5c8a7d077cb52d28bbf7100ac6651e372487f14741ba56083513d74f6c56"
     },
     "assets/scripts/GameUI.ts": {
       "bytes": 2870,
@@ -202,12 +216,12 @@
       "sha256": "25dce343aaaf49ceae455e0f9fe16d566135dd4e46bed120a1577aa9dc4a10f6"
     },
     "web/resources/models/environment.json": {
-      "bytes": 3015808,
-      "sha256": "656265e9904d5aa6249609be8ce75a560101ac84ae8de79f8f3742c7401254fa"
+      "bytes": 876119,
+      "sha256": "a5ba97fd5e65c7114fdb40ca93a7bc3adc25e8f1bde1e6d81d152848be5a594e"
     },
     "web/resources/models/characters.json": {
-      "bytes": 1586549,
-      "sha256": "12aed38d389a85222a34287b20c721c1138d08616a4520f0768ad733219565c8"
+      "bytes": 525426,
+      "sha256": "895335588c85013abd5fbd57b54b2be87144da1bc466569cb0c08a87a19b5224"
     }
   },
   "assetRequests": [
@@ -339,7 +353,7 @@
     }
   },
   "expectedWarnings": [
-    "Run restore failed Error: Invalid or unsupported Monster Den snapshot.\n    at GameModel.restore (assets/scripts/core/model.ts:270:19)\n    at GameMain.restoreRun (assets/scripts/GameMain.ts:352:28)\n    at tools/check-game-headless.cjs:272:14"
+    "Run restore failed Error: Invalid or unsupported Monster Den snapshot.\n    at GameModel.restore ([project]/assets/scripts/core/model.ts:314:19)\n    at GameMain.restoreRun ([project]/assets/scripts/GameMain.ts:380:28)\n    at [project]/tools/check-game-headless.cjs:272:14"
   ],
   "save": {
     "backend": "web",
@@ -351,10 +365,10 @@
   },
   "teardown": {
     "destroyed": true,
-    "frames": 3298
+    "frames": 3301
   },
   "meshLifecycle": {
-    "initialized": 296,
+    "initialized": 307,
     "liveAfterSceneDestroy": 0,
     "instrumentation": "Counters wrap Mesh.initialize/destroy and call the original implementations without changing behavior."
   },

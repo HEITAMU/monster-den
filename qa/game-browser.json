@@ -1,0 +1,2265 @@
+{
+  "test": "Actual Cocos 3.8.8 WebGL, native UI, 21 pointer shots, audio playback state and mobile touch ownership",
+  "method": "Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. Game state is read for targeting and assertions, never rewritten to reach victory.",
+  "passed": true,
+  "audibleOutputValidation": false,
+  "phonePerformanceValidation": false,
+  "errors": [],
+  "consoleErrors": [],
+  "knownDiagnostics": [
+    {
+      "scope": "mobile-390x844-dpr2",
+      "message": "Ignored attempt to cancel a touchcancel event with cancelable=false, for example because scrolling is in progress and cannot be interrupted.",
+      "location": {
+        "url": "http://127.0.0.1:40711/vendor/cocos-3.8.8.js",
+        "line": 1,
+        "column": 0,
+        "lineNumber": 1,
+        "columnNumber": 0
+      },
+      "originalSeverity": "error",
+      "behaviorVerified": true,
+      "reason": "Official Cocos 3.8.8 web adapter calls preventDefault on our deliberately dispatched non-cancelable native touchcancel; Chromium ignores that no-op.",
+      "source": "cocos-engine@3.8.8/pal/input/web/touch-input.ts:_createCallback",
+      "trigger": "CDP Input.dispatchTouchEvent(type=touchCancel, touchPoints=[])",
+      "evidence": {
+        "nativeCancel": {
+          "type": "touchcancel",
+          "trusted": true,
+          "cancelable": false,
+          "active": [],
+          "changed": [
+            11,
+            12
+          ]
+        },
+        "aimCleared": true,
+        "cancellationDidNotLaunch": true,
+        "subsequentTouchLaunchedAndBrokeBoard": true
+      }
+    }
+  ],
+  "warnings": [],
+  "failedRequests": [],
+  "checkpoints": [
+    {
+      "label": "home actual WebGL draw",
+      "screenshot": "01-home.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 23,
+      "drawCalls": 46,
+      "triangles": 54390,
+      "meshRenderers": 59,
+      "labels": 10,
+      "activeLabels": [
+        "MONSTER DEN",
+        "撞进怪物窝",
+        "撞开一条路，把宝物带出来",
+        "声音",
+        "潜入怪物窝",
+        "工具柜",
+        "怎么玩",
+        "已带回 0 枚金币",
+        "首段冒险 · 0.1.1"
+      ],
+      "page": "home",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 0,
+      "hp": 5,
+      "score": 0,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": -5.5,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.11490483740165786,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": false,
+        "paused": false,
+        "musicRequested": false,
+        "prepared": true,
+        "scene": "camp",
+        "playingScene": null,
+        "activeMusicVoices": 0,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp"
+        ],
+        "decodedMusicBytes": 21168000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "first room before input",
+      "screenshot": "02-room1.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 35,
+      "drawCalls": 53,
+      "triangles": 54498,
+      "meshRenderers": 59,
+      "labels": 15,
+      "activeLabels": [
+        "1 / 5  苔门前院",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "先撞开木栏，拿宝物，再去出口",
+        "第 1 次行动",
+        "下间房选工具",
+        "按住场景，向后拉，再松手"
+      ],
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 0,
+      "hp": 5,
+      "score": 0,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": -5.5,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.08837367489228473,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "first pointer drag displays native aim meshes",
+      "screenshot": "03-room1-aim.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 52,
+      "drawCalls": 62,
+      "triangles": 54680,
+      "meshRenderers": 59,
+      "labels": 15,
+      "activeLabels": [
+        "1 / 5  苔门前院",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "先撞开木栏，拿宝物，再去出口",
+        "力度 100%",
+        "下间房选工具",
+        "松手！撞开前面的木栏",
+        "碰撞点"
+      ],
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 0,
+      "hp": 5,
+      "score": 0,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": -5.5,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.09054689565766698,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": true,
+      "dragPower": 0.9974025974025973,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "first shot breaks board and collects treasure",
+      "screenshot": "04-room1-first-shot.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 147,
+      "drawCalls": 50,
+      "triangles": 51544,
+      "meshRenderers": 59,
+      "labels": 15,
+      "activeLabels": [
+        "1 / 5  苔门前院",
+        "♥♥♥♥♥",
+        "宝物已到手",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "宝物到手，前往发光出口",
+        "第 2 次行动",
+        "下间房选工具",
+        "带宝物进出口，就能离开这一间"
+      ],
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 1,
+      "hp": 5,
+      "score": 115,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": 3.280505991753983,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.08615216700983692,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.9974025974025973,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "room 2 drawn with authored models",
+      "screenshot": "05-room2.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 184,
+      "drawCalls": 64,
+      "triangles": 65068,
+      "meshRenderers": 70,
+      "labels": 15,
+      "activeLabels": [
+        "2 / 5  箭廊货仓",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "推柜子挡住箭路，绕到后面拿宝物",
+        "第 3 次行动",
+        "重撞 · 持续生效",
+        "拖拽瞄准 · 松手出击"
+      ],
+      "page": "game",
+      "room": 2,
+      "phase": "aiming",
+      "shots": 2,
+      "hp": 5,
+      "score": 165,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0,
+        "y": -5.6,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.0800680841489241,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.13506493506493505,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 1,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "room 3 drawn with authored models",
+      "screenshot": "06-room3.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 454,
+      "drawCalls": 65,
+      "triangles": 61760,
+      "meshRenderers": 71,
+      "labels": 15,
+      "activeLabels": [
+        "3 / 5  断桥菌庭",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "撞开中间的厚木栏，去拿宝物",
+        "第 8 次行动",
+        "重撞 · 持续生效",
+        "拖拽瞄准 · 松手出击"
+      ],
+      "page": "game",
+      "room": 3,
+      "phase": "aiming",
+      "shots": 7,
+      "hp": 5,
+      "score": 315,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": -3,
+        "y": -5.5,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.09689222801613247,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.246301705789708,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 1,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "room 4 drawn with authored models",
+      "screenshot": "07-room4.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 718,
+      "drawCalls": 63,
+      "triangles": 64434,
+      "meshRenderers": 69,
+      "labels": 15,
+      "activeLabels": [
+        "4 / 5  回声宝库",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "拿到宝物后，向左边出口撤离",
+        "第 12 次行动",
+        "重撞 · 持续生效",
+        "拖拽瞄准 · 松手出击"
+      ],
+      "page": "game",
+      "room": 4,
+      "phase": "aiming",
+      "shots": 11,
+      "hp": 5,
+      "score": 480,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0,
+        "y": -5.7,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.12987872728000227,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.15584415584415584,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 1,
+        "cachedMusicScenes": [
+          "explore",
+          "boss"
+        ],
+        "decodedMusicBytes": 76204800,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "room 5 drawn with authored models",
+      "screenshot": "08-room5.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 1061,
+      "drawCalls": 64,
+      "triangles": 66230,
+      "meshRenderers": 70,
+      "labels": 15,
+      "activeLabels": [
+        "5 / 5  窝主巢心",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "看清冲锋方向，带走窝主的宝物",
+        "第 17 次行动",
+        "重撞 · 持续生效",
+        "拖拽瞄准 · 松手出击"
+      ],
+      "page": "game",
+      "room": 5,
+      "phase": "aiming",
+      "shots": 16,
+      "hp": 5,
+      "score": 665,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0,
+        "y": -5.7,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.12793836867549552,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.6644478734678226,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "boss",
+        "playingScene": "boss",
+        "activeMusicVoices": 2,
+        "activeSounds": 1,
+        "cachedMusicScenes": [
+          "explore",
+          "boss"
+        ],
+        "decodedMusicBytes": 76204800,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "victory reached by 21 real pointer shots",
+      "screenshot": "09-victory.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 1376,
+      "drawCalls": 70,
+      "triangles": 65220,
+      "meshRenderers": 70,
+      "labels": 21,
+      "activeLabels": [
+        "5 / 5  窝主巢心",
+        "♥♥♥♥♡",
+        "宝物已到手",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "宝物到手，前往发光出口",
+        "第 22 次行动",
+        "重撞 · 持续生效",
+        "带宝物进出口，就能离开这一间",
+        "满载而归",
+        "带回 1065 金币",
+        "21 次出手 · 5 处宝物",
+        "再潜入一次",
+        "看视频 · 加领金币",
+        "回到营地"
+      ],
+      "page": "game",
+      "room": 5,
+      "phase": "victory",
+      "shots": 21,
+      "hp": 4,
+      "score": 1065,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0.27719517357798507,
+        "y": 5.1502769968818685,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1337.142857142857
+      },
+      "viewport": {
+        "width": 420,
+        "height": 780,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780,
+        "bufferWidth": 420,
+        "bufferHeight": 780
+      },
+      "heroY": 0.08028797746354249,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0.16427416416459112,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "boss",
+        "playingScene": "boss",
+        "activeMusicVoices": 1,
+        "activeSounds": 1,
+        "cachedMusicScenes": [
+          "boss"
+        ],
+        "decodedMusicBytes": 33868800,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 1065
+    },
+    {
+      "label": "victory panel at shorter 360×640 viewport",
+      "screenshot": "10-short-portrait.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 25,
+      "drawCalls": 70,
+      "triangles": 65220,
+      "meshRenderers": 70,
+      "labels": 21,
+      "activeLabels": [
+        "5 / 5  窝主巢心",
+        "♥♥♥♥♡",
+        "宝物已到手",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "宝物到手，前往发光出口",
+        "第 22 次行动",
+        "重撞 · 持续生效",
+        "带宝物进出口，就能离开这一间",
+        "满载而归",
+        "带回 1065 金币",
+        "21 次出手 · 5 处宝物",
+        "再潜入一次",
+        "看视频 · 加领金币",
+        "回到营地"
+      ],
+      "page": "game",
+      "room": 5,
+      "phase": "victory",
+      "shots": 21,
+      "hp": 4,
+      "score": 1065,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0.27719517357798507,
+        "y": 5.1502769968818685,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1280
+      },
+      "viewport": {
+        "width": 360,
+        "height": 640,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 360,
+        "height": 640,
+        "bufferWidth": 360,
+        "bufferHeight": 640
+      },
+      "heroY": 0.11167028979099972,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "boss",
+        "playingScene": "boss",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "explore",
+          "boss"
+        ],
+        "decodedMusicBytes": 76204800,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 1065
+    },
+    {
+      "label": "tool cabinet at 360×640",
+      "screenshot": "11-tool-cabinet.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 37,
+      "drawCalls": 59,
+      "triangles": 64456,
+      "meshRenderers": 70,
+      "labels": 13,
+      "activeLabels": [
+        "探险工具柜",
+        "金币 1065 · 开局可携带一件",
+        "回到营地",
+        "重撞拳套",
+        "冲撞伤害翻倍，一击破开厚木板，柜子推得更远。",
+        "300 金币解锁",
+        "壁虎手套",
+        "飞行中抓停一次，可从当前位置重新瞄准；敌人暂不行动。",
+        "450 金币解锁",
+        "回旋腕带",
+        "飞行中转向发射起点一次，借返程取宝或避开箭路。",
+        "450 金币解锁"
+      ],
+      "page": "tools",
+      "room": 5,
+      "phase": "victory",
+      "shots": 21,
+      "hp": 4,
+      "score": 1065,
+      "rescuesUsed": 0,
+      "livingEnemies": 2,
+      "player": {
+        "x": 0.27719517357798507,
+        "y": 5.1502769968818685,
+        "tool": "heavy"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1280
+      },
+      "viewport": {
+        "width": 360,
+        "height": 640,
+        "dpr": 1
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 360,
+        "height": 640,
+        "bufferWidth": 360,
+        "bufferHeight": 640
+      },
+      "heroY": 0.1297344343696157,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "camp",
+        "playingScene": "camp",
+        "activeMusicVoices": 2,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "boss",
+          "camp"
+        ],
+        "decodedMusicBytes": 55036800,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 1065
+    },
+    {
+      "label": "mobile home at 390×844 DPR2",
+      "screenshot": "12-mobile-home.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 18,
+      "drawCalls": 46,
+      "triangles": 54390,
+      "meshRenderers": 59,
+      "labels": 10,
+      "activeLabels": [
+        "MONSTER DEN",
+        "撞进怪物窝",
+        "撞开一条路，把宝物带出来",
+        "声音",
+        "潜入怪物窝",
+        "工具柜",
+        "怎么玩",
+        "已带回 0 枚金币",
+        "首段冒险 · 0.1.1"
+      ],
+      "page": "home",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 0,
+      "hp": 5,
+      "score": 0,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": -5.5,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1558.1538461538462
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 780,
+        "bufferHeight": 1688
+      },
+      "heroY": 0.0970559469843263,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 0,
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": false,
+        "paused": false,
+        "musicRequested": false,
+        "prepared": true,
+        "scene": "camp",
+        "playingScene": null,
+        "activeMusicVoices": 0,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "CDP dual-touch aim; isolated release checked by marked DOM fixture",
+      "screenshot": "13-mobile-aim.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 48,
+      "drawCalls": 64,
+      "triangles": 54704,
+      "meshRenderers": 59,
+      "labels": 15,
+      "activeLabels": [
+        "1 / 5  苔门前院",
+        "♥♥♥♥♥",
+        "寻找宝物",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "先撞开木栏，拿宝物，再去出口",
+        "力度 82%",
+        "下间房选工具",
+        "松手！撞开前面的木栏",
+        "碰撞点"
+      ],
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 0,
+      "hp": 5,
+      "score": 0,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": -5.5,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1558.1538461538462
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 780,
+        "bufferHeight": 1688
+      },
+      "heroY": 0.12114381566606532,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": true,
+      "dragPower": 0.8181818181818182,
+      "touchTrace": [
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            11
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            11
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11,
+            12
+          ],
+          "changed": [
+            12
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11,
+            12
+          ],
+          "changed": [
+            12
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": false,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            12
+          ]
+        }
+      ],
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    },
+    {
+      "label": "mobile touch launch after cancellation",
+      "screenshot": "14-mobile-shot.png",
+      "engineVersion": "3.8.8",
+      "ready": true,
+      "bootErrors": [],
+      "device": "Zot",
+      "gfxAPI": 7,
+      "isWebGL": true,
+      "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "gpuVendor": "Google Inc. (Google)",
+      "glError": 0,
+      "frames": 152,
+      "drawCalls": 50,
+      "triangles": 51544,
+      "meshRenderers": 59,
+      "labels": 15,
+      "activeLabels": [
+        "1 / 5  苔门前院",
+        "♥♥♥♥♥",
+        "宝物已到手",
+        "●",
+        "●",
+        "●",
+        "●",
+        "●",
+        "声音",
+        "营地",
+        "宝物到手，前往发光出口",
+        "第 2 次行动",
+        "下间房选工具",
+        "带宝物进出口，就能离开这一间"
+      ],
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "shots": 1,
+      "hp": 5,
+      "score": 115,
+      "rescuesUsed": 0,
+      "livingEnemies": 1,
+      "player": {
+        "x": 0,
+        "y": 3.294205454024133,
+        "tool": "none"
+      },
+      "visibleSize": {
+        "width": 720,
+        "height": 1558.1538461538462
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "dpr": 2
+      },
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "bufferWidth": 780,
+        "bufferHeight": 1688
+      },
+      "heroY": 0.0979561707762188,
+      "translucentMaterials": {
+        "matShadow": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matDanger": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matAim": {
+          "blend": true,
+          "depthWrite": false
+        },
+        "matGold": {
+          "blend": true,
+          "depthWrite": false
+        }
+      },
+      "dragging": false,
+      "dragPower": 1,
+      "touchTrace": [
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            11
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            11
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11,
+            12
+          ],
+          "changed": [
+            12
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            11,
+            12
+          ],
+          "changed": [
+            12
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": false,
+          "cancelable": true,
+          "active": [
+            11
+          ],
+          "changed": [
+            12
+          ]
+        },
+        {
+          "type": "touchcancel",
+          "trusted": true,
+          "cancelable": false,
+          "active": [],
+          "changed": [
+            11,
+            12
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            21
+          ],
+          "changed": [
+            21
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            21
+          ],
+          "changed": [
+            21
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            21
+          ]
+        }
+      ],
+      "audio": {
+        "mode": "web-audio",
+        "unlocked": true,
+        "paused": false,
+        "musicRequested": true,
+        "prepared": true,
+        "scene": "explore",
+        "playingScene": "explore",
+        "activeMusicVoices": 1,
+        "activeSounds": 0,
+        "cachedMusicScenes": [
+          "camp",
+          "explore"
+        ],
+        "decodedMusicBytes": 63504000,
+        "contextState": "running",
+        "decodedSounds": 34
+      },
+      "wallet": 0
+    }
+  ],
+  "route": {
+    "source": "design/PLAYTEST.md; documented 21-shot route, UI drag power at least 11%",
+    "rooms": [
+      {
+        "room": 1,
+        "phase": "room_clear",
+        "shots": 2,
+        "hp": 5,
+        "score": 165,
+        "livingEnemies": 1
+      },
+      {
+        "room": 2,
+        "phase": "room_clear",
+        "shots": 7,
+        "hp": 5,
+        "score": 315,
+        "livingEnemies": 2
+      },
+      {
+        "room": 3,
+        "phase": "room_clear",
+        "shots": 11,
+        "hp": 4,
+        "score": 480,
+        "livingEnemies": 2
+      },
+      {
+        "room": 4,
+        "phase": "room_clear",
+        "shots": 16,
+        "hp": 4,
+        "score": 665,
+        "livingEnemies": 1
+      },
+      {
+        "room": 5,
+        "phase": "victory",
+        "shots": 21,
+        "hp": 4,
+        "score": 1065,
+        "livingEnemies": 2
+      }
+    ],
+    "shots": [
+      {
+        "room": 1,
+        "shot": 1,
+        "target": {
+          "x": 0,
+          "y": 1.6
+        },
+        "power": 1,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 115,
+        "player": {
+          "x": 0,
+          "y": 3.280505991753983
+        }
+      },
+      {
+        "room": 1,
+        "shot": 2,
+        "target": {
+          "x": 0,
+          "y": 5.6
+        },
+        "power": 0.1344512604387056,
+        "phase": "room_clear",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": 0,
+          "y": 4.8007111645964535
+        }
+      },
+      {
+        "room": 2,
+        "shot": 3,
+        "target": {
+          "x": 0,
+          "y": 3
+        },
+        "power": 1,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": 0,
+          "y": -4.591897311595426
+        }
+      },
+      {
+        "room": 2,
+        "shot": 4,
+        "target": {
+          "x": -1.4,
+          "y": -2.5
+        },
+        "power": 0.1971536471853703,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": -1.334424683552109,
+          "y": -2.536338750211883
+        }
+      },
+      {
+        "room": 2,
+        "shot": 5,
+        "target": {
+          "x": -1.4,
+          "y": 4.5
+        },
+        "power": 0.8219190968770209,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 165,
+        "player": {
+          "x": -1.334424683552109,
+          "y": 4.514015893136091
+        }
+      },
+      {
+        "room": 2,
+        "shot": 6,
+        "target": {
+          "x": 0,
+          "y": 4.2
+        },
+        "power": 0.11,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 265,
+        "player": {
+          "x": 0.5737043187028367,
+          "y": 4.094116274847438
+        }
+      },
+      {
+        "room": 2,
+        "shot": 7,
+        "target": {
+          "x": 2.9,
+          "y": 5.7
+        },
+        "power": 0.23995231902745384,
+        "phase": "room_clear",
+        "hp": 5,
+        "score": 315,
+        "player": {
+          "x": 2.291210057302426,
+          "y": 5.182976224723882
+        }
+      },
+      {
+        "room": 3,
+        "shot": 8,
+        "target": {
+          "x": 0,
+          "y": -3
+        },
+        "power": 0.38902457428495574,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 315,
+        "player": {
+          "x": -0.6222721820839245,
+          "y": -3.0103670917378493
+        }
+      },
+      {
+        "room": 3,
+        "shot": 9,
+        "target": {
+          "x": 0,
+          "y": 3
+        },
+        "power": 1,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 330,
+        "player": {
+          "x": 0.18342488731953932,
+          "y": 4.709584551478516
+        }
+      },
+      {
+        "room": 3,
+        "shot": 10,
+        "target": {
+          "x": 3,
+          "y": 3.6
+        },
+        "power": 0.2676697435680836,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 430,
+        "player": {
+          "x": 3.0605599525169254,
+          "y": 3.5952626534224064
+        }
+      },
+      {
+        "room": 3,
+        "shot": 11,
+        "target": {
+          "x": 3,
+          "y": 5.8
+        },
+        "power": 0.15408161667661338,
+        "phase": "room_clear",
+        "hp": 4,
+        "score": 480,
+        "player": {
+          "x": 3.0605599525169254,
+          "y": 5.0101159996035705
+        }
+      },
+      {
+        "room": 4,
+        "shot": 12,
+        "target": {
+          "x": 2,
+          "y": -4
+        },
+        "power": 0.2120464101834219,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 480,
+        "player": {
+          "x": 2.0745913014179993,
+          "y": -4.075286634501316
+        }
+      },
+      {
+        "room": 4,
+        "shot": 13,
+        "target": {
+          "x": 4.1,
+          "y": 1
+        },
+        "power": 0.6045899360934196,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 515,
+        "player": {
+          "x": 4.570937915949349,
+          "y": 0.37275428698824026
+        }
+      },
+      {
+        "room": 4,
+        "shot": 14,
+        "target": {
+          "x": 4.1,
+          "y": 4.5
+        },
+        "power": 0.4234322639963222,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 615,
+        "player": {
+          "x": 4.145258892621463,
+          "y": 4.494419124478826
+        }
+      },
+      {
+        "room": 4,
+        "shot": 15,
+        "target": {
+          "x": 3.6,
+          "y": 4.5
+        },
+        "power": 0.11,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 615,
+        "player": {
+          "x": 2.2809879169242997,
+          "y": 4.494419124478826
+        }
+      },
+      {
+        "room": 4,
+        "shot": 16,
+        "target": {
+          "x": -3.5,
+          "y": 5.7
+        },
+        "power": 0.6655324316249848,
+        "phase": "room_clear",
+        "hp": 4,
+        "score": 665,
+        "player": {
+          "x": -2.7160492872538686,
+          "y": 5.5504221326761884
+        }
+      },
+      {
+        "room": 5,
+        "shot": 17,
+        "target": {
+          "x": 3.8,
+          "y": -4
+        },
+        "power": 0.4246632352875263,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 3.87696912199893,
+          "y": -4.01555743410307
+        }
+      },
+      {
+        "room": 5,
+        "shot": 18,
+        "target": {
+          "x": 4.2,
+          "y": 2
+        },
+        "power": 0.6819643507146402,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 4.258425329022904,
+          "y": 1.9863386959149096
+        }
+      },
+      {
+        "room": 5,
+        "shot": 19,
+        "target": {
+          "x": 2,
+          "y": 3.8
+        },
+        "power": 0.2495977858520447,
+        "phase": "aiming",
+        "hp": 5,
+        "score": 665,
+        "player": {
+          "x": 1.973966612692546,
+          "y": 3.783541582676075
+        }
+      },
+      {
+        "room": 5,
+        "shot": 20,
+        "target": {
+          "x": 0,
+          "y": 3.8
+        },
+        "power": 0.12207489568297993,
+        "phase": "aiming",
+        "hp": 4,
+        "score": 765,
+        "player": {
+          "x": 0.6840407418749164,
+          "y": 3.673036240429327
+        }
+      },
+      {
+        "room": 5,
+        "shot": 21,
+        "target": {
+          "x": 0,
+          "y": 5.9
+        },
+        "power": 0.17123462073796944,
+        "phase": "victory",
+        "hp": 4,
+        "score": 1065,
+        "player": {
+          "x": 0.27719517357798507,
+          "y": 5.1502769968818685
+        }
+      }
+    ]
+  },
+  "url": "http://127.0.0.1:40711/",
+  "requestedSoftwareGL": true,
+  "browserVersion": "157.0.8103.0",
+  "audio": {
+    "scope": "Decoded assets, running AudioContext and scheduled music voices; output was not heard by a human",
+    "explore": {
+      "mode": "web-audio",
+      "unlocked": true,
+      "paused": false,
+      "musicRequested": true,
+      "prepared": true,
+      "scene": "explore",
+      "playingScene": "explore",
+      "activeMusicVoices": 1,
+      "activeSounds": 0,
+      "cachedMusicScenes": [
+        "camp",
+        "explore"
+      ],
+      "decodedMusicBytes": 63504000,
+      "contextState": "running",
+      "decodedSounds": 34
+    },
+    "boss": {
+      "mode": "web-audio",
+      "unlocked": true,
+      "paused": false,
+      "musicRequested": true,
+      "prepared": true,
+      "scene": "boss",
+      "playingScene": "boss",
+      "activeMusicVoices": 2,
+      "activeSounds": 1,
+      "cachedMusicScenes": [
+        "explore",
+        "boss"
+      ],
+      "decodedMusicBytes": 76204800,
+      "contextState": "running",
+      "decodedSounds": 34
+    },
+    "camp": {
+      "mode": "web-audio",
+      "unlocked": true,
+      "paused": false,
+      "musicRequested": true,
+      "prepared": true,
+      "scene": "camp",
+      "playingScene": "camp",
+      "activeMusicVoices": 2,
+      "activeSounds": 1,
+      "cachedMusicScenes": [
+        "boss",
+        "camp"
+      ],
+      "decodedMusicBytes": 55036800,
+      "contextState": "running",
+      "decodedSounds": 34
+    }
+  },
+  "unavailableAd": {
+    "grantedNoReward": true,
+    "pauseReleased": true,
+    "genuineAdvertisementPlayed": false
+  },
+  "saveRestore": {
+    "actualPageReload": true,
+    "victoryReopened": true,
+    "baseRewardNotDuplicated": true,
+    "wallet": 1065
+  },
+  "mobileInput": {
+    "viewport": "390×844",
+    "devicePixelRatio": 2,
+    "emulatedPhone": true,
+    "realPhone": false,
+    "cdpSecondFingerCannotSteer": true,
+    "secondaryReleaseFixture": {
+      "method": "DOM TouchEvent fixture through native canvas listener and Cocos input dispatch",
+      "isTrusted": false,
+      "primaryIdentifier": 11,
+      "releasedIdentifier": 12,
+      "cannotReleasePrimaryShot": true
+    },
+    "cdpCancellationDoesNotLaunch": true,
+    "subsequentTouchLaunches": true,
+    "firstBoardDestroyed": true,
+    "audio": {
+      "mode": "web-audio",
+      "unlocked": true,
+      "paused": false,
+      "musicRequested": true,
+      "prepared": true,
+      "scene": "explore",
+      "playingScene": "explore",
+      "activeMusicVoices": 1,
+      "activeSounds": 0,
+      "cachedMusicScenes": [
+        "camp",
+        "explore"
+      ],
+      "decodedMusicBytes": 63504000,
+      "contextState": "running",
+      "decodedSounds": 34
+    },
+    "touchEvents": [
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          11
+        ],
+        "changed": [
+          11
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          11
+        ],
+        "changed": [
+          11
+        ]
+      },
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          11,
+          12
+        ],
+        "changed": [
+          12
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          11,
+          12
+        ],
+        "changed": [
+          12
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": false,
+        "cancelable": true,
+        "active": [
+          11
+        ],
+        "changed": [
+          12
+        ]
+      },
+      {
+        "type": "touchcancel",
+        "trusted": true,
+        "cancelable": false,
+        "active": [],
+        "changed": [
+          11,
+          12
+        ]
+      },
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          21
+        ],
+        "changed": [
+          21
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          21
+        ],
+        "changed": [
+          21
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": true,
+        "cancelable": true,
+        "active": [],
+        "changed": [
+          21
+        ]
+      }
+    ]
+  },
+  "provenance": {
+    "testedCommit": "26c5d48b3de085a892852f5312840c597350230d",
+    "workflowRun": "https://github.com/HEITAMU/monster-den/actions/runs/44442569356",
+    "workflowConclusion": "success",
+    "artifactId": 14491398634,
+    "artifactCreatedAt": "2026-11-19T02:17:38Z",
+    "artifactArchiveSha256": "b05c76b8e4f0a603881bb74d22ed735b0c1673abdca59ae0bb38661c54479e54",
+    "retainedScreenshots": [
+      "webgl/01-home.png",
+      "webgl/03-room1-aim.png",
+      "webgl/08-room5.png",
+      "webgl/09-victory.png"
+    ],
+    "note": "The report is the unmodified browser result with this provenance object appended. Localhost URLs identify the CI server; all 14 screenshots remain in the workflow artifact, four selected originals are retained here."
+  }
+}

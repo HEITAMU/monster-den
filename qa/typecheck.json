@@ -5,9 +5,12 @@
   "strict": true,
   "noImplicitAny": true,
   "files": [
+    "assets/scripts/AudioCatalog.ts",
     "assets/scripts/GameMain.ts",
     "assets/scripts/GameUI.ts",
+    "assets/scripts/MeshCodec.ts",
     "assets/scripts/ModelLibrary.ts",
+    "assets/scripts/ResourceBundles.ts",
     "assets/scripts/core/index.ts",
     "assets/scripts/core/model.ts",
     "assets/scripts/core/rooms.ts",
@@ -19,6 +22,14 @@
   "diagnostics": [],
   "unresolvedImports": [],
   "ccImports": [
+    {
+      "name": "assetManager",
+      "file": "assets/scripts/AudioCatalog.ts",
+      "declarations": [
+        "cocos/asset/asset-manager/asset-manager.ts"
+      ],
+      "unresolvedOrAny": false
+    },
     {
       "name": "_decorator",
       "file": "assets/scripts/GameMain.ts",
@@ -188,6 +199,14 @@
       "declarations": [
         "cocos/input/input.ts",
         "cocos/input/input.ts"
+      ],
+      "unresolvedOrAny": false
+    },
+    {
+      "name": "UIOpacity",
+      "file": "assets/scripts/GameMain.ts",
+      "declarations": [
+        "cocos/2d/components/ui-opacity.ts"
       ],
       "unresolvedOrAny": false
     },
@@ -433,6 +452,23 @@
       "file": "assets/scripts/ModelLibrary.ts",
       "declarations": [
         "cocos/gfx/index.ts"
+      ],
+      "unresolvedOrAny": false
+    },
+    {
+      "name": "assetManager",
+      "file": "assets/scripts/ResourceBundles.ts",
+      "declarations": [
+        "cocos/asset/asset-manager/asset-manager.ts"
+      ],
+      "unresolvedOrAny": false
+    },
+    {
+      "name": "AssetManager",
+      "file": "assets/scripts/ResourceBundles.ts",
+      "declarations": [
+        "cocos/asset/asset-manager/asset-manager.ts",
+        "cocos/asset/asset-manager/asset-manager.ts"
       ],
       "unresolvedOrAny": false
     }
