@@ -107,7 +107,7 @@ System.register(["./rooms"], function (exports_1, context_1) {
                         !['none', 'heavy', 'grip', 'return'].includes(tool))
                         return false;
                     this.state.player.tool = tool;
-                    this.state.player.toolReady = false;
+                    this.state.player.toolReady = tool === 'grip' || tool === 'return';
                     return true;
                 }
                 /** Direction vector; magnitude does NOT determine strength. power is clamped to 0..1. */

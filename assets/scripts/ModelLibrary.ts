@@ -36,14 +36,18 @@ export async function loadGameEffects():Promise<void> {
 export function makeMaterial(color:Color,lit=true,alpha=false,vertexColors=false,emission=0):Material {
   const material=new Material();
   const effectAsset=editorEffects[lit?'monster-den-lit':'monster-den-unlit'];
-  material.initialize({...(effectAsset?{effectAsset}:{effectName:lit?'monster-den/lit':'monster-den/unlit'}),defines:{USE_VERTEX_COLOR:vertexColors,USE_TEXTURE:false}});
+  // Base Material.overridePipelineStates is intentionally a no-op in 3.8.8.
+  // Supply overrides while initializing the shared asset so real GPU passes
+  // retain transparent blending and do not write invisible depth.
+  material.initialize({...(effectAsset?{effectAsset}:{effectName:lit?'monster-den/lit':'monster-den/unlit'}),defines:{USE_VERTEX_COLOR:vertexColors,USE_TEXTURE:false},
+    ...(alpha?{states:{
+      rasterizerState:{cullMode:gfx.CullMode.NONE},
+      depthStencilState:{depthTest:true,depthWrite:false},
+      blendState:{targets:[{blend:true,blendSrc:gfx.BlendFactor.SRC_ALPHA,blendDst:gfx.BlendFactor.ONE_MINUS_SRC_ALPHA,blendSrcAlpha:gfx.BlendFactor.ONE,blendDstAlpha:gfx.BlendFactor.ONE_MINUS_SRC_ALPHA}]},
+    }}:{}),
+  });
   material.setProperty('mainColor',color);
   material.setProperty('surfaceParams',new Vec4(.78,.45,emission,0));
-  if(alpha) material.overridePipelineStates({
-    rasterizerState:{cullMode:gfx.CullMode.NONE},
-    depthStencilState:{depthTest:true,depthWrite:false},
-    blendState:{targets:[{blend:true,blendSrc:gfx.BlendFactor.SRC_ALPHA,blendDst:gfx.BlendFactor.ONE_MINUS_SRC_ALPHA,blendSrcAlpha:gfx.BlendFactor.ONE,blendDstAlpha:gfx.BlendFactor.ONE_MINUS_SRC_ALPHA}]},
-  });
   return material;
 }
 

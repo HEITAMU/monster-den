@@ -30,7 +30,7 @@ export class GameMain extends Component {
   private env!:ModelLibrary;private characters!:ModelLibrary;
   private world!:Node;private roomWorld!:Node;private actorWorld!:Node;private effectsWorld!:Node;
   private canvas!:Node;private hud!:Node;private overlay!:Node;private floating!:Node;
-  private worldCamera!:Camera;private cameraNode!:Node;private cameraBase=new Vec3(0,24,10);
+  private worldCamera!:Camera;private cameraNode!:Node;private cameraBase=new Vec3(0,22,15);
   private hero!:Visual;private enemies=new Map<string,Visual>();private obstacles=new Map<string,ModelInstance>();
   private treasure:ModelInstance|null=null;private exitRing:Node|null=null;private heroRing:Node|null=null;
   private aimNodes:Node[]=[];private aimEnd:Node|null=null;private aimCaption:Label|null=null;
@@ -253,7 +253,7 @@ export class GameMain extends Component {
     const tool=TOOLS.find(t=>t.id===p.tool);const toolLabel=this.toolButton?.getComponentsInChildren(Label)[0];
     const activeTool=p.tool==='grip'||p.tool==='return',available=activeTool&&p.toolReady&&s.phase==='moving';
     if(toolLabel){
-      toolLabel.string=!tool?'下间房选工具':p.tool==='heavy'?'重撞 · 持续生效':!p.toolReady?'本回合已使用':s.phase==='moving'?tool.actionLabel:'冲撞时可用';
+      toolLabel.string=!tool?'下间房选工具':p.tool==='heavy'?'重撞 · 持续生效':s.phase==='enemies'?'等待下一回合':!p.toolReady?'本回合已使用':s.phase==='moving'?tool.actionLabel:'冲撞时可用';
       toolLabel.color=rgba(available?PALETTE.gold:PALETTE.cream);
     }
     if(this.toolGlow)this.toolGlow.active=available;
@@ -339,7 +339,7 @@ export class GameMain extends Component {
   }
   private move(location:Vec2):void {
     if(!this.dragging)return;this.dragNow.set(location);const dx=(this.dragStart.x-location.x)/view.getScaleX(),dy=(this.dragStart.y-location.y)/view.getScaleY();
-    this.dragPower=Math.min(1,Math.sqrt(dx*dx+dy*dy)/165);this.lastAim.set(dx,dy/Math.sin(Math.atan2(24,10)));
+    this.dragPower=Math.min(1,Math.sqrt(dx*dx+dy*dy)/165);this.lastAim.set(dx,dy/Math.sin(Math.atan2(this.cameraBase.y,this.cameraBase.z)));
     this.showAim();
   }
   private release():void {
@@ -411,7 +411,8 @@ export class GameMain extends Component {
     if(this.heroRing){this.heroRing.setPosition(p.x,GROUND_EFFECT+.01,-p.y);this.heroRing.active=this.page==='game';const size=1+Math.sin(this.time*3)*.04;this.heroRing.setScale(size,1,size);}
     if(this.treasure){this.treasure.root.active=!s.treasure.taken;this.treasure.root.setPosition(s.treasure.x,.12+Math.sin(this.time*2.5)*.08,-s.treasure.y);}
     if(this.exitRing){const size=1+Math.sin(this.time*3)*.07;this.exitRing.setScale(size,1,size);}
-    for(const o of s.obstacles){const visual=this.obstacles.get(o.id);if(visual){visual.root.active=!o.destroyed;visual.root.setPosition(o.x,GROUND,-o.y);}}
+    for(const o of s.obstacles){const visual=this.obstacles.get(o.id);if(visual){visual.root.active=!o.destroyed;visual.root.setPosition(o.x,GROUND,-o.y);
+      if(o.kind==='board')visual.root.setRotationFromEuler(0,0,o.hp<o.maxHp?5:0);}}
     for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;v.instance.root.active=e.alive;v.shadow.active=e.alive;
       if(e.alive){this.animateActor(v,e.x,e.y,e.vx,e.vy,dt);if(Math.hypot(e.vx,e.vy)<.3)v.instance.root.setRotationFromEuler(0,Math.atan2(e.telegraph.dx,-e.telegraph.dy)*180/Math.PI,0);
         if(this.page==='game'&&s.phase==='enemies'&&e.action==='windup'){const charge=Math.min(1,s.enemyTime/.34);v.instance.root.setScale(v.scale*(1+charge*.08),v.scale*(1-charge*.16),v.scale*(1+charge*.08));}}
@@ -438,6 +439,7 @@ export class GameMain extends Component {
     if(e.type==='treasure'){this.showTip('宝物到手！去发光出口',3);this.floatText('宝物 +100',e.x,e.y,PALETTE.gold);}
     if(e.type==='damage'){this.hero.hit=.4;this.floatText(`-${e.amount||1}`,e.x,e.y,PALETTE.danger);}
     if(e.type==='enemy_hit')this.floatText(`-${e.amount||1}`,e.x,e.y,PALETTE.cream);
+    if(e.type==='board_hit'){this.burst(e.x,e.y,2,5);this.shake=Math.max(this.shake,.14);this.floatText('木栏松动',e.x,e.y,PALETTE.gold);}
     if(e.type==='arrow_blocked')this.showTip(this.model.state.obstacles.find(o=>o.id===e.obstacleId)?.kind==='cabinet'?'柜子挡住了箭':'掩体挡住了箭',1.5);
     if(e.type==='exit_locked')this.showTip('先拿到房间里的宝物',2);
     if(e.type==='room_clear'||e.type==='victory'||e.type==='game_over')this.persist();

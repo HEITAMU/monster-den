@@ -36,15 +36,18 @@ System.register(["cc", "./MeshCodec", "./ResourceBundles"], function (exports_1,
     function makeMaterial(color, lit = true, alpha = false, vertexColors = false, emission = 0) {
         const material = new cc_1.Material();
         const effectAsset = editorEffects[lit ? 'monster-den-lit' : 'monster-den-unlit'];
-        material.initialize({ ...(effectAsset ? { effectAsset } : { effectName: lit ? 'monster-den/lit' : 'monster-den/unlit' }), defines: { USE_VERTEX_COLOR: vertexColors, USE_TEXTURE: false } });
+        // Base Material.overridePipelineStates is intentionally a no-op in 3.8.8.
+        // Supply overrides while initializing the shared asset so real GPU passes
+        // retain transparent blending and do not write invisible depth.
+        material.initialize({ ...(effectAsset ? { effectAsset } : { effectName: lit ? 'monster-den/lit' : 'monster-den/unlit' }), defines: { USE_VERTEX_COLOR: vertexColors, USE_TEXTURE: false },
+            ...(alpha ? { states: {
+                    rasterizerState: { cullMode: cc_1.gfx.CullMode.NONE },
+                    depthStencilState: { depthTest: true, depthWrite: false },
+                    blendState: { targets: [{ blend: true, blendSrc: cc_1.gfx.BlendFactor.SRC_ALPHA, blendDst: cc_1.gfx.BlendFactor.ONE_MINUS_SRC_ALPHA, blendSrcAlpha: cc_1.gfx.BlendFactor.ONE, blendDstAlpha: cc_1.gfx.BlendFactor.ONE_MINUS_SRC_ALPHA }] },
+                } } : {}),
+        });
         material.setProperty('mainColor', color);
         material.setProperty('surfaceParams', new cc_1.Vec4(.78, .45, emission, 0));
-        if (alpha)
-            material.overridePipelineStates({
-                rasterizerState: { cullMode: cc_1.gfx.CullMode.NONE },
-                depthStencilState: { depthTest: true, depthWrite: false },
-                blendState: { targets: [{ blend: true, blendSrc: cc_1.gfx.BlendFactor.SRC_ALPHA, blendDst: cc_1.gfx.BlendFactor.ONE_MINUS_SRC_ALPHA, blendSrcAlpha: cc_1.gfx.BlendFactor.ONE, blendDstAlpha: cc_1.gfx.BlendFactor.ONE_MINUS_SRC_ALPHA }] },
-            });
         return material;
     }
     exports_1("makeMaterial", makeMaterial);

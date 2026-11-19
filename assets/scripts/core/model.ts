@@ -97,7 +97,7 @@ export class GameModel {
     if(this.state.roomIndex!==0 || this.state.shots!==0 || this.state.phase!=='aiming' ||
       !['none','heavy','grip','return'].includes(tool)) return false;
     this.state.player.tool=tool;
-    this.state.player.toolReady=false;
+    this.state.player.toolReady=tool==='grip'||tool==='return';
     return true;
   }
 

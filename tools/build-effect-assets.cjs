@@ -52,7 +52,12 @@ vec4 frag () {
   float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
   float spec = pow(max(dot(n, normalize(l + v)), 0.0), mix(60.0, 5.0, surfaceParams.x)) * 0.12;
   vec3 shade = vec3(0.32, 0.37, 0.45) + vec3(0.78, 0.75, 0.66) * diffuse;
-  base.rgb = base.rgb * shade + vec3(spec) + vec3(0.12, 0.16, 0.20) * rim * surfaceParams.y + base.rgb * surfaceParams.z;` : ''}
+  base.rgb = base.rgb * shade + vec3(spec) + vec3(0.12, 0.16, 0.20) * rim * surfaceParams.y + base.rgb * surfaceParams.z;
+  // Model palette and lighting are linear; this material writes directly to an sRGB display.
+  vec3 linearColor = max(base.rgb, vec3(0.0));
+  vec3 low = linearColor * 12.92;
+  vec3 high = 1.055 * pow(linearColor, vec3(1.0 / 2.4)) - 0.055;
+  base.rgb = mix(low, high, step(vec3(0.0031308), linearColor));` : ''}
   return base;
 }`;}
 fs.mkdirSync(out,{recursive:true});

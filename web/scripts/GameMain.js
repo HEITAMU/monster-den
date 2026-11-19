@@ -45,7 +45,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                 constructor() {
                     super(...arguments);
                     this.model = new index_1.GameModel();
-                    this.cameraBase = new cc_1.Vec3(0, 24, 10);
+                    this.cameraBase = new cc_1.Vec3(0, 22, 15);
                     this.enemies = new Map();
                     this.obstacles = new Map();
                     this.treasure = null;
@@ -468,7 +468,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const toolLabel = this.toolButton?.getComponentsInChildren(cc_1.Label)[0];
                     const activeTool = p.tool === 'grip' || p.tool === 'return', available = activeTool && p.toolReady && s.phase === 'moving';
                     if (toolLabel) {
-                        toolLabel.string = !tool ? '下间房选工具' : p.tool === 'heavy' ? '重撞 · 持续生效' : !p.toolReady ? '本回合已使用' : s.phase === 'moving' ? tool.actionLabel : '冲撞时可用';
+                        toolLabel.string = !tool ? '下间房选工具' : p.tool === 'heavy' ? '重撞 · 持续生效' : s.phase === 'enemies' ? '等待下一回合' : !p.toolReady ? '本回合已使用' : s.phase === 'moving' ? tool.actionLabel : '冲撞时可用';
                         toolLabel.color = GameUI_1.rgba(available ? GameUI_1.PALETTE.gold : GameUI_1.PALETTE.cream);
                     }
                     if (this.toolGlow)
@@ -643,7 +643,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.dragNow.set(location);
                     const dx = (this.dragStart.x - location.x) / cc_1.view.getScaleX(), dy = (this.dragStart.y - location.y) / cc_1.view.getScaleY();
                     this.dragPower = Math.min(1, Math.sqrt(dx * dx + dy * dy) / 165);
-                    this.lastAim.set(dx, dy / Math.sin(Math.atan2(24, 10)));
+                    this.lastAim.set(dx, dy / Math.sin(Math.atan2(this.cameraBase.y, this.cameraBase.z)));
                     this.showAim();
                 }
                 release() {
@@ -807,6 +807,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         if (visual) {
                             visual.root.active = !o.destroyed;
                             visual.root.setPosition(o.x, GROUND, -o.y);
+                            if (o.kind === 'board')
+                                visual.root.setRotationFromEuler(0, 0, o.hp < o.maxHp ? 5 : 0);
                         }
                     }
                     for (const e of s.enemies) {
@@ -901,6 +903,11 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     }
                     if (e.type === 'enemy_hit')
                         this.floatText(`-${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.cream);
+                    if (e.type === 'board_hit') {
+                        this.burst(e.x, e.y, 2, 5);
+                        this.shake = Math.max(this.shake, .14);
+                        this.floatText('木栏松动', e.x, e.y, GameUI_1.PALETTE.gold);
+                    }
                     if (e.type === 'arrow_blocked')
                         this.showTip(this.model.state.obstacles.find(o => o.id === e.obstacleId)?.kind === 'cabinet' ? '柜子挡住了箭' : '掩体挡住了箭', 1.5);
                     if (e.type === 'exit_locked')

@@ -205,7 +205,7 @@ process.on('unhandledRejection', onUnhandled);
       const player = api.model.state.player, dx = targetX - player.x, dy = targetY - player.y;
       const distance = Math.hypot(dx, dy), drag = 1.36 * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
       const power = explicitPower ?? Math.max(.11, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - 1.9) / 10.9));
-      const projectedY = dy * Math.sin(Math.atan2(24, 10)), projectedLength = Math.hypot(dx, projectedY);
+      const projectedY = dy * Math.sin(Math.atan2(controller.cameraBase.y, controller.cameraBase.z)), projectedLength = Math.hypot(dx, projectedY);
       const before = api.model.state.shots;
       mouse(cc.Input.EventType.MOUSE_DOWN, 360, 560);
       mouse(cc.Input.EventType.MOUSE_MOVE, 360 - dx / projectedLength * power * 165, 560 - projectedY / projectedLength * power * 165);

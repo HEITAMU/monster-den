@@ -43,3 +43,4 @@ jobs:
           name: monster-den-webgl-${{ github.sha }}
           path: .build/game-browser/
           retention-days: 14
+          include-hidden-files: true

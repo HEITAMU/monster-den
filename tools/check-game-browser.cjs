@@ -16,7 +16,7 @@ const output = path.join(root, '.build/game-browser');
 fs.mkdirSync(output, { recursive: true });
 const report = {
   test: 'Actual Cocos 3.8.8 WebGL, native UI, 21 pointer shots, audio playback state and mobile touch ownership',
-  method: 'Real browser frames and DOM mouse/CDP touch input. Game state is read for targeting and assertions, never rewritten to reach victory.',
+  method: 'Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. Game state is read for targeting and assertions, never rewritten to reach victory.',
   passed: false, audibleOutputValidation: false, phonePerformanceValidation: false,
   errors: [], consoleErrors: [], warnings: [], failedRequests: [], checkpoints: [],
   route: { source: 'design/PLAYTEST.md; documented 21-shot route, UI drag power at least 11%', rooms: [], shots: [] },
@@ -103,7 +103,12 @@ async function inspect(page) {
       viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
       canvas: rect && { x: rect.x, y: rect.y, width: rect.width, height: rect.height, bufferWidth: canvas.width, bufferHeight: canvas.height },
       heroY: controller.hero?.instance.root.position.y,
+      translucentMaterials: Object.fromEntries(['matShadow', 'matDanger', 'matAim', 'matGold'].map(name => {
+        const pass = controller[name]?.passes[0];
+        return [name, { blend: pass?.blendState.targets[0].blend, depthWrite: pass?.depthStencilState.depthWrite }];
+      })),
       dragging: controller.dragging, dragPower: controller.dragPower,
+      touchTrace: window.__acceptanceTouchEvents,
       audio: audio && { ...audio.status, contextState: audio.context?.state, decodedSounds: audio.soundBuffers?.size || 0 },
       wallet: controller.save?.read().progress.coins,
     };
@@ -120,6 +125,10 @@ async function checkpoint(page, label, filename) {
   assert.ok(value.drawCalls > 3 && value.triangles > 100 && value.meshRenderers > 10 && value.labels > 3,
     `Incomplete 3D/UI draw at ${label}: ${JSON.stringify(value)}`);
   assert.ok(value.glError === undefined || value.glError === 0, `WebGL error ${value.glError} at ${label}`);
+  for (const [name, state] of Object.entries(value.translucentMaterials)) {
+    assert.equal(state.blend, true, `${name}: transparent material lost blending`);
+    assert.equal(state.depthWrite, false, `${name}: transparent material writes depth`);
+  }
   return value;
 }
 
@@ -148,6 +157,7 @@ async function inputGeometry(page) {
     return { x: rect.left + rect.width * .5, y: rect.top + rect.height * .54,
       pixelX: c.view.getScaleX() * rect.width / canvas.width,
       pixelY: c.view.getScaleY() * rect.height / canvas.height,
+      groundProjection: Math.sin(Math.atan2(window.__MONSTER_DEN__.controller.cameraBase.y, window.__MONSTER_DEN__.controller.cameraBase.z)),
       rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height } };
   });
 }
@@ -158,8 +168,8 @@ async function mouseShot(page, targetX, targetY, explicitPower, captureAim) {
   const player = state.player, dx = targetX - player.x, dy = targetY - player.y;
   const distance = Math.hypot(dx, dy), drag = 1.36 * (player.tool === 'heavy' ? 1.07 : 1), multiplier = player.tool === 'heavy' ? .96 : 1;
   const power = explicitPower ?? Math.max(.11, Math.min(1, ((distance + .17) * drag / 1.006 / multiplier - 1.9) / 10.9));
-  const projectedY = dy * Math.sin(Math.atan2(24, 10)), projectedLength = Math.hypot(dx, projectedY);
   const input = await inputGeometry(page);
+  const projectedY = dy * input.groundProjection, projectedLength = Math.hypot(dx, projectedY);
   const end = { x: input.x - dx / projectedLength * power * 165 * input.pixelX,
     y: input.y + projectedY / projectedLength * power * 165 * input.pixelY };
   await page.mouse.move(input.x, input.y); await page.mouse.down();
@@ -202,7 +212,7 @@ async function mobileInputCheck(url) {
   await page.evaluate(() => {
     window.__acceptanceTouchEvents = [];
     for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(type, event => {
-      window.__acceptanceTouchEvents.push({ type, active: [...event.touches].map(t => t.identifier), changed: [...event.changedTouches].map(t => t.identifier) });
+      window.__acceptanceTouchEvents.push({ type, trusted: event.isTrusted, active: [...event.touches].map(t => t.identifier), changed: [...event.changedTouches].map(t => t.identifier) });
     }, { capture: true, passive: true });
   });
   const input = await inputGeometry(page), cdp = await context.newCDPSession(page);
@@ -218,18 +228,39 @@ async function mobileInputCheck(url) {
   assert.ok(before.dragging && before.shots === 0, 'Primary mobile touch failed to start an aim.');
   await send('touchStart', [ownerDragged, extra]);
   await send('touchMove', [ownerDragged, extraMoved]);
-  // CDP TouchEnd requires an empty list. Removing the secondary ID from a
-  // TouchMove list makes the browser emit its real touchend while retaining
-  // the primary touch; verify that event rather than fabricating a DOM event.
-  await send('touchMove', [ownerDragged]); await afterFrames(page);
+  await afterFrames(page);
+  const steered = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
+    aim: { x: window.__MONSTER_DEN__.controller.lastAim.x, y: window.__MONSTER_DEN__.controller.lastAim.y }, shots: window.__MONSTER_DEN__.model.state.shots }));
+  assert.equal(steered.dragging, true); assert.equal(steered.shots, 0);
+  assert.ok(Math.abs(steered.aim.x - before.aim.x) < .01 && Math.abs(steered.aim.y - before.aim.y) < .01, 'CDP second finger redirected the primary aim.');
+  // The Chromium protocol requires an empty point list for touchEnd. A
+  // touchMove with one point removed does not dispatch secondary-only end.
+  // Exercise that edge through the real DOM -> Cocos -> controller pipeline,
+  // explicitly recording its untrusted fixture status; do not call a game API.
+  const releaseFixture = await page.evaluate(({ ownerDragged, extraMoved }) => {
+    const target = document.querySelector('#GameCanvas');
+    const start = window.__acceptanceTouchEvents.find(event => event.type === 'touchstart' && event.active.length === 2);
+    if (!start) throw new Error('CDP did not establish two actual touch identifiers.');
+    const make = (identifier, point) => new Touch({ identifier, target,
+      clientX: point.x, clientY: point.y, pageX: point.x, pageY: point.y, screenX: point.x, screenY: point.y,
+      radiusX: 5, radiusY: 5, force: 1 });
+    const primary = make(start.active[0], ownerDragged), secondary = make(start.active[1], extraMoved);
+    const event = new TouchEvent('touchend', { bubbles: true, cancelable: true,
+      touches: [primary], targetTouches: [primary], changedTouches: [secondary] });
+    target.dispatchEvent(event);
+    return { method: 'DOM TouchEvent fixture through native canvas listener and Cocos input dispatch',
+      isTrusted: event.isTrusted, primaryIdentifier: primary.identifier, releasedIdentifier: secondary.identifier };
+  }, { ownerDragged, extraMoved });
+  await afterFrames(page);
   const after = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
     aim: { x: window.__MONSTER_DEN__.controller.lastAim.x, y: window.__MONSTER_DEN__.controller.lastAim.y }, shots: window.__MONSTER_DEN__.model.state.shots }));
   assert.equal(after.dragging, true, 'Releasing a second finger must not release the primary shot.');
   assert.equal(after.shots, 0, 'Second-finger input caused an unintended launch.');
   assert.ok(Math.abs(after.aim.x - before.aim.x) < .01 && Math.abs(after.aim.y - before.aim.y) < .01, 'Second finger redirected the primary aim.');
-  const endedExtra = await page.evaluate(() => window.__acceptanceTouchEvents.some(event => event.type === 'touchend' && event.active.length === 1 && event.changed.length === 1));
-  assert.equal(endedExtra, true, 'Browser did not deliver a secondary-only touchend.');
-  await checkpoint(page, 'secondary finger cannot steer or release primary aim', '13-mobile-aim.png');
+  const endedExtra = await page.evaluate(() => window.__acceptanceTouchEvents.some(event => event.type === 'touchend' && !event.trusted && event.active.length === 1 && event.changed.length === 1));
+  assert.equal(endedExtra, true, 'DOM fixture did not deliver a secondary-only touchend.');
+  assert.equal(releaseFixture.isTrusted, false);
+  await checkpoint(page, 'CDP dual-touch aim; isolated release checked by marked DOM fixture', '13-mobile-aim.png');
   await send('touchCancel', []); await afterFrames(page);
   const cancelled = await page.evaluate(() => ({ dragging: window.__MONSTER_DEN__.controller.dragging,
     shots: window.__MONSTER_DEN__.model.state.shots, visibleAim: window.__MONSTER_DEN__.controller.aimNodes.some(node => node.active) }));
@@ -244,7 +275,8 @@ async function mobileInputCheck(url) {
   const audio = await musicState(page, 'explore');
   await checkpoint(page, 'mobile touch launch after cancellation', '14-mobile-shot.png');
   report.mobileInput = { viewport: '390×844', devicePixelRatio: 2, emulatedPhone: true, realPhone: false,
-    secondFingerCannotSteer: true, secondFingerCannotRelease: true, cancellationDoesNotLaunch: true,
+    cdpSecondFingerCannotSteer: true, secondaryReleaseFixture: { ...releaseFixture, cannotReleasePrimaryShot: true },
+    cdpCancellationDoesNotLaunch: true,
     subsequentTouchLaunches: true, firstBoardDestroyed: true, audio };
   report.mobileInput.touchEvents = await page.evaluate(() => window.__acceptanceTouchEvents);
   await page.waitForLoadState('networkidle');
