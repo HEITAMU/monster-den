@@ -6,7 +6,7 @@ export const TUNING = {
   cabinetDrag: 2.7, cabinetMaxSpeed: 8.5, restitution: 0.70,
   enemyWindup: 0.34, arrowSpeed: 15, invulnerableTime: 0.85,
   treasureRadius: 0.48, exitRadius: 0.8, maxFlightTime: 5.5,
-  sporeBlast: 2.22, sporeChain: 3.05, sporeFuse: 0.12, sporeScore: 10,
+  sporeBlast: 2.22, sporeChain: 2.60, sporeFuse: 0.12, sporeScore: 10,
 };
 
 /** Shared design-unit radii. Remap travel after the dead zone to the full 0..1 power range. */
@@ -36,8 +36,8 @@ export const ROOMS: RoomConfig[] = [
       {id:'heart-root',x:-3.2,y:-3.0,radius:0.52},
       {id:'heart-bridge',x:-2.7,y:-1.05,radius:0.52},
       {id:'heart-latch',x:-1.45,y:-0.85,radius:0.52},
-      {id:'heart-bloom',x:-1.6,y:1.35,radius:0.52},
-      {id:'heart-guard',x:1.05,y:2.75,radius:0.52},
+      {id:'heart-bloom',x:-1.15,y:1.35,radius:0.52},
+      {id:'heart-guard',x:0.98,y:2.65,radius:0.52},
     ],
     obstacles: [
       { id: 'welcome-board', kind: 'board', x: 0, y: -1.2, w: 2.1, h: 0.28, hp: 1 },

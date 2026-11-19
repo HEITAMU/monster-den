@@ -52,6 +52,37 @@ function sporeCrownMesh():MeshData {
   return {positions,normals,colors,uvs,indices};
 }
 
+/** Braided three-strand mycelium with an irregular surface, laid over the soil
+ * so a new player can visually follow the chain before touching its first bud. */
+function sporeRootMesh(ax:number,ay:number,bx:number,by:number):MeshData {
+  const positions:number[]=[],normals:number[]=[],colors:number[]=[],uvs:number[]=[],indices:number[]=[];
+  const count=18,sides=9,dx=bx-ax,dz=ay-by,length=Math.hypot(dx,dz)||1;
+  const acrossX=-dz/length,acrossZ=dx/length;
+  for(let strand=0;strand<3;strand++){
+    const offset=strand*2.0944;
+    const base=positions.length/3;
+    for(let i=0;i<=count;i++){
+      const t=i/count,twist=offset+t*Math.PI*3.4;
+      const wiggle=Math.sin(t*Math.PI)*.09;
+      const x=ax+dx*t+acrossX*(wiggle*Math.sin(t*9+offset)+Math.cos(twist)*.05);
+      const z=-ay+dz*t+acrossZ*(wiggle*Math.cos(t*8+offset)+Math.cos(twist)*.05);
+      const y=.16+.045*Math.sin(t*Math.PI)+Math.sin(twist)*.055;
+      const r=(.045+.015*Math.cos(t*23+offset))*(.74+.26*Math.sin(t*Math.PI));
+      for(let j=0;j<=sides;j++){
+        const a=j/sides*Math.PI*2,c=Math.cos(a),sn=Math.sin(a);
+        positions.push(x+acrossX*c*r,y+sn*r,z+acrossZ*c*r);
+        normals.push(acrossX*c,sn,acrossZ*c);
+        const shade=.5+.5*Math.sin(t*8+offset),light=.52+.2*shade;
+        colors.push(.28+.2*shade,light+.23*sn,.37+.2*shade,1);
+        uvs.push(t,j/sides);
+        if(i>0&&j>0){const o=base+(i-1)*(sides+1)+j-1,q=o+sides+1;
+          indices.push(o,q,o+1,o+1,q,q+1);}
+      }
+    }
+  }
+  return {positions,normals,colors,uvs,indices};
+}
+
 @ccclass('GameMain')
 export class GameMain extends Component {
   model=new GameModel();
@@ -66,10 +97,11 @@ export class GameMain extends Component {
   private objectiveRing:Node|null=null;private objectiveLabel:Label|null=null;
   private stashVisuals=new Map<string,{instance:ModelInstance;label:Label}>();
   private sporeVisuals=new Map<string,{bud:ModelInstance;crown:Node;ring:Node;label:Label}>();
+  private sporeRoots:Node[]=[];
   private aimNodes:Node[]=[];private aimEnd:Node|null=null;private aimCaption:Label|null=null;
   private threatNodes=new Map<string,Node>();private arrowNodes=new Map<string,Node>();
   private matShadow!:Material;private matAim!:Material;private matDanger!:Material;private matGold!:Material;
-  private matSporeCrown!:Material;private matSporeGlow!:Material;
+  private matSporeCrown!:Material;private matSporeGlow!:Material;private matSporeRoot!:Material;
   private sparkMaterials:Material[]=[];private sparks:Spark[]=[];private trails:Trail[]=[];private impacts:Impact[]=[];private trailClock=0;
   private ready=false;private page:Page='loading';private height=1280;private time=0;private phase='';
   private runId='';private runMeta={bonus:0,settled:false,bankedRooms:0};
@@ -150,6 +182,7 @@ export class GameMain extends Component {
     this.matGold=makeMaterial(rgba('#ffdb7c'),false,true,true,.8);
     this.matSporeCrown=makeMaterial(rgba('#daf9b9'),true,false,true,.3);
     this.matSporeGlow=makeMaterial(rgba('#73f8ce',225),false,true,false,.75);
+    this.matSporeRoot=makeMaterial(rgba('#d0efc0'),true,false,true,.18);
     this.sparkMaterials=['#ffe1a0','#aaead0','#d39b61','#ef9b7d'].map(c=>makeMaterial(rgba(c),false,false,false,.8));
     for(let i=0;i<32;i++){const node=meshNode('AimMark',discMesh(.075,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
     this.aimEnd=meshNode('AimEndpoint',ringMesh(.38,.055),this.matAim,this.effectsWorld);this.aimEnd.active=false;
@@ -170,7 +203,7 @@ export class GameMain extends Component {
     this.tip='';this.tipTimer=0;this.tipPhase=null;this.tipPriority=0;
     this.clear(this.roomWorld);this.clear(this.actorWorld);this.enemies.clear();this.obstacles.clear();
     for(const stash of this.stashVisuals.values())stash.label.node.destroy();this.stashVisuals.clear();
-    for(const spore of this.sporeVisuals.values())spore.label.node.destroy();this.sporeVisuals.clear();
+    for(const spore of this.sporeVisuals.values())spore.label.node.destroy();this.sporeVisuals.clear();this.sporeRoots=[];
     for(const node of this.threatNodes.values())node.destroy();this.threatNodes.clear();
     for(const node of this.arrowNodes.values())node.destroy();this.arrowNodes.clear();
     this.heroRing?.destroy();this.exitRing?.destroy();this.clearAim();
@@ -186,6 +219,11 @@ export class GameMain extends Component {
       text.node.active=false;this.stashVisuals.set(stash.id,{instance,label:text});
     }
     // First-room interactive chain: actual organic 3D volumes and a separate ground halo.
+    for(let i=1;i<state.spores.length;i++){
+      const prior=state.spores[i-1],next=state.spores[i];
+      const root=meshNode('BraidedMycelium',sporeRootMesh(prior.x,prior.y,next.x,next.y),this.matSporeRoot,this.roomWorld);
+      this.sporeRoots.push(root);
+    }
     const crownData=state.spores.length?sporeCrownMesh():null;
     for(const node of state.spores){
       const bud=this.instantiate('mushroom',this.roomWorld,node.x,node.y,.73);
@@ -688,7 +726,7 @@ export class GameMain extends Component {
     this.inputCanvas=null;this.mouseButtonGuard=null;
     if((globalThis as any).__MONSTER_DEN__?.controller===this)delete (globalThis as any).__MONSTER_DEN__;
     this.env?.dispose();this.characters?.dispose();
-    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,this.matSporeCrown,this.matSporeGlow,...this.sparkMaterials,...this.impacts.map(i=>i.material)])mat?.destroy();
+    for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,this.matSporeCrown,this.matSporeGlow,this.matSporeRoot,...this.sparkMaterials,...this.impacts.map(i=>i.material)])mat?.destroy();
     input.off(Input.EventType.TOUCH_START,this.touchStart,this);input.off(Input.EventType.TOUCH_MOVE,this.touchMove,this);input.off(Input.EventType.TOUCH_END,this.touchEnd,this);input.off(Input.EventType.TOUCH_CANCEL,this.touchCancel,this);
     input.off(Input.EventType.MOUSE_DOWN,this.mouseDown,this);input.off(Input.EventType.MOUSE_MOVE,this.mouseMove,this);input.off(Input.EventType.MOUSE_UP,this.mouseUp,this);
     game.off(Game.EVENT_HIDE,this.onHide,this);game.off(Game.EVENT_SHOW,this.onShow,this);

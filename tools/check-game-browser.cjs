@@ -469,6 +469,7 @@ async function optionalSporeChainCheck(url) {
   assert.equal(initial.spores.length,5);
   assert.ok(initial.spores.every(spore=>!spore.spent));
   const shots=[];await mouseShot(page,-3.2,-3,.55,false,shots);
+  await page.waitForFunction(()=>window.__MONSTER_DEN__.model.state.spores.every(spore=>spore.spent),undefined,{timeout:12000});
   const burst=await checkpoint(page,'left fungal bud detonates chain and breaks wood','20-room1-spore-after.png');
   assert.equal(burst.spores.filter(spore=>spore.spent).length,5,'Joystick failed to trigger the five-bud chain.');
   assert.equal(burst.treasureTaken,false);
