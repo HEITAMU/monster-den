@@ -11,7 +11,7 @@
   <script src="./vendor/system-6.15.1.js"></script>
   <script type="systemjs-importmap">{"imports":{"cc":"./vendor/cocos-3.8.8.js"}}</script>
   <script>
-    window.__MONSTER_DEN_BUILD__ = '0.3.0';
+    window.__MONSTER_DEN_BUILD__ = '0.3.1';
     const originalResolve = System.constructor.prototype.resolve;
     System.constructor.prototype.resolve = function(specifier, parent) {
       if ((specifier.startsWith('./') || specifier.startsWith('../')) && !/\.[a-z0-9]+(?:\?|$)/i.test(specifier)) specifier += '.js';
@@ -20,6 +20,6 @@
       return resolved;
     };
   </script>
-  <script type="module" src="./engine-boot.js?v=0.3.0"></script>
+  <script type="module" src="./engine-boot.js?v=0.3.1"></script>
 </body>
 </html>

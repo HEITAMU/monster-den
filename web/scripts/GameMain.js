@@ -40,7 +40,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
         ],
         execute: function () {
             ccclass = cc_1._decorator.ccclass;
-            VERSION = '0.3.0';
+            VERSION = '0.3.1';
             GROUND = .08, GROUND_EFFECT = .105;
             TOOL_COST = { heavy: 300, grip: 450, return: 450 };
             GameMain = class GameMain extends cc_1.Component {
@@ -80,6 +80,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.dragging = false;
                     this.dragStart = new cc_1.Vec2();
                     this.dragNow = new cc_1.Vec2();
+                    this.pointerStart = new cc_1.Vec2();
+                    this.pointerMoved = false;
                     this.dragPower = 0;
                     this.lastAim = new cc_1.Vec2(0, 1);
                     this.activeTouchId = null;
@@ -101,6 +103,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.tipTimer = 0;
                     this.tip = '';
                     this.tipPhase = null;
+                    this.tipPriority = 0;
                     this.toastNode = null;
                     this.toolButton = null;
                     this.toolGlow = null;
@@ -267,6 +270,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.tip = '';
                     this.tipTimer = 0;
                     this.tipPhase = null;
+                    this.tipPriority = 0;
                     this.clear(this.roomWorld);
                     this.clear(this.actorWorld);
                     this.enemies.clear();
@@ -549,7 +553,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.toolNameLabel.fontSize = 26;
                     this.toolNameLabel.node.setPosition(0, 13, 0);
                     this.toolNameLabel.getComponent(cc_1.UITransform).setContentSize(227, 42);
-                    this.toolStatusLabel = GameUI_1.label(this.toolButton, '', 17, 0, -20, 230, 28, GameUI_1.PALETTE.muted);
+                    this.toolStatusLabel = GameUI_1.label(this.toolButton, '', 20, 0, -20, 230, 30, GameUI_1.PALETTE.muted);
                     this.toolButton.addComponent(cc_1.UIOpacity);
                     this.toolGlow = GameUI_1.uiNode('ToolReadyGlow', this.toolButton, 247, 83);
                     const glow = this.toolGlow.addComponent(cc_1.Graphics);
@@ -558,7 +562,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     glow.roundRect(-123, -41, 246, 82, 18);
                     glow.stroke();
                     this.toolGlow.active = false;
-                    this.tutorialText = GameUI_1.label(this.hud, '推动摇杆 · 松手冲撞', 20, 175, bottom + 95, 276, 58, GameUI_1.PALETTE.muted);
+                    this.tutorialText = GameUI_1.label(this.hud, '推动摇杆 · 松手冲撞', 24, 175, bottom + 95, 282, 68, GameUI_1.PALETTE.muted);
                     this.updateHud();
                 }
                 updateHud() {
@@ -573,6 +577,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     if (this.tipPhase && this.tipPhase !== s.phase) {
                         this.tipTimer = 0;
                         this.tipPhase = null;
+                        this.tipPriority = 0;
                     }
                     this.hintLabel.string = this.tipTimer > 0 ? this.tip : guide.hint;
                     this.phaseLabel.string = this.dragging ? `力度 ${Math.round(this.dragPower * 100)}%` : s.phase === 'moving' ? '正在冲撞' : s.phase === 'enemies' ? '守卫行动' : p.tool === 'grip' && !p.toolReady ? '再次瞄准' : `第 ${s.turn + 1} 次行动`;
@@ -787,6 +792,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     this.dragging = true;
                     this.dragStart.set((this.stick.root.position.x + 360) * cc_1.view.getScaleX(), (this.stick.root.position.y + this.height / 2) * cc_1.view.getScaleY());
                     this.dragNow.set(location);
+                    this.pointerStart.set(location);
+                    this.pointerMoved = false;
                     this.dragPower = 0;
                     this.stickEngaged = false;
                     this.move(location);
@@ -798,8 +805,12 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const dx = (location.x - this.dragStart.x) / cc_1.view.getScaleX(), dy = (location.y - this.dragStart.y) / cc_1.view.getScaleY(), distance = Math.hypot(dx, dy);
                     const { deadZone, travel } = this.joystickTuning, scale = distance > travel ? travel / distance : 1;
                     this.stickOffset.set(dx * scale, dy * scale);
-                    this.stickEngaged = distance > deadZone;
-                    this.dragPower = Math.max(0, Math.min(1, (distance - deadZone) / (travel - deadZone)));
+                    // Off-centre taps and tiny finger jitter must not release an accidental shot.
+                    const travelled = Math.hypot((location.x - this.pointerStart.x) / cc_1.view.getScaleX(), (location.y - this.pointerStart.y) / cc_1.view.getScaleY());
+                    if (travelled >= 6)
+                        this.pointerMoved = true;
+                    this.stickEngaged = distance > deadZone && this.pointerMoved;
+                    this.dragPower = this.stickEngaged ? Math.max(0, Math.min(1, (distance - deadZone) / (travel - deadZone))) : 0;
                     this.lastAim.set(dx, dy / this.groundProjection);
                     this.showAim();
                 }
@@ -809,6 +820,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     const fire = this.stickEngaged, power = this.dragPower;
                     this.dragging = false;
                     this.stickEngaged = false;
+                    this.pointerMoved = false;
                     this.clearAim();
                     if (fire && this.model.shoot({ x: this.lastAim.x, y: this.lastAim.y }, power))
                         this.persist();
@@ -824,7 +836,7 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                     return; this.move(e.getLocation()); this.activeTouchId = null; this.release(); }
                 touchCancel(e) { if (e.simulate || this.activeTouchId === null || e.getID() !== this.activeTouchId)
                     return; this.cancelDrag(); }
-                cancelDrag() { this.activeTouchId = null; this.heldMouse = false; this.dragging = false; this.stickEngaged = false; this.dragPower = 0; this.clearAim(); }
+                cancelDrag() { this.activeTouchId = null; this.heldMouse = false; this.dragging = false; this.stickEngaged = false; this.pointerMoved = false; this.dragPower = 0; this.clearAim(); }
                 // On backends that mark simulated touch, the primary mouse path owns it here.
                 // The DOM guard above also covers 3.8.8 web's unmarked simulated events.
                 mouseDown(e) { if (e.getButton() !== 0 || this.activeTouchId !== null)
@@ -931,6 +943,8 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             this.stickOffset.set(0, 0);
                     }
                     this.stick.thumb.setPosition(this.stickOffset.x, this.stickOffset.y, 0);
+                    const angle = this.stickEngaged ? Math.atan2(this.stickOffset.y, this.stickOffset.x) * 180 / Math.PI - 90 : 0;
+                    this.stick.thumb.setRotationFromEuler(0, 0, angle);
                     const g = this.stick.meter;
                     g.clear();
                     if (this.stickEngaged) {
@@ -1148,11 +1162,11 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             this.enemies.get(e.id).hit = .3;
                     }
                     if (e.type === 'treasure') {
-                        this.showTip('宝物到手！去发光出口', 3);
+                        this.showTip('宝物到手！去发光出口', 3, null, 3);
                         this.floatText('宝物 +100', e.x, e.y, GameUI_1.PALETTE.gold);
                     }
                     if (e.type === 'stash') {
-                        this.showTip(`额外收获 +${e.amount || 0}，${this.model.state.treasure.taken ? '可以前往出口' : '继续找主宝箱'}`, 2.4);
+                        this.showTip(`额外收获 +${e.amount || 0}，${this.model.state.treasure.taken ? '可以前往出口' : '继续找主宝箱'}`, 2.4, null, 3);
                         this.floatText(`额外金币 +${e.amount || 0}`, e.x, e.y, GameUI_1.PALETTE.mint);
                         this.persist();
                     }
@@ -1161,10 +1175,10 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                         const attacker = this.model.state.enemies.find(enemy => enemy.id === e.id);
                         const reason = attacker?.kind === 'archer' ? '中箭' : attacker?.kind === 'boss' ? '窝主冲撞' : attacker ? '被冲撞' : '受伤';
                         this.floatText(`${reason} −${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.danger);
-                        this.showTip(attacker?.kind === 'archer' ? (this.model.state.roomIndex === 1 ? '弩箭命中：试着让柜子挡住箭路' : '弩箭命中：调整落点，避开红色箭路') : '冲撞命中：下次避开红色预告路线', 2.3);
+                        this.showTip(attacker?.kind === 'archer' ? (this.model.state.roomIndex === 1 ? '弩箭命中：试着让柜子挡住箭路' : '弩箭命中：调整落点，避开红色箭路') : '冲撞命中：下次避开红色预告路线', 2.3, null, 4);
                     }
                     if (e.type === 'tool_used')
-                        this.showTip(e.tool === 'grip' ? '已经抓停，再次推杆；守卫暂不行动' : '正在向本次出发点折返', 2.5, e.tool === 'grip' ? 'aiming' : 'moving');
+                        this.showTip(e.tool === 'grip' ? '已经抓停，再次推杆；守卫暂不行动' : '正在向本次出发点折返', 2.5, e.tool === 'grip' ? 'aiming' : 'moving', 2);
                     if (e.type === 'enemy_hit')
                         this.floatText(`-${e.amount || 1}`, e.x, e.y, GameUI_1.PALETTE.cream);
                     if (e.type === 'board_hit') {
@@ -1174,13 +1188,20 @@ System.register(["cc", "./core/index", "./platform/SaveStore", "./platform/Rewar
                             this.floatText('木栏松动', e.x, e.y, GameUI_1.PALETTE.gold);
                     }
                     if (e.type === 'arrow_blocked')
-                        this.showTip(this.model.state.obstacles.find(o => o.id === e.obstacleId)?.kind === 'cabinet' ? '柜子挡住了箭' : '掩体挡住了箭', 1.5);
+                        this.showTip(this.model.state.obstacles.find(o => o.id === e.obstacleId)?.kind === 'cabinet' ? '柜子挡住了箭' : '掩体挡住了箭', 1.5, null, 0);
                     if (e.type === 'exit_locked')
                         this.showTip('先拿到房间里的宝物', 2);
                     if (e.type === 'room_clear' || e.type === 'victory' || e.type === 'game_over')
                         this.persist();
                 }
-                showTip(text, seconds = 2, phase = null) { this.tip = text; this.tipTimer = seconds; this.tipPhase = phase; }
+                showTip(text, seconds = 2, phase = null, priority = 1) {
+                    if (this.tipTimer > 0 && this.tipPhase === phase && priority < this.tipPriority)
+                        return;
+                    this.tip = text;
+                    this.tipTimer = seconds;
+                    this.tipPhase = phase;
+                    this.tipPriority = priority;
+                }
                 placeWorldLabel(text, x, y, height, offset = 0) {
                     const screen = this.worldCamera.worldToScreen(new cc_1.Vec3(x, height, -y));
                     const xx = screen.x / cc_1.view.getScaleX() - 360, yy = screen.y / cc_1.view.getScaleY() - this.height / 2 + offset;

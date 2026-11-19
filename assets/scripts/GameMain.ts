@@ -16,7 +16,7 @@ import type {JoystickArt} from './GameUI';
 import {objectiveGuide,toolPresentation,nextRoomAdvice} from './AdventureGuide';
 
 const {ccclass}=_decorator;
-const VERSION='0.3.0';
+const VERSION='0.3.1';
 const GROUND=.08,GROUND_EFFECT=.105;
 type Page='loading'|'home'|'game'|'tools';
 interface LocalRun {model:GameSnapshot;bonus:number;settled:boolean;bankedRooms:number;}
@@ -45,13 +45,13 @@ export class GameMain extends Component {
   private sparkMaterials:Material[]=[];private sparks:Spark[]=[];private trails:Trail[]=[];private impacts:Impact[]=[];private trailClock=0;
   private ready=false;private page:Page='loading';private height=1280;private time=0;private phase='';
   private runId='';private runMeta={bonus:0,settled:false,bankedRooms:0};
-  private dragging=false;private dragStart=new Vec2();private dragNow=new Vec2();private dragPower=0;private lastAim=new Vec2(0,1);
+  private dragging=false;private dragStart=new Vec2();private dragNow=new Vec2();private pointerStart=new Vec2();private pointerMoved=false;private dragPower=0;private lastAim=new Vec2(0,1);
   private activeTouchId:number|null=null;private heldMouse=false;private shake=0;private background=false;private adBusy=false;private rewardPending=false;
   private stick:JoystickArt|null=null;private stickOffset=new Vec2();private stickEngaged=false;private hitStop=0;private launchKick=0;
   private inputCanvas:HTMLCanvasElement|null=null;private mouseButtonGuard:((event:MouseEvent)=>void)|null=null;
   readonly joystickTuning=JOYSTICK_TUNING;readonly gameplayTuning=TUNING;
   get groundProjection():number{return Math.sin(Math.atan2(this.cameraBase.y-this.cameraTarget.y,this.cameraBase.z-this.cameraTarget.z));}
-  private overlayPhase='';private tipTimer=0;private tip='';private tipPhase:Phase|null=null;private toastNode:Node|null=null;
+  private overlayPhase='';private tipTimer=0;private tip='';private tipPhase:Phase|null=null;private tipPriority=0;private toastNode:Node|null=null;
   private roomLabel!:Label;private hpLabel!:Label;private lootLabel!:Label;private hintLabel!:Label;private phaseLabel!:Label;
   private toolButton:Node|null=null;private toolGlow:Node|null=null;private stepDots:Label[]=[];private tutorialText:Label|null=null;
   private toolNameLabel:Label|null=null;private toolStatusLabel:Label|null=null;
@@ -137,7 +137,7 @@ export class GameMain extends Component {
     return {instance,shadow,scale,hit:0,phase:Math.random()*6};
   }
   private renderRoom():void {
-    this.tip='';this.tipTimer=0;this.tipPhase=null;
+    this.tip='';this.tipTimer=0;this.tipPhase=null;this.tipPriority=0;
     this.clear(this.roomWorld);this.clear(this.actorWorld);this.enemies.clear();this.obstacles.clear();
     for(const stash of this.stashVisuals.values())stash.label.node.destroy();this.stashVisuals.clear();
     for(const node of this.threatNodes.values())node.destroy();this.threatNodes.clear();
@@ -284,11 +284,11 @@ export class GameMain extends Component {
     this.toolNameLabel=this.toolButton.getComponentsInChildren(Label)[0];
     this.toolNameLabel.fontSize=26;this.toolNameLabel.node.setPosition(0,13,0);
     this.toolNameLabel.getComponent(UITransform)!.setContentSize(227,42);
-    this.toolStatusLabel=label(this.toolButton,'',17,0,-20,230,28,PALETTE.muted);
+    this.toolStatusLabel=label(this.toolButton,'',20,0,-20,230,30,PALETTE.muted);
     this.toolButton.addComponent(UIOpacity);
     this.toolGlow=uiNode('ToolReadyGlow',this.toolButton,247,83);
     const glow=this.toolGlow.addComponent(Graphics);glow.lineWidth=3;glow.strokeColor=rgba(PALETTE.gold);glow.roundRect(-123,-41,246,82,18);glow.stroke();this.toolGlow.active=false;
-    this.tutorialText=label(this.hud,'推动摇杆 · 松手冲撞',20,175,bottom+95,276,58,PALETTE.muted);
+    this.tutorialText=label(this.hud,'推动摇杆 · 松手冲撞',24,175,bottom+95,282,68,PALETTE.muted);
     this.updateHud();
   }
   private updateHud():void {
@@ -298,7 +298,7 @@ export class GameMain extends Component {
     this.lootLabel.string=s.treasure.taken?'出口已开启':'寻找主宝箱';
     this.stepDots.forEach((l,i)=>{l.color=rgba(i<=s.roomIndex?PALETTE.gold:'#486961');});
     const guide=objectiveGuide(s);
-    if(this.tipPhase&&this.tipPhase!==s.phase){this.tipTimer=0;this.tipPhase=null;}
+    if(this.tipPhase&&this.tipPhase!==s.phase){this.tipTimer=0;this.tipPhase=null;this.tipPriority=0;}
     this.hintLabel.string=this.tipTimer>0?this.tip:guide.hint;
     this.phaseLabel.string=this.dragging?`力度 ${Math.round(this.dragPower*100)}%`:s.phase==='moving'?'正在冲撞':s.phase==='enemies'?'守卫行动':p.tool==='grip'&&!p.toolReady?'再次瞄准':`第 ${s.turn+1} 次行动`;
     const tool=toolPresentation(p.tool,s.phase,p.toolReady);
@@ -417,25 +417,29 @@ export class GameMain extends Component {
     if(this.dragging||!this.validInput(location)||this.model.state.phase!=='aiming')return;
     void this.audio.unlock().then(()=>this.audio.startMusic());this.dragging=true;
     this.dragStart.set((this.stick!.root.position.x+360)*view.getScaleX(),(this.stick!.root.position.y+this.height/2)*view.getScaleY());
-    this.dragNow.set(location);this.dragPower=0;this.stickEngaged=false;this.move(location);
+    this.dragNow.set(location);this.pointerStart.set(location);this.pointerMoved=false;this.dragPower=0;this.stickEngaged=false;this.move(location);
   }
   private move(location:Vec2):void {
     if(!this.dragging)return;this.dragNow.set(location);
     const dx=(location.x-this.dragStart.x)/view.getScaleX(),dy=(location.y-this.dragStart.y)/view.getScaleY(),distance=Math.hypot(dx,dy);
     const {deadZone,travel}=this.joystickTuning,scale=distance>travel?travel/distance:1;
-    this.stickOffset.set(dx*scale,dy*scale);this.stickEngaged=distance>deadZone;
-    this.dragPower=Math.max(0,Math.min(1,(distance-deadZone)/(travel-deadZone)));this.lastAim.set(dx,dy/this.groundProjection);
+    this.stickOffset.set(dx*scale,dy*scale);
+    // Off-centre taps and tiny finger jitter must not release an accidental shot.
+    const travelled=Math.hypot((location.x-this.pointerStart.x)/view.getScaleX(),(location.y-this.pointerStart.y)/view.getScaleY());
+    if(travelled>=6)this.pointerMoved=true;
+    this.stickEngaged=distance>deadZone&&this.pointerMoved;
+    this.dragPower=this.stickEngaged?Math.max(0,Math.min(1,(distance-deadZone)/(travel-deadZone))):0;this.lastAim.set(dx,dy/this.groundProjection);
     this.showAim();
   }
   private release():void {
-    if(!this.dragging)return;const fire=this.stickEngaged,power=this.dragPower;this.dragging=false;this.stickEngaged=false;this.clearAim();
+    if(!this.dragging)return;const fire=this.stickEngaged,power=this.dragPower;this.dragging=false;this.stickEngaged=false;this.pointerMoved=false;this.clearAim();
     if(fire&&this.model.shoot({x:this.lastAim.x,y:this.lastAim.y},power))this.persist();this.dragPower=0;
   }
   private touchStart(e:EventTouch):void{if(e.simulate||this.activeTouchId!==null||this.heldMouse)return;const id=e.getID();if(id===null)return;this.begin(e.getLocation());if(this.dragging)this.activeTouchId=id;}
   private touchMove(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());}
   private touchEnd(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());this.activeTouchId=null;this.release();}
   private touchCancel(e:EventTouch):void{if(e.simulate||this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.cancelDrag();}
-  private cancelDrag():void{this.activeTouchId=null;this.heldMouse=false;this.dragging=false;this.stickEngaged=false;this.dragPower=0;this.clearAim();}
+  private cancelDrag():void{this.activeTouchId=null;this.heldMouse=false;this.dragging=false;this.stickEngaged=false;this.pointerMoved=false;this.dragPower=0;this.clearAim();}
   // On backends that mark simulated touch, the primary mouse path owns it here.
   // The DOM guard above also covers 3.8.8 web's unmarked simulated events.
   private mouseDown(e:EventMouse):void{if(e.getButton()!==0||this.activeTouchId!==null)return;this.begin(e.getLocation());this.heldMouse=this.dragging;}
@@ -483,6 +487,8 @@ export class GameMain extends Component {
     if(!this.stick||this.page!=='game')return;
     if(!this.dragging){const fade=Math.exp(-dt*24);this.stickOffset.multiplyScalar(fade);if(this.stickOffset.length()<.05)this.stickOffset.set(0,0);}
     this.stick.thumb.setPosition(this.stickOffset.x,this.stickOffset.y,0);
+    const angle=this.stickEngaged?Math.atan2(this.stickOffset.y,this.stickOffset.x)*180/Math.PI-90:0;
+    this.stick.thumb.setRotationFromEuler(0,0,angle);
     const g=this.stick.meter;g.clear();if(this.stickEngaged){g.lineWidth=5;g.strokeColor=rgba(this.dragPower>.9?PALETTE.gold:PALETTE.mint,240);g.arc(0,0,101,Math.PI/2,Math.PI/2-this.dragPower*Math.PI*2,true);g.stroke();}
     const opacity=this.stick.root.getComponent(UIOpacity)||this.stick.root.addComponent(UIOpacity);opacity.opacity=this.model.state.phase==='aiming'?255:165;
     if(this.stick.glow.active)this.stick.glow.setScale(1+Math.sin(this.time*5)*.008,1+Math.sin(this.time*5)*.008,1);
@@ -567,22 +573,25 @@ export class GameMain extends Component {
       const impact=this.impacts.find(i=>i.life<=0);if(impact){impact.life=.24;impact.size=e.type==='cabinet_push'?.7:.5;impact.node.active=true;impact.node.setPosition(e.x,GROUND_EFFECT+.02,-e.y);}
       if(e.type==='enemy_hit'&&e.id&&this.enemies.has(e.id))this.enemies.get(e.id)!.hit=.3;
     }
-    if(e.type==='treasure'){this.showTip('宝物到手！去发光出口',3);this.floatText('宝物 +100',e.x,e.y,PALETTE.gold);}
-    if(e.type==='stash'){this.showTip(`额外收获 +${e.amount||0}，${this.model.state.treasure.taken?'可以前往出口':'继续找主宝箱'}`,2.4);this.floatText(`额外金币 +${e.amount||0}`,e.x,e.y,PALETTE.mint);this.persist();}
+    if(e.type==='treasure'){this.showTip('宝物到手！去发光出口',3,null,3);this.floatText('宝物 +100',e.x,e.y,PALETTE.gold);}
+    if(e.type==='stash'){this.showTip(`额外收获 +${e.amount||0}，${this.model.state.treasure.taken?'可以前往出口':'继续找主宝箱'}`,2.4,null,3);this.floatText(`额外金币 +${e.amount||0}`,e.x,e.y,PALETTE.mint);this.persist();}
     if(e.type==='damage'){
       this.hero.hit=.4;const attacker=this.model.state.enemies.find(enemy=>enemy.id===e.id);
       const reason=attacker?.kind==='archer'?'中箭':attacker?.kind==='boss'?'窝主冲撞':attacker?'被冲撞':'受伤';
       this.floatText(`${reason} −${e.amount||1}`,e.x,e.y,PALETTE.danger);
-      this.showTip(attacker?.kind==='archer'?(this.model.state.roomIndex===1?'弩箭命中：试着让柜子挡住箭路':'弩箭命中：调整落点，避开红色箭路'):'冲撞命中：下次避开红色预告路线',2.3);
+      this.showTip(attacker?.kind==='archer'?(this.model.state.roomIndex===1?'弩箭命中：试着让柜子挡住箭路':'弩箭命中：调整落点，避开红色箭路'):'冲撞命中：下次避开红色预告路线',2.3,null,4);
     }
-    if(e.type==='tool_used')this.showTip(e.tool==='grip'?'已经抓停，再次推杆；守卫暂不行动':'正在向本次出发点折返',2.5,e.tool==='grip'?'aiming':'moving');
+    if(e.type==='tool_used')this.showTip(e.tool==='grip'?'已经抓停，再次推杆；守卫暂不行动':'正在向本次出发点折返',2.5,e.tool==='grip'?'aiming':'moving',2);
     if(e.type==='enemy_hit')this.floatText(`-${e.amount||1}`,e.x,e.y,PALETTE.cream);
     if(e.type==='board_hit'){this.burst(e.x,e.y,2,5);this.shake=Math.max(this.shake,.14);if(!this.model.state.obstacles.find(o=>o.id===e.id)?.destroyed)this.floatText('木栏松动',e.x,e.y,PALETTE.gold);}
-    if(e.type==='arrow_blocked')this.showTip(this.model.state.obstacles.find(o=>o.id===e.obstacleId)?.kind==='cabinet'?'柜子挡住了箭':'掩体挡住了箭',1.5);
+    if(e.type==='arrow_blocked')this.showTip(this.model.state.obstacles.find(o=>o.id===e.obstacleId)?.kind==='cabinet'?'柜子挡住了箭':'掩体挡住了箭',1.5,null,0);
     if(e.type==='exit_locked')this.showTip('先拿到房间里的宝物',2);
     if(e.type==='room_clear'||e.type==='victory'||e.type==='game_over')this.persist();
   }
-  private showTip(text:string,seconds=2,phase:Phase|null=null):void{this.tip=text;this.tipTimer=seconds;this.tipPhase=phase;}
+  private showTip(text:string,seconds=2,phase:Phase|null=null,priority=1):void{
+    if(this.tipTimer>0&&this.tipPhase===phase&&priority<this.tipPriority)return;
+    this.tip=text;this.tipTimer=seconds;this.tipPhase=phase;this.tipPriority=priority;
+  }
   private placeWorldLabel(text:Label,x:number,y:number,height:number,offset=0):boolean {
     const screen=this.worldCamera.worldToScreen(new Vec3(x,height,-y));
     const xx=screen.x/view.getScaleX()-360,yy=screen.y/view.getScaleY()-this.height/2+offset;

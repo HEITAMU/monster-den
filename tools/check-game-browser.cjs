@@ -272,6 +272,11 @@ async function mouseJoystickBoundaries(page) {
   };
   await page.mouse.click(input.x, input.y);
   const centerTap = await assertIdle('Joystick center tap');
+  await page.mouse.click(input.x + 90 * input.pixelX, input.y);
+  const rimTap = await assertIdle('Joystick outer-ring tap');
+  await page.mouse.move(input.x + 90 * input.pixelX, input.y); await page.mouse.down();
+  await page.mouse.move(input.x + 94 * input.pixelX, input.y, { steps: 2 }); await page.mouse.up();
+  const rimJitter = await assertIdle('Outer-ring 4-unit finger jitter');
   await page.mouse.move(input.x, input.y); await page.mouse.down();
   await page.mouse.move(input.x + deadZone * .5 * input.pixelX, input.y, { steps: 3 });
   await afterFrames(page);
@@ -317,9 +322,9 @@ async function mouseJoystickBoundaries(page) {
     nonPrimaryButtons.push({ button, cannotAimOrLaunch: true, pressed, moved, released });
   }
   return { method: 'Real DOM mouse input at the rendered joystick center and scene', input,
-    centerTapDoesNotLaunch: true, deadZoneDoesNotLaunch: true, recenterCancels: true, sceneStartRejected: true,
+    centerTapDoesNotLaunch: true, rimTapDoesNotLaunch: true, rimJitterDoesNotLaunch: true, deadZoneDoesNotLaunch: true, recenterCancels: true, sceneStartRejected: true,
     nonPrimaryButtons,
-    evidence: { centerTap, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
+    evidence: { centerTap, rimTap, rimJitter, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
 }
 
 async function mouseShot(page, targetX, targetY, explicitPower, captureAim = false, shotLog = report.route.shots) {
@@ -502,6 +507,13 @@ async function mobileInputCheck(url) {
   };
   await page.touchscreen.tap(input.x, input.y);
   const centerTap = await idleTouch('Mobile joystick center tap');
+  await send('touchStart', [touch(41, input.x + 90 * input.pixelX, input.y)]);
+  await send('touchEnd', []);
+  const rimTap = await idleTouch('Mobile outer-ring tap');
+  await send('touchStart', [touch(42, input.x + 90 * input.pixelX, input.y)]);
+  await send('touchMove', [touch(42, input.x + 94 * input.pixelX, input.y)]);
+  await send('touchEnd', []);
+  const rimJitter = await idleTouch('Mobile outer-ring 4-unit jitter');
   await send('touchStart', [touch(1, input.x, input.y)]);
   await send('touchMove', [touch(1, input.x + deadZone * .5 * input.pixelX, input.y)]);
   await afterFrames(page);
@@ -530,8 +542,8 @@ async function mobileInputCheck(url) {
   await send('touchEnd', []);
   const sceneRelease = await idleTouch('Mobile scene-origin drag');
   const joystickBoundaries = { method: 'Real CDP/touchscreen input; no synthetic event fixture for these checks', input,
-    centerTapDoesNotLaunch: true, deadZoneDoesNotLaunch: true, recenterCancels: true, sceneStartRejected: true,
-    evidence: { centerTap, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
+    centerTapDoesNotLaunch: true, rimTapDoesNotLaunch: true, rimJitterDoesNotLaunch: true, deadZoneDoesNotLaunch: true, recenterCancels: true, sceneStartRejected: true,
+    evidence: { centerTap, rimTap, rimJitter, insideDeadZone, deadZoneRelease, pushed, recentered, recenterRelease, outsideStart, sceneRelease } };
   const owner = touch(11, input.x, input.y);
   const ownerDragged = touch(11, input.x, input.y - travel * .8 * input.pixelY);
   const extra = touch(12, input.x + 45 * input.pixelX, input.y - 25 * input.pixelY);

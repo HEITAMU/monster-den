@@ -247,7 +247,7 @@ System.register(["cc"], function (exports_1, context_1) {
             t.lineTo(10, yy);
             t.stroke();
         }
-        const caption = label(root, '推动瞄准', 21, 0, -135, 255, 34, PALETTE.muted, true);
+        const caption = label(root, '推动瞄准', 24, 0, -135, 265, 38, PALETTE.muted, true);
         return { root, thumb, meter, caption, glow };
     }
     exports_1("joystick", joystick);

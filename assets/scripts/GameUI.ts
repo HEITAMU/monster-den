@@ -99,6 +99,6 @@ export function joystick(parent:Node,x:number,y:number):JoystickArt {
   t.lineWidth=2;t.strokeColor=rgba('#91c9c5',120);t.arc(0,2,26,.3,Math.PI-.3,false);t.stroke();
   t.fillColor=rgba('#e8d2a0');t.moveTo(0,20);t.lineTo(6,9);t.lineTo(-6,9);t.close();t.fill();
   for(const yy of [-9,-3,3]){t.lineWidth=2;t.strokeColor=rgba('#123c49',165);t.moveTo(-10,yy);t.lineTo(10,yy);t.stroke();}
-  const caption=label(root,'推动瞄准',21,0,-135,255,34,PALETTE.muted,true);
+  const caption=label(root,'推动瞄准',24,0,-135,265,38,PALETTE.muted,true);
   return {root,thumb,meter,caption,glow};
 }
