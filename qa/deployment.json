@@ -1,0 +1,113 @@
+{
+  "version": "0.2.0",
+  "publicUrl": "https://heitamu.github.io/monster-den/web/?v=0.2.0",
+  "verifiedAtUtc": "2026-11-19T08:42:08.727895+00:00",
+  "testedAndPublishedRuntimeCommit": "ccfe4169c57e1aa2931cf65970c2ffc25ef45a6a",
+  "pagesWorkflow": "https://github.com/HEITAMU/monster-den/actions/runs/44489644880",
+  "pagesConclusion": "success",
+  "browserAcceptanceWorkflow": "https://github.com/HEITAMU/monster-den/actions/runs/44488941187",
+  "browserAcceptanceConclusion": "success",
+  "passed": true,
+  "checks": [
+    {
+      "path": "web/index.html",
+      "url": "https://heitamu.github.io/monster-den/web/?v=0.2.0",
+      "status": 200,
+      "contentType": "text/html",
+      "bytes": 1906,
+      "sha256": "b2a2e2545ee6bb655e049e1d246cdd39223306e652a3a881b47515487d328995",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/build-info.json",
+      "url": "https://heitamu.github.io/monster-den/web/build-info.json?v=0.2.0",
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 252,
+      "sha256": "a35596397454250c165e6df54cc2d8ecc1487972305b4bdfe65144232a64a1e2",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/engine-boot.js",
+      "url": "https://heitamu.github.io/monster-den/web/engine-boot.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 2680,
+      "sha256": "514344c8863136717b5c1ce1a93f7c5be7737a02d0a660b4409778c30cdd7853",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/GameMain.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/GameMain.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 77953,
+      "sha256": "18ad8203c6179f3c599c156064b366677ee2f8f1dd7e09f7b01c9ebf5b4db6c5",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/GameUI.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/GameUI.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 7440,
+      "sha256": "6f356fefe24f4fcc302f03aaab775dc1bc7019cf799a46be315910654cf1460a",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/ModelLibrary.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/ModelLibrary.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 9358,
+      "sha256": "8d25565df736ffb9006e1aa85095beaa10e9e4403727a0bafaa5cc8d1e6d5923",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/core/index.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/core/index.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 770,
+      "sha256": "c8cb5b30f039c4851d7f35e14aae4745f759b496ca3ca8f632030bce47f23806",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/core/model.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/core/model.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 48292,
+      "sha256": "99a06c610ca8d424b939be99e138ed7d8cc256a9fad34b3fd86f5abf0fd2ef89",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/scripts/core/rooms.js",
+      "url": "https://heitamu.github.io/monster-den/web/scripts/core/rooms.js?v=0.2.0",
+      "status": 200,
+      "contentType": "application/javascript",
+      "bytes": 6697,
+      "sha256": "37ded3704951947012e833253b1ae72d5f06b1accfb7c6f5728a7510a30d8a8c",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/resources/models/characters.json",
+      "url": "https://heitamu.github.io/monster-den/web/resources/models/characters.json?v=0.2.0",
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 603556,
+      "sha256": "2b10b4ddfb80d7d827beee6fff056f21ac894e92cc2c548241a995ff96dcdc0e",
+      "matchesLocalBuild": true
+    },
+    {
+      "path": "web/resources/models/environment.json",
+      "url": "https://heitamu.github.io/monster-den/web/resources/models/environment.json?v=0.2.0",
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 1567873,
+      "sha256": "ef8ec0e1f85a44fdeffd9c29ae08cf9e1639fddeb4b3a05d884427d7a2f884a1",
+      "matchesLocalBuild": true
+    }
+  ],
+  "scope": "HTTP response and byte-for-byte match of the live entry, metadata, boot, all changed compiled scripts, and both new model libraries. WebGL and touch evidence is in game-browser.json. No phone or WeChat runtime is claimed."
+}

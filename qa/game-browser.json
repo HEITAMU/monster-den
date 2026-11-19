@@ -1,5 +1,5 @@
 {
-  "test": "Actual Cocos 3.8.8 WebGL, native UI, 21 pointer shots, audio playback state and mobile touch ownership",
+  "test": "Actual Cocos 3.8.8 WebGL, native fixed joystick/UI, 21 pointer shots, audio playback state and mobile touch ownership",
   "method": "Real browser frames and DOM mouse/CDP touch input. One explicitly marked DOM TouchEvent fixture checks isolated secondary-finger release, which CDP cannot express. Game state is read for targeting and assertions, never rewritten to reach victory.",
   "passed": true,
   "audibleOutputValidation": false,
@@ -11,7 +11,7 @@
       "scope": "mobile-390x844-dpr2",
       "message": "Ignored attempt to cancel a touchcancel event with cancelable=false, for example because scrolling is in progress and cannot be interrupted.",
       "location": {
-        "url": "http://127.0.0.1:40711/vendor/cocos-3.8.8.js",
+        "url": "http://127.0.0.1:46671/vendor/cocos-3.8.8.js",
         "line": 1,
         "column": 0,
         "lineNumber": 1,
@@ -54,21 +54,22 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 23,
-      "drawCalls": 46,
-      "triangles": 54390,
-      "meshRenderers": 59,
+      "frames": 26,
+      "drawCalls": 41,
+      "triangles": 80835,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 27,
       "labels": 10,
       "activeLabels": [
         "MONSTER DEN",
         "撞进怪物窝",
-        "撞开一条路，把宝物带出来",
+        "一推，一撞，带宝物回家",
         "声音",
         "潜入怪物窝",
         "工具柜",
         "怎么玩",
         "已带回 0 枚金币",
-        "首段冒险 · 0.1.1"
+        "摇杆试玩 · 0.2.0"
       ],
       "page": "home",
       "room": 1,
@@ -100,7 +101,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.11490483740165786,
+      "heroY": 0.08,
+      "heroVisible": false,
+      "homeActorVisible": true,
+      "joystickVisible": false,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -132,9 +136,10 @@
         "activeMusicVoices": 0,
         "activeSounds": 0,
         "cachedMusicScenes": [
-          "camp"
+          "camp",
+          "explore"
         ],
-        "decodedMusicBytes": 21168000,
+        "decodedMusicBytes": 63504000,
         "contextState": "running",
         "decodedSounds": 34
       },
@@ -152,26 +157,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 35,
-      "drawCalls": 53,
-      "triangles": 54498,
-      "meshRenderers": 59,
-      "labels": 15,
+      "frames": 39,
+      "drawCalls": 57,
+      "triangles": 86985,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 34,
+      "labels": 16,
       "activeLabels": [
         "1 / 5  苔门前院",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
         "先撞开木栏，拿宝物，再去出口",
+        "推动瞄准",
         "第 1 次行动",
         "下间房选工具",
-        "按住场景，向后拉，再松手"
+        "推杆瞄准\n松手冲撞"
       ],
       "page": "game",
       "room": 1,
@@ -203,7 +210,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.08837367489228473,
+      "heroY": 0.08495133681102901,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -245,7 +255,7 @@
       "wallet": 0
     },
     {
-      "label": "first pointer drag displays native aim meshes",
+      "label": "first fixed-joystick push displays native aim meshes",
       "screenshot": "03-room1-aim.png",
       "engineVersion": "3.8.8",
       "ready": true,
@@ -256,26 +266,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 52,
-      "drawCalls": 62,
-      "triangles": 54680,
-      "meshRenderers": 59,
-      "labels": 15,
+      "frames": 129,
+      "drawCalls": 73,
+      "triangles": 87487,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 48,
+      "labels": 16,
       "activeLabels": [
         "1 / 5  苔门前院",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
         "先撞开木栏，拿宝物，再去出口",
+        "松手冲撞",
         "力度 100%",
         "下间房选工具",
-        "松手！撞开前面的木栏",
+        "松手冲撞\n回中可取消",
         "碰撞点"
       ],
       "page": "game",
@@ -308,7 +320,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.09054689565766698,
+      "heroY": 0.08922741396253406,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -328,7 +343,7 @@
         }
       },
       "dragging": true,
-      "dragPower": 0.9974025974025973,
+      "dragPower": 1,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -361,26 +376,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 147,
-      "drawCalls": 50,
-      "triangles": 51544,
-      "meshRenderers": 59,
-      "labels": 15,
+      "frames": 179,
+      "drawCalls": 54,
+      "triangles": 83119,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 31,
+      "labels": 16,
       "activeLabels": [
         "1 / 5  苔门前院",
         "♥♥♥♥♥",
         "宝物已到手",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "宝物到手，前往发光出口",
+        "宝物到手！去发光出口",
+        "推动瞄准",
         "第 2 次行动",
         "下间房选工具",
-        "带宝物进出口，就能离开这一间"
+        "带宝物进出口"
       ],
       "page": "game",
       "room": 1,
@@ -391,8 +408,8 @@
       "rescuesUsed": 0,
       "livingEnemies": 1,
       "player": {
-        "x": 0,
-        "y": 3.280505991753983,
+        "x": 0.054733501132761576,
+        "y": 3.2940351268028016,
         "tool": "none"
       },
       "visibleSize": {
@@ -412,7 +429,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.08615216700983692,
+      "heroY": 0.1099127586791451,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -432,7 +452,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.9974025974025973,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -465,26 +485,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 184,
-      "drawCalls": 64,
-      "triangles": 65068,
-      "meshRenderers": 70,
-      "labels": 15,
+      "frames": 207,
+      "drawCalls": 68,
+      "triangles": 98437,
+      "meshRenderers": 121,
+      "activeMeshRenderers": 45,
+      "labels": 16,
       "activeLabels": [
         "2 / 5  箭廊货仓",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "推柜子挡住箭路，绕到后面拿宝物",
+        "宝物到手！去发光出口",
+        "推动瞄准",
         "第 3 次行动",
         "重撞 · 持续生效",
-        "拖拽瞄准 · 松手出击"
+        "轻推微调\n推满远冲"
       ],
       "page": "game",
       "room": 2,
@@ -516,7 +538,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.0800680841489241,
+      "heroY": 0.10837263858676634,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -536,7 +561,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.13506493506493505,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -569,26 +594,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 454,
-      "drawCalls": 65,
-      "triangles": 61760,
-      "meshRenderers": 71,
-      "labels": 15,
+      "frames": 374,
+      "drawCalls": 69,
+      "triangles": 94925,
+      "meshRenderers": 122,
+      "activeMeshRenderers": 46,
+      "labels": 16,
       "activeLabels": [
         "3 / 5  断桥菌庭",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "撞开中间的厚木栏，去拿宝物",
+        "柜子挡住了箭",
+        "推动瞄准",
         "第 8 次行动",
         "重撞 · 持续生效",
-        "拖拽瞄准 · 松手出击"
+        "轻推微调\n推满远冲"
       ],
       "page": "game",
       "room": 3,
@@ -620,7 +647,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.09689222801613247,
+      "heroY": 0.09208619068226949,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -640,7 +670,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.246301705789708,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -673,26 +703,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 718,
-      "drawCalls": 63,
-      "triangles": 64434,
-      "meshRenderers": 69,
-      "labels": 15,
+      "frames": 544,
+      "drawCalls": 67,
+      "triangles": 97623,
+      "meshRenderers": 120,
+      "activeMeshRenderers": 44,
+      "labels": 16,
       "activeLabels": [
         "4 / 5  回声宝库",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "拿到宝物后，向左边出口撤离",
+        "宝物到手！去发光出口",
+        "推动瞄准",
         "第 12 次行动",
         "重撞 · 持续生效",
-        "拖拽瞄准 · 松手出击"
+        "轻推微调\n推满远冲"
       ],
       "page": "game",
       "room": 4,
@@ -724,7 +756,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.12987872728000227,
+      "heroY": 0.10992136618943474,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -744,7 +779,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.15584415584415584,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -777,26 +812,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 1061,
-      "drawCalls": 64,
-      "triangles": 66230,
-      "meshRenderers": 70,
-      "labels": 15,
+      "frames": 745,
+      "drawCalls": 68,
+      "triangles": 100019,
+      "meshRenderers": 121,
+      "activeMeshRenderers": 45,
+      "labels": 16,
       "activeLabels": [
         "5 / 5  窝主巢心",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
         "看清冲锋方向，带走窝主的宝物",
+        "推动瞄准",
         "第 17 次行动",
         "重撞 · 持续生效",
-        "拖拽瞄准 · 松手出击"
+        "轻推微调\n推满远冲"
       ],
       "page": "game",
       "room": 5,
@@ -828,7 +865,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.12793836867549552,
+      "heroY": 0.12502814262464862,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -848,7 +888,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.6644478734678226,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -881,26 +921,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 1376,
-      "drawCalls": 70,
-      "triangles": 65220,
-      "meshRenderers": 70,
-      "labels": 21,
+      "frames": 933,
+      "drawCalls": 74,
+      "triangles": 98083,
+      "meshRenderers": 122,
+      "activeMeshRenderers": 42,
+      "labels": 22,
       "activeLabels": [
         "5 / 5  窝主巢心",
         "♥♥♥♥♡",
         "宝物已到手",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "宝物到手，前往发光出口",
+        "宝物到手！去发光出口",
+        "等待落定",
         "第 22 次行动",
         "重撞 · 持续生效",
-        "带宝物进出口，就能离开这一间",
+        "带宝物进出口",
         "满载而归",
         "带回 1065 金币",
         "21 次出手 · 5 处宝物",
@@ -917,8 +959,8 @@
       "rescuesUsed": 0,
       "livingEnemies": 2,
       "player": {
-        "x": 0.27719517357798507,
-        "y": 5.1502769968818685,
+        "x": 0.1904207734392849,
+        "y": 5.123338096261046,
         "tool": "heavy"
       },
       "visibleSize": {
@@ -938,7 +980,10 @@
         "bufferWidth": 420,
         "bufferHeight": 780
       },
-      "heroY": 0.08028797746354249,
+      "heroY": 0.08051379314132596,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -958,7 +1003,7 @@
         }
       },
       "dragging": false,
-      "dragPower": 0.16427416416459112,
+      "dragPower": 0,
       "audio": {
         "mode": "web-audio",
         "unlocked": true,
@@ -990,26 +1035,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 25,
-      "drawCalls": 70,
-      "triangles": 65220,
-      "meshRenderers": 70,
-      "labels": 21,
+      "frames": 32,
+      "drawCalls": 73,
+      "triangles": 98077,
+      "meshRenderers": 121,
+      "activeMeshRenderers": 41,
+      "labels": 22,
       "activeLabels": [
         "5 / 5  窝主巢心",
         "♥♥♥♥♡",
         "宝物已到手",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
         "宝物到手，前往发光出口",
+        "等待落定",
         "第 22 次行动",
         "重撞 · 持续生效",
-        "带宝物进出口，就能离开这一间",
+        "带宝物进出口",
         "满载而归",
         "带回 1065 金币",
         "21 次出手 · 5 处宝物",
@@ -1026,8 +1073,8 @@
       "rescuesUsed": 0,
       "livingEnemies": 2,
       "player": {
-        "x": 0.27719517357798507,
-        "y": 5.1502769968818685,
+        "x": 0.1904207734392849,
+        "y": 5.123338096261046,
         "tool": "heavy"
       },
       "visibleSize": {
@@ -1047,7 +1094,10 @@
         "bufferWidth": 360,
         "bufferHeight": 640
       },
-      "heroY": 0.11167028979099972,
+      "heroY": 0.12165895107857286,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -1100,10 +1150,11 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 37,
-      "drawCalls": 59,
-      "triangles": 64456,
-      "meshRenderers": 70,
+      "frames": 46,
+      "drawCalls": 19,
+      "triangles": 2587,
+      "meshRenderers": 121,
+      "activeMeshRenderers": 0,
       "labels": 13,
       "activeLabels": [
         "探险工具柜",
@@ -1128,8 +1179,8 @@
       "rescuesUsed": 0,
       "livingEnemies": 2,
       "player": {
-        "x": 0.27719517357798507,
-        "y": 5.1502769968818685,
+        "x": 0.1904207734392849,
+        "y": 5.123338096261046,
         "tool": "heavy"
       },
       "visibleSize": {
@@ -1149,7 +1200,10 @@
         "bufferWidth": 360,
         "bufferHeight": 640
       },
-      "heroY": 0.1297344343696157,
+      "heroY": 0.12421866421397643,
+      "heroVisible": false,
+      "homeActorVisible": false,
+      "joystickVisible": false,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -1202,21 +1256,22 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 18,
-      "drawCalls": 46,
-      "triangles": 54390,
-      "meshRenderers": 59,
+      "frames": 28,
+      "drawCalls": 41,
+      "triangles": 80835,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 27,
       "labels": 10,
       "activeLabels": [
         "MONSTER DEN",
         "撞进怪物窝",
-        "撞开一条路，把宝物带出来",
+        "一推，一撞，带宝物回家",
         "声音",
         "潜入怪物窝",
         "工具柜",
         "怎么玩",
         "已带回 0 枚金币",
-        "首段冒险 · 0.1.1"
+        "摇杆试玩 · 0.2.0"
       ],
       "page": "home",
       "room": 1,
@@ -1248,7 +1303,10 @@
         "bufferWidth": 780,
         "bufferHeight": 1688
       },
-      "heroY": 0.0970559469843263,
+      "heroY": 0.08,
+      "heroVisible": false,
+      "homeActorVisible": true,
+      "joystickVisible": false,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -1301,26 +1359,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 48,
-      "drawCalls": 64,
-      "triangles": 54704,
-      "meshRenderers": 59,
-      "labels": 15,
+      "frames": 94,
+      "drawCalls": 73,
+      "triangles": 87301,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 48,
+      "labels": 16,
       "activeLabels": [
         "1 / 5  苔门前院",
         "♥♥♥♥♥",
         "寻找宝物",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
         "先撞开木栏，拿宝物，再去出口",
-        "力度 82%",
+        "松手冲撞",
+        "力度 78%",
         "下间房选工具",
-        "松手！撞开前面的木栏",
+        "松手冲撞\n回中可取消",
         "碰撞点"
       ],
       "page": "game",
@@ -1353,7 +1413,10 @@
         "bufferWidth": 780,
         "bufferHeight": 1688
       },
-      "heroY": 0.12114381566606532,
+      "heroY": 0.11541632894152178,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -1373,8 +1436,132 @@
         }
       },
       "dragging": true,
-      "dragPower": 0.8181818181818182,
+      "dragPower": 0.7794117647058851,
       "touchTrace": [
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            0
+          ],
+          "changed": [
+            0
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            0
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            1
+          ],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            1
+          ],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            3
+          ],
+          "changed": [
+            3
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            3
+          ],
+          "changed": [
+            3
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            3
+          ]
+        },
         {
           "type": "touchstart",
           "trusted": true,
@@ -1465,26 +1652,28 @@
       "gpuRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "gpuVendor": "Google Inc. (Google)",
       "glError": 0,
-      "frames": 152,
-      "drawCalls": 50,
-      "triangles": 51544,
-      "meshRenderers": 59,
-      "labels": 15,
+      "frames": 157,
+      "drawCalls": 54,
+      "triangles": 83119,
+      "meshRenderers": 110,
+      "activeMeshRenderers": 31,
+      "labels": 16,
       "activeLabels": [
         "1 / 5  苔门前院",
         "♥♥♥♥♥",
         "宝物已到手",
-        "●",
-        "●",
-        "●",
-        "●",
-        "●",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
+        "◆",
         "声音",
         "营地",
-        "宝物到手，前往发光出口",
+        "宝物到手！去发光出口",
+        "推动瞄准",
         "第 2 次行动",
         "下间房选工具",
-        "带宝物进出口，就能离开这一间"
+        "带宝物进出口"
       ],
       "page": "game",
       "room": 1,
@@ -1495,8 +1684,8 @@
       "rescuesUsed": 0,
       "livingEnemies": 1,
       "player": {
-        "x": 0,
-        "y": 3.294205454024133,
+        "x": 4.5485357934670444e-07,
+        "y": 3.2942054540241252,
         "tool": "none"
       },
       "visibleSize": {
@@ -1516,7 +1705,10 @@
         "bufferWidth": 780,
         "bufferHeight": 1688
       },
-      "heroY": 0.0979561707762188,
+      "heroY": 0.08134778963821226,
+      "heroVisible": true,
+      "homeActorVisible": false,
+      "joystickVisible": true,
       "translucentMaterials": {
         "matShadow": {
           "blend": true,
@@ -1536,8 +1728,132 @@
         }
       },
       "dragging": false,
-      "dragPower": 1,
+      "dragPower": 0,
       "touchTrace": [
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            0
+          ],
+          "changed": [
+            0
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            0
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            1
+          ],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            1
+          ],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            1
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            2
+          ],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            2
+          ]
+        },
+        {
+          "type": "touchstart",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            3
+          ],
+          "changed": [
+            3
+          ]
+        },
+        {
+          "type": "touchmove",
+          "trusted": true,
+          "cancelable": true,
+          "active": [
+            3
+          ],
+          "changed": [
+            3
+          ]
+        },
+        {
+          "type": "touchend",
+          "trusted": true,
+          "cancelable": true,
+          "active": [],
+          "changed": [
+            3
+          ]
+        },
         {
           "type": "touchstart",
           "trusted": true,
@@ -1659,7 +1975,7 @@
     }
   ],
   "route": {
-    "source": "design/PLAYTEST.md; documented 21-shot route, UI drag power at least 11%",
+    "source": "design/PLAYTEST.md; documented 21-shot route, current launch tuning and fixed joystick travel; fine power may be as low as 1%",
     "rooms": [
       {
         "room": 1,
@@ -1711,12 +2027,19 @@
           "y": 1.6
         },
         "power": 1,
+        "effectivePower": 1,
+        "pointer": {
+          "x": 131,
+          "y": 629,
+          "effectivePower": 1,
+          "error": 1.030157507275426
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 115,
         "player": {
-          "x": 0,
-          "y": 3.280505991753983
+          "x": 0.054733501132761576,
+          "y": 3.2940351268028016
         }
       },
       {
@@ -1726,13 +2049,20 @@
           "x": 0,
           "y": 5.6
         },
-        "power": 0.1344512604387056,
+        "power": 0.2284168875659181,
+        "effectivePower": 0.23151498035557005,
+        "pointer": {
+          "x": 130,
+          "y": 660,
+          "effectivePower": 0.23151498035557005,
+          "error": 0.5314202561197519
+        },
         "phase": "room_clear",
         "hp": 5,
         "score": 165,
         "player": {
-          "x": 0,
-          "y": 4.8007111645964535
+          "x": -0.008205312236021091,
+          "y": 4.80803599665285
         }
       },
       {
@@ -1743,12 +2073,19 @@
           "y": 3
         },
         "power": 1,
+        "effectivePower": 1,
+        "pointer": {
+          "x": 131,
+          "y": 629,
+          "effectivePower": 1,
+          "error": 1.030157507275426
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 165,
         "player": {
-          "x": 0,
-          "y": -4.591897311595426
+          "x": 0.04140185467999938,
+          "y": -4.59280129248468
         }
       },
       {
@@ -1758,13 +2095,20 @@
           "x": -1.4,
           "y": -2.5
         },
-        "power": 0.1971536471853703,
+        "power": 0.28858323437356026,
+        "effectivePower": 0.2904548499267293,
+        "pointer": {
+          "x": 121,
+          "y": 661,
+          "effectivePower": 0.29045484992672893,
+          "error": 0.727130712179957
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 165,
         "player": {
-          "x": -1.334424683552109,
-          "y": -2.536338750211883
+          "x": -1.3666512091361298,
+          "y": -2.433174015240082
         }
       },
       {
@@ -1774,13 +2118,20 @@
           "x": -1.4,
           "y": 4.5
         },
-        "power": 0.8219190968770209,
+        "power": 0.8288269988670564,
+        "effectivePower": 0.8362848374690428,
+        "pointer": {
+          "x": 130,
+          "y": 636,
+          "effectivePower": 0.8362848374690428,
+          "error": 0.9203592439664593
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 165,
         "player": {
-          "x": -1.334424683552109,
-          "y": 4.514015893136091
+          "x": -1.470394077748823,
+          "y": 4.5826102409876475
         }
       },
       {
@@ -1790,13 +2141,20 @@
           "x": 0,
           "y": 4.2
         },
-        "power": 0.11,
+        "power": 0.16289897121268648,
+        "effectivePower": 0.16127238464104549,
+        "pointer": {
+          "x": 141,
+          "y": 675,
+          "effectivePower": 0.1612723846410462,
+          "error": 0.8006687368896243
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 265,
         "player": {
-          "x": 0.5737043187028367,
-          "y": 4.094116274847438
+          "x": 0.026481735310564216,
+          "y": 4.275790133790911
         }
       },
       {
@@ -1806,13 +2164,20 @@
           "x": 2.9,
           "y": 5.7
         },
-        "power": 0.23995231902745384,
+        "power": 0.37049689754150034,
+        "effectivePower": 0.3707179588627347,
+        "pointer": {
+          "x": 148,
+          "y": 666,
+          "effectivePower": 0.37071795886273534,
+          "error": 0.24140257279278013
+        },
         "phase": "room_clear",
         "hp": 5,
         "score": 315,
         "player": {
-          "x": 2.291210057302426,
-          "y": 5.182976224723882
+          "x": 2.1767324197479803,
+          "y": 5.36433278197357
         }
       },
       {
@@ -1822,13 +2187,20 @@
           "x": 0,
           "y": -3
         },
-        "power": 0.38902457428495574,
+        "power": 0.4563565599760015,
+        "effectivePower": 0.4529246616829429,
+        "pointer": {
+          "x": 149,
+          "y": 661,
+          "effectivePower": 0.4529246616829435,
+          "error": 0.5774421367607111
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 315,
         "player": {
-          "x": -0.6222721820839245,
-          "y": -3.0103670917378493
+          "x": -0.6264898378942766,
+          "y": -3.0477275097121654
         }
       },
       {
@@ -1839,12 +2211,19 @@
           "y": 3
         },
         "power": 1,
+        "effectivePower": 1,
+        "pointer": {
+          "x": 136,
+          "y": 629,
+          "effectivePower": 1,
+          "error": 1.4519247511297502
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 330,
         "player": {
-          "x": 0.18342488731953932,
-          "y": 4.709584551478516
+          "x": 0.146040919320262,
+          "y": 4.709932875242414
         }
       },
       {
@@ -1854,13 +2233,20 @@
           "x": 3,
           "y": 3.6
         },
-        "power": 0.2676697435680836,
+        "power": 0.3526731637696718,
+        "effectivePower": 0.35744972690779625,
+        "pointer": {
+          "x": 148,
+          "y": 679,
+          "effectivePower": 0.3574497269077969,
+          "error": 0.43727574770316674
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 430,
         "player": {
-          "x": 3.0605599525169254,
-          "y": 3.5952626534224064
+          "x": 3.0439538651500437,
+          "y": 3.5464191050284017
         }
       },
       {
@@ -1870,13 +2256,20 @@
           "x": 3,
           "y": 5.8
         },
-        "power": 0.15408161667661338,
+        "power": 0.25326363363513293,
+        "effectivePower": 0.25669544583854853,
+        "pointer": {
+          "x": 130,
+          "y": 659,
+          "effectivePower": 0.25669544583854853,
+          "error": 0.6097870929395489
+        },
         "phase": "room_clear",
         "hp": 4,
         "score": 480,
         "player": {
-          "x": 3.0605599525169254,
-          "y": 5.0101159996035705
+          "x": 2.9873846346532575,
+          "y": 5.009899238426036
         }
       },
       {
@@ -1886,13 +2279,20 @@
           "x": 2,
           "y": -4
         },
-        "power": 0.2120464101834219,
+        "power": 0.2988821119183101,
+        "effectivePower": 0.3061620814020486,
+        "pointer": {
+          "x": 144,
+          "y": 664,
+          "effectivePower": 0.30616208140204915,
+          "error": 0.5197548835795743
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 480,
         "player": {
-          "x": 2.0745913014179993,
-          "y": -4.075286634501316
+          "x": 2.0725074770342373,
+          "y": -3.959798498913377
         }
       },
       {
@@ -1902,13 +2302,20 @@
           "x": 4.1,
           "y": 1
         },
-        "power": 0.6045899360934196,
+        "power": 0.6350900831557325,
+        "effectivePower": 0.6392979339046011,
+        "pointer": {
+          "x": 144,
+          "y": 647,
+          "effectivePower": 0.6392979339046015,
+          "error": 0.6022200637775527
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 515,
         "player": {
-          "x": 4.570937915949349,
-          "y": 0.37275428698824026
+          "x": 4.56099013859309,
+          "y": 0.4000034086259523
         }
       },
       {
@@ -1918,13 +2325,20 @@
           "x": 4.1,
           "y": 4.5
         },
-        "power": 0.4234322639963222,
+        "power": 0.48350422253958736,
+        "effectivePower": 0.48703598643532636,
+        "pointer": {
+          "x": 128,
+          "y": 650,
+          "effectivePower": 0.48703598643532614,
+          "error": 0.8758095191760141
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 615,
         "player": {
-          "x": 4.145258892621463,
-          "y": 4.494419124478826
+          "x": 4.166988869064492,
+          "y": 4.557695112497083
         }
       },
       {
@@ -1934,13 +2348,20 @@
           "x": 3.6,
           "y": 4.5
         },
-        "power": 0.11,
+        "power": 0.04611437301311153,
+        "effectivePower": 0.041161770081030016,
+        "pointer": {
+          "x": 125,
+          "y": 674,
+          "effectivePower": 0.041161770081029316,
+          "error": 0.582634100155847
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 615,
         "player": {
-          "x": 2.2809879169242997,
-          "y": 4.494419124478826
+          "x": 3.6224090704928047,
+          "y": 4.470459149328236
         }
       },
       {
@@ -1950,13 +2371,20 @@
           "x": -3.5,
           "y": 5.7
         },
-        "power": 0.6655324316249848,
+        "power": 0.8650519531907922,
+        "effectivePower": 0.8558179998878636,
+        "pointer": {
+          "x": 93,
+          "y": 668,
+          "effectivePower": 0.8558179998878629,
+          "error": 0.6617209908862588
+        },
         "phase": "room_clear",
         "hp": 4,
         "score": 665,
         "player": {
-          "x": -2.7160492872538686,
-          "y": 5.5504221326761884
+          "x": -2.7233487833842562,
+          "y": 5.540957610559088
         }
       },
       {
@@ -1966,13 +2394,20 @@
           "x": 3.8,
           "y": -4
         },
-        "power": 0.4246632352875263,
+        "power": 0.48806769507216624,
+        "effectivePower": 0.49727078265385044,
+        "pointer": {
+          "x": 153,
+          "y": 665,
+          "effectivePower": 0.49727078265385105,
+          "error": 0.6258613317751468
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 665,
         "player": {
-          "x": 3.87696912199893,
-          "y": -4.01555743410307
+          "x": 3.889276222602166,
+          "y": -3.9611199460828495
         }
       },
       {
@@ -1982,13 +2417,20 @@
           "x": 4.2,
           "y": 2
         },
-        "power": 0.6819643507146402,
+        "power": 0.7102465414509007,
+        "effectivePower": 0.7122092390016997,
+        "pointer": {
+          "x": 133,
+          "y": 641,
+          "effectivePower": 0.7122092390016997,
+          "error": 0.5276635940400304
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 665,
         "player": {
-          "x": 4.258425329022904,
-          "y": 1.9863386959149096
+          "x": 4.24772033018893,
+          "y": 2.035062185853591
         }
       },
       {
@@ -1998,13 +2440,20 @@
           "x": 2,
           "y": 3.8
         },
-        "power": 0.2495977858520447,
+        "power": 0.32753694302502173,
+        "effectivePower": 0.33420023487818223,
+        "pointer": {
+          "x": 116,
+          "y": 664,
+          "effectivePower": 0.33420023487818157,
+          "error": 0.5903889310443406
+        },
         "phase": "aiming",
         "hp": 5,
         "score": 665,
         "player": {
-          "x": 1.973966612692546,
-          "y": 3.783541582676075
+          "x": 1.915864803380154,
+          "y": 3.8150309755425527
         }
       },
       {
@@ -2014,13 +2463,20 @@
           "x": 0,
           "y": 3.8
         },
-        "power": 0.12207489568297993,
+        "power": 0.21167791410535355,
+        "effectivePower": 0.21644874449703622,
+        "pointer": {
+          "x": 118,
+          "y": 673,
+          "effectivePower": 0.21644874449703555,
+          "error": 0.6515978117988682
+        },
         "phase": "aiming",
         "hp": 4,
         "score": 765,
         "player": {
-          "x": 0.6840407418749164,
-          "y": 3.673036240429327
+          "x": 0.5888797676512096,
+          "y": 3.7540552471238566
         }
       },
       {
@@ -2030,18 +2486,25 @@
           "x": 0,
           "y": 5.9
         },
-        "power": 0.17123462073796944,
+        "power": 0.2497294520117741,
+        "effectivePower": 0.25120467676110414,
+        "pointer": {
+          "x": 126,
+          "y": 660,
+          "effectivePower": 0.25120467676110386,
+          "error": 0.4432731158135649
+        },
         "phase": "victory",
         "hp": 4,
         "score": 1065,
         "player": {
-          "x": 0.27719517357798507,
-          "y": 5.1502769968818685
+          "x": 0.1904207734392849,
+          "y": 5.123338096261046
         }
       }
     ]
   },
-  "url": "http://127.0.0.1:40711/",
+  "url": "http://127.0.0.1:46671/",
   "requestedSoftwareGL": true,
   "browserVersion": "157.0.8103.0",
   "audio": {
@@ -2072,13 +2535,12 @@
       "prepared": true,
       "scene": "boss",
       "playingScene": "boss",
-      "activeMusicVoices": 2,
-      "activeSounds": 1,
+      "activeMusicVoices": 1,
+      "activeSounds": 0,
       "cachedMusicScenes": [
-        "explore",
         "boss"
       ],
-      "decodedMusicBytes": 76204800,
+      "decodedMusicBytes": 33868800,
       "contextState": "running",
       "decodedSounds": 34
     },
@@ -2101,6 +2563,258 @@
       "decodedSounds": 34
     }
   },
+  "joystickBoundaries": {
+    "method": "Real DOM mouse input at the rendered joystick center and scene",
+    "input": {
+      "x": 130.66666666666666,
+      "y": 673.25,
+      "coordinateSource": "Actual rendered joystick root through the UI camera to canvas CSS coordinates",
+      "pixelX": 0.5833333333333334,
+      "pixelY": 0.5833333333333334,
+      "groundProjection": 0.8262273428075476,
+      "joystickTuning": {
+        "deadZone": 7,
+        "travel": 75
+      },
+      "gameplayTuning": {
+        "fixedStep": 0.008333333333333333,
+        "maxFrameTime": 0.25,
+        "playerRadius": 0.38,
+        "maxHp": 5,
+        "launchMin": 0.55,
+        "launchMax": 12.8,
+        "drag": 1.36,
+        "stopSpeed": 0.24,
+        "cabinetDrag": 2.7,
+        "cabinetMaxSpeed": 8.5,
+        "restitution": 0.7,
+        "enemyWindup": 0.34,
+        "arrowSpeed": 15,
+        "invulnerableTime": 0.85,
+        "treasureRadius": 0.48,
+        "exitRadius": 0.8,
+        "maxFlightTime": 5.5
+      },
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 420,
+        "height": 780
+      }
+    },
+    "centerTapDoesNotLaunch": true,
+    "deadZoneDoesNotLaunch": true,
+    "recenterCancels": true,
+    "sceneStartRejected": true,
+    "nonPrimaryButtons": [
+      {
+        "button": "right",
+        "cannotAimOrLaunch": true,
+        "pressed": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "moved": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "released": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "button": "middle",
+        "cannotAimOrLaunch": true,
+        "pressed": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "moved": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "released": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": -1.1428571428571752,
+            "y": 0.5187088424296499
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    ],
+    "evidence": {
+      "centerTap": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "insideDeadZone": {
+        "dragging": true,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 2.285714285714253,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 2.285714285714253,
+          "y": 0.42857142857142855
+        }
+      },
+      "deadZoneRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": 2.285714285714253,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 0.06245422273666778,
+          "y": 0.011710166763125375
+        }
+      },
+      "pushed": {
+        "dragging": true,
+        "power": 1,
+        "shots": 0,
+        "visibleDots": 13,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 91.81146511004802
+        },
+        "thumb": {
+          "x": -1.1298152863771647,
+          "y": 74.99148963328217
+        }
+      },
+      "recentered": {
+        "dragging": true,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": -1.1428571428571752,
+          "y": 0.42857142857142855
+        }
+      },
+      "recenterRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "outsideStart": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "sceneRelease": {
+        "dragging": false,
+        "power": 0,
+        "shots": 0,
+        "visibleDots": 0,
+        "aim": {
+          "x": -1.1428571428571752,
+          "y": 0.5187088424296499
+        },
+        "thumb": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  },
   "unavailableAd": {
     "grantedNoReward": true,
     "pauseReleased": true,
@@ -2117,6 +2831,164 @@
     "devicePixelRatio": 2,
     "emulatedPhone": true,
     "realPhone": false,
+    "joystickBoundaries": {
+      "method": "Real CDP/touchscreen input; no synthetic event fixture for these checks",
+      "input": {
+        "x": 121.33333333333333,
+        "y": 744.875,
+        "coordinateSource": "Actual rendered joystick root through the UI camera to canvas CSS coordinates",
+        "pixelX": 0.5416666666666666,
+        "pixelY": 0.5416666666666666,
+        "groundProjection": 0.8262273428075476,
+        "joystickTuning": {
+          "deadZone": 7,
+          "travel": 75
+        },
+        "gameplayTuning": {
+          "fixedStep": 0.008333333333333333,
+          "maxFrameTime": 0.25,
+          "playerRadius": 0.38,
+          "maxHp": 5,
+          "launchMin": 0.55,
+          "launchMax": 12.8,
+          "drag": 1.36,
+          "stopSpeed": 0.24,
+          "cabinetDrag": 2.7,
+          "cabinetMaxSpeed": 8.5,
+          "restitution": 0.7,
+          "enemyWindup": 0.34,
+          "arrowSpeed": 15,
+          "invulnerableTime": 0.85,
+          "treasureRadius": 0.48,
+          "exitRadius": 0.8,
+          "maxFlightTime": 5.5
+        },
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        }
+      },
+      "centerTapDoesNotLaunch": true,
+      "deadZoneDoesNotLaunch": true,
+      "recenterCancels": true,
+      "sceneStartRejected": true,
+      "evidence": {
+        "centerTap": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "insideDeadZone": {
+          "dragging": true,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 3.4999953049879897,
+            "y": 0
+          },
+          "thumb": {
+            "x": 3.4999953049879897,
+            "y": 0
+          }
+        },
+        "deadZoneRelease": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 3.4999953049879897,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0.09563290028031884,
+            "y": 0
+          }
+        },
+        "pushed": {
+          "dragging": true,
+          "power": 1,
+          "shots": 0,
+          "visibleDots": 13,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 90.77404742518874
+          },
+          "thumb": {
+            "x": 4.695012027975901e-06,
+            "y": 74.99999999999984
+          }
+        },
+        "recentered": {
+          "dragging": true,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          },
+          "thumb": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          }
+        },
+        "recenterRelease": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "outsideStart": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "sceneRelease": {
+          "dragging": false,
+          "power": 0,
+          "shots": 0,
+          "visibleDots": 0,
+          "aim": {
+            "x": 4.695012027975911e-06,
+            "y": 0
+          },
+          "thumb": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    },
     "cdpSecondFingerCannotSteer": true,
     "secondaryReleaseFixture": {
       "method": "DOM TouchEvent fixture through native canvas listener and Cocos input dispatch",
@@ -2147,6 +3019,130 @@
       "decodedSounds": 34
     },
     "touchEvents": [
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          0
+        ],
+        "changed": [
+          0
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": true,
+        "cancelable": true,
+        "active": [],
+        "changed": [
+          0
+        ]
+      },
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          1
+        ],
+        "changed": [
+          1
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          1
+        ],
+        "changed": [
+          1
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": true,
+        "cancelable": true,
+        "active": [],
+        "changed": [
+          1
+        ]
+      },
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          2
+        ],
+        "changed": [
+          2
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          2
+        ],
+        "changed": [
+          2
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          2
+        ],
+        "changed": [
+          2
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": true,
+        "cancelable": true,
+        "active": [],
+        "changed": [
+          2
+        ]
+      },
+      {
+        "type": "touchstart",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          3
+        ],
+        "changed": [
+          3
+        ]
+      },
+      {
+        "type": "touchmove",
+        "trusted": true,
+        "cancelable": true,
+        "active": [
+          3
+        ],
+        "changed": [
+          3
+        ]
+      },
+      {
+        "type": "touchend",
+        "trusted": true,
+        "cancelable": true,
+        "active": [],
+        "changed": [
+          3
+        ]
+      },
       {
         "type": "touchstart",
         "trusted": true,
@@ -2248,18 +3244,163 @@
     ]
   },
   "provenance": {
-    "testedCommit": "26c5d48b3de085a892852f5312840c597350230d",
-    "workflowRun": "https://github.com/HEITAMU/monster-den/actions/runs/44442569356",
+    "candidateVersion": "0.2.0",
+    "testedCommit": "ccfe4169c57e1aa2931cf65970c2ffc25ef45a6a",
+    "workflowRun": "https://github.com/HEITAMU/monster-den/actions/runs/44488941187",
     "workflowConclusion": "success",
-    "artifactId": 14491398634,
-    "artifactCreatedAt": "2026-11-19T02:17:38Z",
-    "artifactArchiveSha256": "b05c76b8e4f0a603881bb74d22ed735b0c1673abdca59ae0bb38661c54479e54",
+    "artifactId": 14512167078,
+    "artifactCreatedAt": "2026-11-19T08:38:48Z",
+    "artifactArchiveSha256": "58b43b5a106f1b460639d7505c8124ce60277b4aa7ac2123baf0fef1b20b213e",
     "retainedScreenshots": [
       "webgl/01-home.png",
       "webgl/03-room1-aim.png",
       "webgl/08-room5.png",
-      "webgl/09-victory.png"
+      "webgl/09-victory.png",
+      "webgl/13-mobile-aim.png",
+      "webgl/14-mobile-shot.png"
     ],
-    "note": "The report is the unmodified browser result with this provenance object appended. Localhost URLs identify the CI server; all 14 screenshots remain in the workflow artifact, four selected originals are retained here."
+    "sourceFiles": {
+      "assets/scripts/AudioCatalog.ts": {
+        "sha256": "f211f9b89ee36e4afd9931702814e5b147ab8238c12a5fcf2ce9078be71de272",
+        "bytes": 2423
+      },
+      "assets/scripts/GameMain.ts": {
+        "sha256": "09601d3a9ab04a149cc851af2a5fc5d9210e924b9bd9fe270c2af31cdffd8fba",
+        "bytes": 49859
+      },
+      "assets/scripts/GameUI.ts": {
+        "sha256": "22348390584e9b2b1249c94e3a0c8aa5cc84bc64856dffa76d00d94fb0b0e722",
+        "bytes": 5468
+      },
+      "assets/scripts/MeshCodec.ts": {
+        "sha256": "3c0c5c8a7d077cb52d28bbf7100ac6651e372487f14741ba56083513d74f6c56",
+        "bytes": 2526
+      },
+      "assets/scripts/ModelLibrary.ts": {
+        "sha256": "6b89848620fb6623c67d4f99a0e109d830e37d86f70a0f32f1b770071cdc29dc",
+        "bytes": 6665
+      },
+      "assets/scripts/ResourceBundles.ts": {
+        "sha256": "9d3a071c53f7167b1da9d4fe9f79367e30ed0c58e9e3a547f9af8b6dc24a09d8",
+        "bytes": 1042
+      },
+      "assets/scripts/core/index.ts": {
+        "sha256": "7c90b7e62d26113ec2705d087b6fbf6f91904a326632045fa11fc5985f2df0c7",
+        "bytes": 399
+      },
+      "assets/scripts/core/model.ts": {
+        "sha256": "382d15447e35a130892d018d0e75851920adbfa55c9ab731feff347573db71d5",
+        "bytes": 32895
+      },
+      "assets/scripts/core/rooms.ts": {
+        "sha256": "d334ce67724463f56c5d52dedb2294921e9e41b2e660f4661d26ea42e3a35050",
+        "bytes": 5165
+      },
+      "assets/scripts/core/types.ts": {
+        "sha256": "499c071669a3f989b3ea166dec310766bfb411666a97f94b9ab6d37d51125ca8",
+        "bytes": 3651
+      },
+      "assets/scripts/platform/GameAudio.ts": {
+        "sha256": "d4ba32d29a88d01c315f8f83b0054e8865abc27a3c2acd037dfb5a8959d6580c",
+        "bytes": 47489
+      },
+      "assets/scripts/platform/RewardedAds.ts": {
+        "sha256": "717079c8673a16091fc633981f5b4001027baee6c8770d9d83b9810c300148ee",
+        "bytes": 15987
+      },
+      "assets/scripts/platform/SaveStore.ts": {
+        "sha256": "e6025387b02f6c048bf6c8f9f65d7f16d2663dc284f88902856fcefe65658d05",
+        "bytes": 16946
+      },
+      "tools/check-game-browser.cjs": {
+        "sha256": "a3161b5eec4a8908b605c3ac213ae6a324209947495024aaef24a3f84da3e9b8",
+        "bytes": 37863
+      },
+      "web/Boot.scene": {
+        "sha256": "25dce343aaaf49ceae455e0f9fe16d566135dd4e46bed120a1577aa9dc4a10f6",
+        "bytes": 1470
+      },
+      "web/build-info.json": {
+        "sha256": "a35596397454250c165e6df54cc2d8ecc1487972305b4bdfe65144232a64a1e2",
+        "bytes": 252
+      },
+      "web/engine-boot.js": {
+        "sha256": "514344c8863136717b5c1ce1a93f7c5be7737a02d0a660b4409778c30cdd7853",
+        "bytes": 2680
+      },
+      "web/engine-effects.js": {
+        "sha256": "b807187db73e12f6c27e509153e518527d0c9fd19e4b2b384e9a3dc11c6e38f6",
+        "bytes": 10036
+      },
+      "web/engine-start.js": {
+        "sha256": "4d07e3adbc5e6aae0f0b1d15be6719f2c3f9e35d9edc9806e92e88e55c4968d3",
+        "bytes": 1412
+      },
+      "web/index.html": {
+        "sha256": "b2a2e2545ee6bb655e049e1d246cdd39223306e652a3a881b47515487d328995",
+        "bytes": 1906
+      },
+      "web/resources/models/characters.json": {
+        "sha256": "2b10b4ddfb80d7d827beee6fff056f21ac894e92cc2c548241a995ff96dcdc0e",
+        "bytes": 603556
+      },
+      "web/resources/models/environment.json": {
+        "sha256": "ef8ec0e1f85a44fdeffd9c29ae08cf9e1639fddeb4b3a05d884427d7a2f884a1",
+        "bytes": 1567873
+      },
+      "web/scripts/AudioCatalog.js": {
+        "sha256": "e6270e4e64340b7a84269f3b05608a18c488da9a96d12c16ff69d98c68f2150d",
+        "bytes": 3041
+      },
+      "web/scripts/GameMain.js": {
+        "sha256": "18ad8203c6179f3c599c156064b366677ee2f8f1dd7e09f7b01c9ebf5b4db6c5",
+        "bytes": 77953
+      },
+      "web/scripts/GameUI.js": {
+        "sha256": "6f356fefe24f4fcc302f03aaab775dc1bc7019cf799a46be315910654cf1460a",
+        "bytes": 7440
+      },
+      "web/scripts/MeshCodec.js": {
+        "sha256": "0a790c369e79dfb14d199b229a8b55059631ce37e166a066b4d941dbd4eed8b8",
+        "bytes": 3161
+      },
+      "web/scripts/ModelLibrary.js": {
+        "sha256": "8d25565df736ffb9006e1aa85095beaa10e9e4403727a0bafaa5cc8d1e6d5923",
+        "bytes": 9358
+      },
+      "web/scripts/ResourceBundles.js": {
+        "sha256": "eb797ca286724fef2f278a7306bed4c3ed5271862705eb6ff49416244cacfde6",
+        "bytes": 1760
+      },
+      "web/scripts/core/index.js": {
+        "sha256": "c8cb5b30f039c4851d7f35e14aae4745f759b496ca3ca8f632030bce47f23806",
+        "bytes": 770
+      },
+      "web/scripts/core/model.js": {
+        "sha256": "99a06c610ca8d424b939be99e138ed7d8cc256a9fad34b3fd86f5abf0fd2ef89",
+        "bytes": 48292
+      },
+      "web/scripts/core/rooms.js": {
+        "sha256": "37ded3704951947012e833253b1ae72d5f06b1accfb7c6f5728a7510a30d8a8c",
+        "bytes": 6697
+      },
+      "web/scripts/core/types.js": {
+        "sha256": "9359e9552b0381621ae19c11b936efda45fa83a05cc13f231784787ebffdd4a4",
+        "bytes": 208
+      },
+      "web/scripts/platform/GameAudio.js": {
+        "sha256": "dc9e52c79257c045d3ddee39a7079c1ee4fed06551867cb9a35c9cff2a731932",
+        "bytes": 63769
+      },
+      "web/scripts/platform/RewardedAds.js": {
+        "sha256": "b2305db3ff71c9d4ec97841e51005644b729dff43a16ade4f38c39c9b629d9f3",
+        "bytes": 17604
+      },
+      "web/scripts/platform/SaveStore.js": {
+        "sha256": "f04a134621d8cf8cd9b590cf3b06f48816dd3ad323e94099b80c1089cd462f1f",
+        "bytes": 19505
+      }
+    },
+    "note": "Original browser result with this provenance object appended. Localhost URLs identify the CI server. Six original screenshots are retained here; all fourteen are in the workflow artifact. SwiftShader validates actual WebGL rendering and input paths, not physical-phone performance, WeChat runtime, or human audio listening."
   }
 }

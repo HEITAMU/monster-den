@@ -1,17 +1,37 @@
 # 验证记录及其边界
 
-更新日期：2026-11-19（北京时间）。**0.2.0 摇杆试玩为本地候选，尚未在线发布。** 本轮 GitHub 写入调用中断，远端仍为 `7aa58e5`；新版已取得本地类型、EmptyDevice 集成和核心节奏证据，实际浏览器报告及 `webgl/` 截图仍属于 0.1.1。
+更新日期：2026-11-19（北京时间）。**0.2.0 固定摇杆、新角色与环境已取得实际 WebGL 通过记录。** 先前 GitHub 写入阻塞已恢复。被测提交为 [`ccfe4169c57e1aa2931cf65970c2ffc25ef45a6a`](https://github.com/HEITAMU/monster-den/commit/ccfe4169c57e1aa2931cf65970c2ffc25ef45a6a)，[工作流 44488941187](https://github.com/HEITAMU/monster-den/actions/runs/44488941187) 总结果为 `success`，产物 ID 为 `14512167078`。
+
+本次发布入口为 [0.2.0 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.2.0)，**已公开发布并完成 HTTP 一致性校验**。[Pages 工作流 44489644880](https://github.com/HEITAMU/monster-den/actions/runs/44489644880) 成功，被测和已部署的运行代码提交均为 `ccfe4169`。入口、构建元数据、启动脚本、改动的编译脚本和两份模型共 11 文件、2,326,777 字节，与本地逐字节一致；原始发布记录见 [deployment.json](deployment.json)。这是实际响应核验，不是仅修改版本参数。
 
 ## 报告对应版本
 
 | 报告 | 被测版本与结果 | 证明范围 |
 | --- | --- | --- |
-| [typecheck.json](typecheck.json) | **0.2.0 本地候选**；TypeScript 4.9.5，13 个项目脚本，55 项 Cocos 导入，0 错误 | 按 `strict`、`noImplicitAny` 对官方 Cocos 3.8.8 源码 API 检查；包含最终 DOM 主鼠标键过滤代码 |
-| [game-headless.json](game-headless.json) | **0.2.0 本地候选**；1804 帧，21 次发射、5 间房、胜利、4 生命、1065 分、0 次救援 | 实际 GameMain 生命周期、固定摇杆输入、场景资源、玩法、存档和资源销毁；后端为 EmptyDevice |
-| [feel-comparison.json](feel-comparison.json) | **0.2.0 本地候选与 0.1.1 基线比较**；23 项核心测试通过 | 确定性动作节奏、落点、存档兼容、主动工具窗口与五房核心路线 |
-| [game-browser.json](game-browser.json) 和 [webgl/](webgl/) | **0.1.1 历史证据**；Chromium / WebGL2 五房路线通过 | 旧版本的实际像素、着色器、输入与音频解码，不能作为新版实际浏览器通过证明 |
+| [deployment.json](deployment.json) | **0.2.0，运行代码提交 `ccfe4169`**；Pages 成功，11 文件 HTTP 校验一致 | 公开入口、元数据、启动与改动脚本、两份模型的部署一致性 |
+| [unit-tests.json](unit-tests.json) | **0.2.0 本地工作区**；98 项通过，其中 23 项为核心测试 | 玩法、资源、平台与音频适配的项目测试；不能将核心测试数量再次相加 |
+| [typecheck.json](typecheck.json) | **0.2.0 本地工作区**；TypeScript 4.9.5，13 个项目脚本，55 项 Cocos 导入，0 错误 | 按 `strict`、`noImplicitAny` 对官方 Cocos 3.8.8 源码 API 检查；包含 DOM 主鼠标键过滤代码 |
+| [game-headless.json](game-headless.json) | **0.2.0 本地工作区**；1804 帧，21 发五房，4 生命、1065 分、0 救援 | 实际 GameMain 生命周期、固定摇杆输入、场景资源、存档和资源销毁；后端为 EmptyDevice |
+| [feel-comparison.json](feel-comparison.json) | **0.2.0 与 0.1.1 基线比较**；23 项核心测试通过 | 确定性动作节奏、落点、存档兼容、主动工具窗口与五房核心路线 |
+| [game-browser.json](game-browser.json) 和 [webgl/](webgl/) | **0.2.0，被测提交 `ccfe4169`**；Chromium 157.0.8103.0 / WebGL2，五房路线通过 | 新版真实像素、着色器、固定摇杆、多指输入、音频解码与刷新恢复；SwiftShader 软件驱动 |
 
-新版报告没有声称绑定到已发布提交。`evidenceContext` 或 `candidate` 记录工作区候选身份和逐文件 SHA-256；类型与 EmptyDevice 报告已核对记录文件与最终 DOM 主鼠标键过滤版本一致。代码或资源改变后，应重查受影响结果。本轮全项目测试另已重新执行，98 项通过；其中 23 项为核心测试，不能将两者相加。
+本地报告的 `evidenceContext` 或 `candidate` 保留测量当时的工作区身份与逐文件 SHA-256；它们没有补造最终发布提交。浏览器证据对应上述 GitHub Actions 被测提交。游戏代码或资源改变后，应重查受影响结果，不能只凭版本号沿用通过状态。
+
+## 0.2.0 实际浏览器验证
+
+实际运行官方 Cocos 3.8.8 的帧循环与 WebGL2 图形管线，使用 DOM 鼠标和 CDP 触摸输入；游戏状态仅用于定位和断言，没有改写状态来获得胜利。
+
+- **完整玩法：** 21 次实际摇杆发射完成五房，最终 4 生命、1065 分、0 救援；每房结束仍可保留敌人。首页、工具卡、结算与工具柜均走真实原生 UI。
+- **摇杆边界：** 中心点按、死区内松手、推杆回中、场景起手均不会误发射；鼠标右键和中键不能瞄准或发射。测试坐标来自真实 UI 相机投影至画布的 CSS 坐标。
+- **移动输入：** 390×844 / DPR 2 下，第二根手指不能改向；原生取消不发射，之后仍可正常冲撞并撞碎木栏。单独松开第二根手指的分支使用明确标注 `isTrusted: false` 的 DOM TouchEvent 夹具，因为 CDP 无法表达该单独结束动作；其余触摸分支使用 CDP 原生输入。
+- **画面：** 主流程 420×780，另检查 360×640 的结算与工具柜，以及 390×844 / DPR 2 的首页、瞄准和冲撞。14 张截图随工作流保存；仓库留存 [首页](webgl/01-home.png)、[首次瞄准](webgl/03-room1-aim.png)、[窝主房间](webgl/08-room5.png)、[胜利结算](webgl/09-victory.png)、[移动端瞄准](webgl/13-mobile-aim.png)、[移动端冲撞](webgl/14-mobile-shot.png)。已复看首页、瞄准、移动端、窝主与短屏结算，没有发现阻挡本次试玩的视觉问题；这不是手机实测结论。
+- **声音与恢复：** 营地、探索、窝主三首实际音乐资源已解码，AudioContext 为运行状态，场景音乐调度与换曲缓存通过；实际页面刷新后可重开胜利结算且不重复发基础收益。未配置广告时不给奖励且恢复暂停，没有播放真实广告。
+
+### 精确分类的 `touchcancel` 诊断
+
+报告的 `knownDiagnostics` 保留 1 条 Cocos 3.8.8 诊断：官方触摸适配器对不可取消的原生 `touchcancel` 调用 `preventDefault()`，Chromium 忽略这次无效调用。该条目保留原始错误级别、来源、CDP 触发方式与事件数据，没有删除或冒充为零控制台输出。
+
+例外只接受同源官方引擎、完整一致的消息与限定次数，还必须同时验证事件不可取消、瞄准已清除、取消没有发射、随后触摸能够发射并撞碎木栏。其他运行、着色器、资源或控制台错误仍导致检查失败。本次报告的未分类错误、一般警告和失败请求均为空。
 
 ## 0.2.0 本地集成检查
 
@@ -34,7 +54,7 @@
 
 测量环境为 Node.js 24.22.3，以 120 Hz 时间步输入 `GameModel.step()`，在 100 × 100 的无障碍房间向同一方向发射，并保留远处守卫的敌人回合，计时至下次可瞄准。秒数是送入核心的时间步累计，不是 CPU 耗时、渲染帧率或手机秒表测量。
 
-| 发射力度 | 0.1.1 动作周期 | 0.2.0 候选动作周期 |
+| 发射力度 | 0.1.1 动作周期 | 0.2.0 动作周期 |
 | --- | ---: | ---: |
 | 3% | 2.63 秒 | 1.01 秒 |
 | 11% | 2.88 秒 | 1.25 秒 |
@@ -49,21 +69,16 @@
 
 `characters.json` 为 603,556 字节、31,308 三角面；`environment.json` 为 1,567,873 字节、59,212 三角面；合计 2,171,429 字节、90,520 三角面。这是模型库统计，不是同屏绘制量或微信包体。详见 [美术说明](../art-source/README.md) 和 [微信发布说明](../design/WECHAT_RELEASE.md)。
 
-## 0.1.1 实际浏览器历史证据
+## 验证边界与下一步
 
-通过提交为 [`26c5d48`](https://github.com/HEITAMU/monster-den/commit/26c5d48b3de085a892852f5312840c597350230d)，[工作流 44442569356](https://github.com/HEITAMU/monster-den/actions/runs/44442569356) 结果为 `success`。环境为 Chromium / WebGL2 / ANGLE SwiftShader 软件驱动，报告包含 14 个截图检查点；仓库保存其中四张旧版实际截图：[首页](webgl/01-home.png)、[首次瞄准](webgl/03-room1-aim.png)、[窝主房间](webgl/08-room5.png)、[胜利结算](webgl/09-victory.png)。
+本次 WebGL 结果来自 **Chromium / ANGLE SwiftShader 软件驱动**，没有用 EmptyDevice 代替真实图形管线，但仍不代表手机硬件、手机触摸舒适度或微信小游戏已经验证。音频证据仅覆盖解码与播放状态，**没有人耳试听结论**。当前 `web/` 是 HTML5 源码预览，不能改名充当微信包。
 
-历史检查覆盖 21 次实际拖拽通关、原生 UI 按钮、420×780 与 360×640 画面、390×844 / DPR 2 移动端模拟、多指归属和取消、三首 MP3 解码与播放状态、页面刷新后的存档恢复。单独结束次要手指的分支采用明确标记 `isTrusted: false` 的 DOM TouchEvent；它与其余 CDP 触摸检查的区别保留在报告中。
+接下来需要：
 
-`knownDiagnostics` 留存一项限定的 Cocos 3.8.8 提示：引擎触摸适配器对不可取消的原生 `touchcancel` 调用 `preventDefault()`，Chromium 忽略该调用。历史检查还验证取消后无误发射、下一次触摸正常。其他运行、着色器和资源错误仍会使检查失败。
+- 在真实手机上检查首次与缓存加载、帧时间、安全区、八方向摇杆、工具触达、前后台、内存、发热和持续五房；同时试听声音层次、循环接缝与恢复表现。
+- 完成 Creator 3.8.8 编辑器资产导入、正式微信构建、包体预算、开发者工具及微信真机；真实广告资格和完整观看回调仍需本项目账号与广告位。
 
-上述画面、触摸与音频证据仅用于 0.1.1；当前固定摇杆、新模型、首页展示和动作节奏已变，必须取得新的实际浏览器证据。
-
-## 待完成
-
-- 发布 0.2.0，并复验实际 WebGL 画面、摇杆在各竖屏尺寸的输入、多指触摸、音频解码及页面刷新。
-- 手机硬件上的画面、帧时间、安全区域、拇指操作、内存、发热和持续游玩；真实音效、音乐及前后台音频表现。
-- Creator 3.8.8 编辑器资产导入、正式微信构建、包体预算、微信真机，以及真实广告资格和观看回调。
+历史参照：0.1.1 曾在提交 [`26c5d48`](https://github.com/HEITAMU/monster-den/commit/26c5d48b3de085a892852f5312840c597350230d) 与 [工作流 44442569356](https://github.com/HEITAMU/monster-den/actions/runs/44442569356) 通过浏览器检查。它只用于历史比较，当前 `game-browser.json` 与 `webgl/` 已由本轮 0.2.0 证据接替。
 
 ## 复现
 
@@ -83,4 +98,4 @@ EmptyDevice 检查需要已有的 `@cocos/ccbuild`、`typescript`、`jsdom` 和 
 npm run check:web -- https://your-preview.example/
 ```
 
-不传 URL 时，脚本服务本地 `web/`。结果写入 `.build/game-browser/`；显式设置 `COCOS_SOFTWARE_GL=1` 可使用软件 WebGL，报告会记录这一条件。工作流为 [browser.yml](../.github/workflows/browser.yml)。新版脚本已更新，但工作流存在不表示本轮已运行成功；发布时应保存与最终代码对应的报告和截图。
+不传 URL 时，脚本服务本地 `web/`。结果写入 `.build/game-browser/`；显式设置 `COCOS_SOFTWARE_GL=1` 使用软件 WebGL，报告记录这一条件。工作流为 [browser.yml](../.github/workflows/browser.yml)，本轮已通过的运行与产物见本页开头。工作流产物默认保留 14 天，报告与必要截图应随仓库保存。
