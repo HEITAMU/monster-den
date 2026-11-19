@@ -1,0 +1,13 @@
+node_modules/
+temp/
+library/
+local/
+build/
+.build/
+profiles/
+*.log
+__pycache__/
+*.blend1
+test-results/
+screenshots/
+.DS_Store

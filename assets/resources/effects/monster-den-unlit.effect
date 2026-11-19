@@ -1,0 +1,62 @@
+// Monster Den original material; source-preview equivalent: web/engine-effects.js
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: surface-vs:vert
+      frag: surface-fs:frag
+      rasterizerState: { cullMode: back }
+      depthStencilState: { depthTest: true, depthWrite: true }
+      properties:
+        mainColor: { value: [1, 1, 1, 1], editor: { type: color } }
+        surfaceParams: { value: [0.7, 0.5, 0, 0] }
+        mainTexture: { value: white }
+}%
+CCProgram surface-vs %{
+precision highp float;
+#include <builtin/uniforms/cc-global>
+#include <builtin/uniforms/cc-local>
+in vec3 a_position;
+in vec3 a_normal;
+in vec2 a_texCoord;
+#if USE_VERTEX_COLOR
+  in vec4 a_color;
+#endif
+out vec3 v_normal;
+out vec3 v_world;
+out vec2 v_uv;
+out vec4 v_color;
+vec4 vert () {
+  vec4 world = cc_matWorld * vec4(a_position, 1.0);
+  v_normal = normalize(mat3(cc_matWorldIT) * a_normal);
+  v_world = world.xyz;
+  v_uv = a_texCoord;
+  v_color = vec4(1.0);
+  #if USE_VERTEX_COLOR
+    v_color = a_color;
+  #endif
+  return cc_matViewProj * world;
+}
+}%
+CCProgram surface-fs %{
+precision highp float;
+#include <builtin/uniforms/cc-global>
+uniform Surface {
+  vec4 mainColor;
+  vec4 surfaceParams;
+};
+in vec3 v_normal;
+in vec3 v_world;
+in vec2 v_uv;
+in vec4 v_color;
+#if USE_TEXTURE
+  uniform sampler2D mainTexture;
+#endif
+vec4 frag () {
+  vec4 base = mainColor * v_color;
+  #if USE_TEXTURE
+    base *= texture(mainTexture, v_uv);
+  #endif
+  
+  return base;
+}
+}%
