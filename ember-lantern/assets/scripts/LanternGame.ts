@@ -237,6 +237,7 @@ export class LanternGame extends Component{
   if(!this.ready)return;
   const s=this.rules.state,phase=s.phase;
   this.phaseOnScreen=phase;this.pageNeedsRebuild=false;
+  for(const child of [...this.menu.children])child.destroy();
   this.menu.removeAllChildren();
   this.menu.active=phase!=='exploring';this.hud.active=phase==='exploring';
   this.portal.node.active=phase==='exploring';this.portalGlow.node.active=phase==='exploring';
@@ -374,7 +375,7 @@ export class LanternGame extends Component{
  }
  private drawHUD():void{
   const s=this.rules.state,h=s.hero;this.depthText.string=`第 ${s.depth} 层 · ${['','青影林','灰烬谷','夜冠深处'][s.depth]}`;
-  this.hpText.string=`生命 ${h.hp} / ${h.maxHp}`;this.progressText.string=`灯种 ${s.collected} / ${s.target}`;
+  this.hpText.string=`生命 ${h.hp} / ${h.maxHp}`;this.progressText.string=`灯种 ${Math.min(s.collected,s.target)} / ${s.target}`;
   this.currencyText.string=`携带 ${s.carried} 灯灰     敌影 ${s.enemies.filter(e=>e.hp>0).length}`;
   const bar=this.flameBar;bar.clear();bar.fillColor=G('#0a1619',220);bar.roundRect(-142,-20,284,19,9);bar.fill();
   const power=h.flame/h.maxFlame;

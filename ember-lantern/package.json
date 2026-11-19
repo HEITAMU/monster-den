@@ -11,7 +11,8 @@
     "test": "node tools/run-tests.cjs",
     "build:preview": "tsc -p tsconfig.preview.json",
     "serve": "python3 -m http.server 39188 --directory .",
-    "check:assets": "python3 tools/check-assets.py"
+    "check:assets": "python3 tools/check-assets.py",
+    "check:browser": "python3 tools/browser-smoke.py"
   },
   "engines": {
     "node": ">=18"

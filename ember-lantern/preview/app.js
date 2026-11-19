@@ -55,7 +55,7 @@ function tick(dt){elapsed+=dt;
  for(const f of floaters)f.t+=dt;
  floaters=floaters.filter(f=>f.t<1.0).slice(-18);
 }
-function renderGame(){
+function renderGame(showHud=true){
  const s=game.state,h=s.hero;
  img('forest',0,0,W,H);
  ctx.save();ctx.globalAlpha=.74+(1-h.flame/h.maxFlame)*.24;img('vignette',0,0,W,H);ctx.restore();
@@ -94,10 +94,11 @@ function renderGame(){
   else img(p.type==='blue'?'blue-glow':'glow',p.x,p.y,55+v*140,55+v*140,(1-v)*.74);
  }
  for(const f of floaters){ctx.globalAlpha=1-f.t; text(f.text,f.x,f.y+f.t*63,f.text.includes('!')?35:28,f.col,800);ctx.globalAlpha=1;}
+ if(!showHud)return;
  rect(0,up(545),690,144,'#0a1f29df','#b29360',20);
  text(`第 ${s.depth} 层 · ${['营地','青影林','灰烬谷','夜冠深处'][s.depth]||'营地'}`,0,up(601),26,'#ffe1a5',700);
  text(`生命 ${h.hp}/${h.maxHp}`,-219,up(564),24,'#ffcaac',650);
- text(`灯种 ${s.collected}/${s.target}`,209,up(564),24,'#e8edd2',650);
+ text(`灯种 ${Math.min(s.collected,s.target)}/${s.target}`,209,up(564),24,'#e8edd2',650);
  bar(0,up(525),314,21,h.flame/h.maxFlame);
  text(`携带 ${s.carried} 灯灰`,0,up(487),21,'#ffdfb0',600);
  if(toast && elapsed<toastUntil){rect(0,-326,627,58,'#09212ed9','#b8ae70',15);text(toast,0,-326,22,'#ffde9a');}
@@ -127,7 +128,7 @@ function renderCamp(){
  text('独立存档 · 真正可玩规则 · 广告默认关闭',0,down(-610),16,'#b9c2b9');
 }
 function renderChoice(){
- renderGame();rect(0,0,683,980,'#081d23f1','#d2a86a',24);
+ renderGame(false);rect(0,0,683,980,'#081d23f1','#d2a86a',24);
  img('portal',0,264,291,305);text(`第 ${game.state.depth} 层 · 古门苏醒`,0,448,42,'#ffe4a2',800);
  text(`灯种已齐 · 当前携带 ${game.state.carried} 灯灰`,0,90,27,'#f0dcaf');
  button(`平安撤离 · 结算 ${game.state.carried+(game.state.depth-1)*7}`,0,-35,500,90);
