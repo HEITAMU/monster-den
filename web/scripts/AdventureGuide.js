@@ -14,7 +14,7 @@ System.register([], function (exports_1, context_1) {
             const board = state.obstacles.find(o => o.id === 'welcome-board' && o.kind === 'board' && !o.destroyed);
             if (board)
                 return {
-                    stage: 'board', title: '撞开木栏', hint: '向上推摇杆，松手撞开木栏',
+                    stage: 'board', title: '撞开木栏', hint: '向上撞木栏，或向左撞发光菌核',
                     target: { x: board.x, y: board.y },
                 };
         }
