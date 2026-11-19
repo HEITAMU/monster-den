@@ -1,10 +1,17 @@
 # 《撞进怪物窝》续接记录
 
-更新日期：2026-11-19（北京时间）。**0.3.0 引导与绕路取宝已发布**，入口为 [0.3.0 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.3.0)。本轮 110 项项目测试、严格类型（14 脚本、55 项 Cocos 导入、0 错误）、EmptyDevice 和实际 Chromium / WebGL2 验收均已通过。
+更新日期：2026-11-19（北京时间）。**0.3.1 手感修复已完成浏览器验收**，当前入口 [0.3.1 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.3.1)，完整增量记录见 [0.3.1 验收](../qa/0.3.1.md)。以下为 0.3.0 基础版本交接，其已有验证不能冒充 0.3.1 重新验证。**0.3.0 引导与绕路取宝已发布**，入口为 [0.3.0 网页试玩](https://heitamu.github.io/monster-den/web/?v=0.3.0)。本轮 110 项项目测试、严格类型（14 脚本、55 项 Cocos 导入、0 错误）、EmptyDevice 和实际 Chromium / WebGL2 验收均已通过。
 
 被测与部署运行源码均为 [`cb2fbffc4afa89de849e6e4ec56b2748dc3d407e`](https://github.com/HEITAMU/monster-den/commit/cb2fbffc4afa89de849e6e4ec56b2748dc3d407e)。main 已快进到该提交，工作分支也已包含它；[WebGL 工作流 44496981910](https://github.com/HEITAMU/monster-den/actions/runs/44496981910) 和 [Pages 工作流 44498519820](https://github.com/HEITAMU/monster-den/actions/runs/44498519820) 成功，13 个公开关键文件、2,424,176 字节均与被测文件逐字节一致。后续只补文档和证据时应说明与该运行提交的关系，不臆造尚未产生的最终文档提交号。
 
 0.2.0 的运行代码为 `ccfe4169`，历史报告见 [73bc27f5 的验证文档](https://github.com/HEITAMU/monster-den/blob/73bc27f5/qa/README.md)。当前 `qa/` 的类型、集成、浏览器、截图和部署已更新为 0.3.0；不再用当前文件路径引用旧数值。
+
+## 0.3.1 增量（从本版本继续）
+
+- GameMain.ts：手指必须移动至少 6 设计单位才进入有效推动；不能只凭起手偏离摇杆中心而发射。方向投影、力度映射、回中取消和触摸 ID 归属不变。
+- GameMain.ts、GameUI.ts：摇杆内箭头随方向旋转；提高操作提示和工具状态字号。主宝物、额外钱袋、伤害提示高优先级，低优先级挡箭提示不会覆盖未结束的重要消息。
+- 同源网页产物与版本号更新为 0.3.1。被测提交 [637ca6f1](https://github.com/HEITAMU/monster-den/commit/637ca6f1e0de4d9b95ff233a352a69e39fae37e9)；[实际 WebGL 工作流 44506757784](https://github.com/HEITAMU/monster-den/actions/runs/44506757784) 成功，包括 110 项项目测试、五房 21 发和移动视口 CDP 防误触检查。
+- 0.3.0 的严格类型报告是旧版记录；0.3.1 本轮未单独重跑相同的官方源码严格类型检查。移动端截图和完整 JSON 报告在本轮工作流 artifact 中，不属于真实微信真机验证。
 
 ## 1. 项目身份与已批准范围
 
