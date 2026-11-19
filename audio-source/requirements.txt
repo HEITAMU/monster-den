@@ -1,0 +1,4 @@
+# Versions used for the checked-in score render. FluidSynth and FFmpeg are
+# system dependencies; the licensed sample bank is obtained separately.
+numpy==2.3.5
+scipy==1.17.0

@@ -1,9 +1,9 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engineVersion": "3.8.8",
   "controllerUuid": "02267642-a7b5-40a1-87a8-fc519ba8352c",
   "sceneUuid": "f187116c-ef32-4806-882e-37aab4fb8918",
-  "sourceScripts": 10,
+  "sourceScripts": 13,
   "editorBuild": false,
   "platform": "HTML5 source preview"
 }

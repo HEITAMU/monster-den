@@ -1,0 +1,117 @@
+# 微信构建与发布交接
+
+记录日期：2026-11-19（北京时间）。以下步骤对应本仓库当前的 Cocos Creator **3.8.8** 工程。
+
+## 当前到哪一步
+
+当前执行环境没有已可用的 Creator 编辑器，**尚未由 Creator 产出微信小游戏包**。仓库中的网页试玩使用同源玩法代码和 Cocos 引擎，但 `web/` 不是可直接上传的微信包。
+
+真实 `adUnitId` 仍为空，也没有本项目正式账号权限、广告填充或收入凭证。广告状态逻辑测试通过，不等于广告已开通；源码已提交，不等于已上传、审核或上架。下列未执行的步骤均需实际完成并留存结果。
+
+## 1. 用 Creator 3.8.8 打开工程
+
+1. 安装并启动 **Cocos Creator 3.8.8 编辑器**。Dashboard 是启动管理器，命令行构建需要实际编辑器可执行文件。
+2. 导入本仓库根目录，即包含 `package.json`、`assets/`、`settings/` 的目录。保留资源对应的 `.meta` 文件。
+3. 等待资源导入，打开 `assets/Boot.scene`。确认 `GameMain` 脚本组件正常，Console 没有脚本或自定义 `.effect` 导入错误。
+4. 在编辑器预览中确认首页、角色、场景、拖拽弹射和第一间房。当前设计分辨率为 **720×1280 竖屏**。
+
+编辑器资源导入是独立验证步骤。已有网页运行结果不能证明 `.scene`、`.effect` 和微信适配器已被 Creator 正确处理。
+
+## 2. 生成真正的微信包
+
+### 编辑器界面
+
+打开“构建发布”，新增 **微信小游戏** 任务，使用 `Boot.scene` 作为启动场景，设备方向选择竖屏，填入**本游戏对应账号的 AppID**。AppID 与广告位 ID 是两种不同的标识。不要自动沿用其他项目的账号配置。
+
+构建输出目录应包含 `game.json`、`project.config.json` 和实际平台代码、资源。若界面字段与下方脚本生成的任务配置有差异，先在 3.8.8 编辑器内确认有效配置，再更新脚本；不得把失败退出当作成功产包。
+
+### 仓库构建脚本
+
+`tools/build-creator.cjs` 读取两个环境变量：
+
+| 变量 | 应填写内容 |
+| --- | --- |
+| `COCOS_CREATOR_388` | 已安装的 3.8.8 编辑器可执行文件绝对路径 |
+| `WECHAT_APP_ID` | 本小游戏的实际 AppID，格式为 `wx` 加 16 位十六进制字符 |
+
+**下面的安装路径只是示例，AppID 文本是占位内容，运行前需要替换。** 在仓库根目录执行：
+
+Windows PowerShell：
+
+```powershell
+$env:COCOS_CREATOR_388 = 'D:\Cocos\Creator\3.8.8\CocosCreator.exe'
+$env:WECHAT_APP_ID = '填写本小游戏真实AppID'
+node .\tools\build-creator.cjs wechatgame
+```
+
+macOS 终端：
+
+```sh
+export COCOS_CREATOR_388="/Applications/Cocos/Creator/3.8.8/CocosCreator.app/Contents/MacOS/CocosCreator"
+export WECHAT_APP_ID="填写本小游戏真实AppID"
+node tools/build-creator.cjs wechatgame
+```
+
+等效 npm 入口是 `npm run build:wechat`。脚本会生成 `.build/creator-wechatgame.json` 配置，再调用实际编辑器；预期输出为 `build/wechatgame/`。它要求本次构建生成新的 `build/wechatgame/game.json`，避免把旧目录误当新结果。这个文件存在仅证明产物生成，功能仍需下面的工具和真机验证。
+
+### 本项目的 Asset Bundle 与待验包体
+
+资源按以下目录划分为独立 Asset Bundle，微信平台按**小游戏分包**配置。三首完整音乐各占一个 Bundle，模型和短音效分别管理：
+
+| Bundle 名称 | 资源目录 / 文件 | 用途 |
+| --- | --- | --- |
+| `models` | `assets/models/characters.json`、`assets/models/environment.json` | 角色及场景三维网格 |
+| `sound` | `assets/sound/*.mp3` | 32 个动作音效及 `win.mp3`、`lose.mp3` 两段结算音乐 |
+| `music-camp` | `assets/music-camp/music-camp.mp3` | 60 秒营地配乐 |
+| `music-explore` | `assets/music-explore/music-explore.mp3` | 120 秒探索配乐 |
+| `music-boss` | `assets/music-boss/music-boss.mp3` | 96 秒窝主战配乐 |
+
+目录的 `.meta` 声明 Bundle 名称和 `bundleConfigID`，对应配置在 `settings/v2/packages/builder.json`，其中微信平台的 `compressionType` 为 `subpackage`。导入 Creator 后，应逐个选中这些目录，核对它们被识别为 Asset Bundle、Bundle 名称与表一致、微信平台配置为小游戏分包，再构建。运行代码需要先加载对应 Bundle，随后取得其中的 JSON 或 AudioClip；旧的 `resources/models`、`resources/audio` 路径不应继续加载或保留资源副本。模型初始化、营地进入、探索开始、窝主战切换，以及分包首次下载和缓存再进入，都应实际跑通。
+
+当前经过网格打包的运行资源 `characters.json` 为 **525,426 字节**，`environment.json` 为 **876,119 字节**，合计约 **1.34 MiB**；三首长音乐原始 MP3 分别约 **0.92、1.83、1.47 MiB**。这些是仓库资源文件大小，不是 Creator 的微信主包或分包统计。模型的中间数据位于 `.build/raw-models/`，不应作为重复资源加入游戏。尤其不能因为模型已移入一个独立 Bundle，就推断这个分包已经满足大小要求。
+
+**目前没有 Creator 生成的微信包、真实包体报告或微信真机验收，不能声称包体合规验证完成。** 首次正式构建后，必须检查主包、各分包和整体的实际统计及开发者工具报告；若超出当前平台要求，再调整模型数据、引擎裁剪或进一步拆包，并验证对应加载方式、缓存和更新。不要以网页构建大小或预计压缩比代替正式报告。
+
+当前构建脚本的 `remoteServerAddress` 为空，没有配置远程资源服务。上述分包安排不意味着已经部署 CDN；如之后改成远程 Bundle，需要部署实际资源并重新验证。GitHub 的网页试玩地址也不是已配置好的微信资源服务。
+
+## 3. 微信开发者工具与真机
+
+1. 在微信开发者工具导入 **`build/wechatgame/`**，选择小游戏项目，核对项目 AppID。不要导入仓库根目录或 `web/`。
+2. 编译后检查 Console 和资源加载：角色应为可动三维网格，场景与材质完整，首页能开始新局，第二间房的柜子能挡箭，第五间房能拿宝物撤离。
+3. 使用该项目有权限的账号生成预览，在微信中用 iPhone 和 Android 分别实际运行。记录设备、系统、微信版本、构建提交与录屏。
+4. 真机重点走一遍：首次与缓存启动；拖拽、取消触摸和按钮误触；连续进入五间房；切后台再返回；失败后重新进入；胜利结算后重新进入；音乐播放超过两分钟仍连续循环。具体路线见 [PLAYTEST.md](PLAYTEST.md)。
+
+若真机加载缓慢、卡顿或颜色发黑，应定位模型加载、首次音频读取与解码、自定义材质和实际帧耗时。当前 Blender 摄影棚预览不能代替微信实际画面验收。
+
+## 4. 填入广告位并验证发奖
+
+**当前配置位置：`assets/scripts/GameMain.ts` 中构造 `new RewardedAds(...)` 的地方。** 现在是：
+
+```ts
+new RewardedAds({
+  ledger: this.save,
+  adUnitId: '',
+  allowWebTestAds: false,
+  // onPhaseChange 等现有配置继续保留
+});
+```
+
+在本游戏账号后台实际具备相应权限并取得激励视频广告位 ID 后，将空字符串替换为该广告位的真实 ID，再重建微信包。当前救援与结算加领金币共用这一广告服务；代码中的 `placement` 区分奖励用途。后续若集中到单独配置文件，应同时更新本节指向。
+
+`WECHAT_APP_ID` 不会自动填入广告位，也不会自动开通广告权限。当前空配置在微信返回“正式激励广告尚未配置”，不会模拟成功或自动发奖。
+
+用真实环境分别核验：完整观看、提前关闭、加载或播放错误、连续点击、同一局再次救援，以及完整观看后中断再进入。只有明确完整观看才生成奖励凭证；游戏状态与凭证核销需一起持久化。广告缺填充或返回错误时，普通游戏流程仍应能继续。
+
+网页测试模式只能主动开启并清楚显示“测试广告（不产生收益）”。它仅检查回调与存档流程，不能写成真实广告测试结果。账号后台实际状态、真实广告展示和到账情况，需要各自的证据。
+
+## 5. 上传前留存的实际结果
+
+至少保存本次 Creator 构建日志、包体报告、开发者工具运行结果、两类真机录屏及广告回调结果。使用最终游戏画面制作本游戏自己的头像和展示截图；不要借用其他项目素材或把 Blender 摄影棚图冒充游戏运行截图。
+
+之后通过正确账号的开发者工具上传，再按该账号后台实际显示的要求完成后续流程。本文不猜测未查看账号的资质状态、审核结论、开通门槛或上线时间。
+
+## 已查官方参考
+
+- [Cocos Creator 3.8：发布到微信小游戏](https://docs.cocos.com/creator/3.8/manual/zh/editor/publish/publish-wechatgame.html)：微信构建、AppID、平台运行环境和资源管理。
+- [Cocos Creator 官方下载与版本说明](https://www.cocos.com/creator-download)：取得指定编辑器版本。
+- [腾讯广告：激励广告组件操作指引 PDF](https://training.tencentads.com/uploads/202406/nTROJ2vg_hpC4C1.pdf)：关闭回调与 `isEnded` 完整观看判断。该资料用于接口行为说明，不作为当前账号准入条件的证明。

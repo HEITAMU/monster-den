@@ -1,4 +1,4 @@
-System.register(["cc"], function (exports_1, context_1) {
+System.register(["cc", "./MeshCodec", "./ResourceBundles"], function (exports_1, context_1) {
     "use strict";
     var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
         var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -6,7 +6,7 @@ System.register(["cc"], function (exports_1, context_1) {
         else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
         return c > 3 && r && Object.defineProperty(target, key, r), r;
     };
-    var cc_1, editorEffects, OwnedMesh, ModelLibrary;
+    var cc_1, MeshCodec_1, ResourceBundles_1, editorEffects, OwnedMesh, ModelLibrary;
     var __moduleName = context_1 && context_1.id;
     async function loadGameJson(path) {
         if (globalThis.__monsterDenRuntime) {
@@ -15,7 +15,9 @@ System.register(["cc"], function (exports_1, context_1) {
                 throw new Error(`Resource unavailable: ${path}`);
             return response.json();
         }
-        return new Promise((resolve, reject) => cc_1.resources.load(path, cc_1.JsonAsset, (err, asset) => err ? reject(err) : resolve(asset.json)));
+        const [bundleName, ...relative] = path.split('/');
+        const bundle = await ResourceBundles_1.loadGameBundle(bundleName);
+        return new Promise((resolve, reject) => bundle.load(relative.join('/'), cc_1.JsonAsset, (err, asset) => err ? reject(err) : resolve(asset.json)));
     }
     exports_1("loadGameJson", loadGameJson);
     async function loadGameEffects() {
@@ -93,6 +95,12 @@ System.register(["cc"], function (exports_1, context_1) {
         setters: [
             function (cc_1_1) {
                 cc_1 = cc_1_1;
+            },
+            function (MeshCodec_1_1) {
+                MeshCodec_1 = MeshCodec_1_1;
+            },
+            function (ResourceBundles_1_1) {
+                ResourceBundles_1 = ResourceBundles_1_1;
             }
         ],
         execute: function () {
@@ -118,7 +126,7 @@ System.register(["cc"], function (exports_1, context_1) {
                     this.material = makeMaterial(new cc_1.Color(255, 255, 255, 255), true, false, true);
                     for (const [key, prefab] of Object.entries(this.prefabs))
                         prefab.nodes.forEach((part, i) => { if (part.mesh)
-                            this.meshes.set(`${key}:${i}`, cc_1.utils.createMesh(part.mesh)); });
+                            this.meshes.set(`${key}:${i}`, cc_1.utils.createMesh(MeshCodec_1.decodeMesh(part.mesh))); });
                 }
                 has(name) { return !!this.prefabs[name]; }
                 dispose() {
@@ -126,6 +134,7 @@ System.register(["cc"], function (exports_1, context_1) {
                         mesh.destroy();
                     this.meshes.clear();
                     this.material.destroy();
+                    this.prefabs = {};
                 }
                 instantiate(key, parent, scale = 1) {
                     const prefab = this.prefabs[key];

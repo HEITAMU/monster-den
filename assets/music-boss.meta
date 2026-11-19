@@ -1,0 +1,13 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "35be6844-c56f-4bd9-8017-deeaf3e461d1",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "isBundle": true,
+    "bundleName": "music-boss",
+    "bundleConfigID": "monster_den_music_boss"
+  }
+}

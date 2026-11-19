@@ -1,6 +1,6 @@
 import {
   _decorator,Component,Node,Scene,Camera,Canvas,UITransform,Label,Graphics,Color,
-  Vec2,Vec3,Quat,Layers,DirectionalLight,MeshRenderer,Material,utils,view,input,Input,
+  Vec2,Vec3,Quat,Layers,DirectionalLight,MeshRenderer,Material,utils,view,input,Input,UIOpacity,
   EventTouch,EventMouse,Game,game,tween,math,
 } from 'cc';
 import {GameModel,TOOLS} from './core/index';
@@ -8,11 +8,13 @@ import type {GameSnapshot,GameEvent,ToolId,ObstacleState,EnemyState} from './cor
 import {SaveStore} from './platform/SaveStore';
 import {RewardedAds} from './platform/RewardedAds';
 import {GameAudio} from './platform/GameAudio';
+import type {SoundCue} from './platform/GameAudio';
+import {loadAudioCatalog} from './AudioCatalog';
 import {ModelLibrary,ModelInstance,loadGameJson,loadGameEffects,makeMaterial,meshNode,discMesh,ringMesh} from './ModelLibrary';
 import {PALETTE,rgba,uiNode,label,panel,button,separator} from './GameUI';
 
 const {ccclass}=_decorator;
-const VERSION='0.1.0';
+const VERSION='0.1.1';
 const GROUND=.08,GROUND_EFFECT=.105;
 type Page='loading'|'home'|'game'|'tools';
 interface LocalRun {model:GameSnapshot;bonus:number;settled:boolean;bankedRooms:number;}
@@ -31,29 +33,32 @@ export class GameMain extends Component {
   private worldCamera!:Camera;private cameraNode!:Node;private cameraBase=new Vec3(0,24,10);
   private hero!:Visual;private enemies=new Map<string,Visual>();private obstacles=new Map<string,ModelInstance>();
   private treasure:ModelInstance|null=null;private exitRing:Node|null=null;private heroRing:Node|null=null;
-  private aimNodes:Node[]=[];private threatNodes=new Map<string,Node>();private arrowNodes=new Map<string,Node>();
+  private aimNodes:Node[]=[];private aimEnd:Node|null=null;private aimCaption:Label|null=null;
+  private threatNodes=new Map<string,Node>();private arrowNodes=new Map<string,Node>();
   private matShadow!:Material;private matAim!:Material;private matDanger!:Material;private matGold!:Material;
   private sparkMaterials:Material[]=[];private sparks:Spark[]=[];
   private ready=false;private page:Page='loading';private height=1280;private time=0;private phase='';
   private runId='';private runMeta={bonus:0,settled:false,bankedRooms:0};
   private dragging=false;private dragStart=new Vec2();private dragNow=new Vec2();private dragPower=0;private lastAim=new Vec2(0,1);
-  private heldMouse=false;private shake=0;private background=false;private adBusy=false;private rewardPending=false;
+  private activeTouchId:number|null=null;private heldMouse=false;private shake=0;private background=false;private adBusy=false;private rewardPending=false;
   private overlayPhase='';private tipTimer=0;private tip='';private toastNode:Node|null=null;
   private roomLabel!:Label;private hpLabel!:Label;private lootLabel!:Label;private hintLabel!:Label;private phaseLabel!:Label;
-  private toolButton:Node|null=null;private stepDots:Label[]=[];private tutorialText:Label|null=null;
+  private toolButton:Node|null=null;private toolGlow:Node|null=null;private stepDots:Label[]=[];private tutorialText:Label|null=null;
   private lastHeight=0;private homeHeroRotation=0;private saveClock=0;
 
   async start():Promise<void> {
     this.save=new SaveStore({onWarning:m=>this.toast(m)});
-    this.audio=new GameAudio({settings:this.save.read().settings});
-    this.audio.prepare();
-    this.ads=new RewardedAds({ledger:this.save,adUnitId:'',allowWebTestAds:false,onPhaseChange:phase=>{
-      this.adBusy=phase!=='idle';if(this.adBusy)this.audio.pause('ad');else void this.audio.resume('ad');
-    }});
     this.createScene();this.drawLoading('准备探索装备…');
     try {
       await loadGameEffects();
-      const [environment,characters]=await Promise.all([loadGameJson('models/environment'),loadGameJson('models/characters')]);
+      const [environment,characters,audioAssets]=await Promise.all([loadGameJson('models/environment'),loadGameJson('models/characters'),loadAudioCatalog(message=>{console.warn('[MonsterDen audio]',message);this.toast('部分音效未能加载，场景仍可继续');})]);
+      this.audio=new GameAudio({...audioAssets,settings:this.save.read().settings,allowProceduralFallback:false,onWarning:message=>{
+        console.warn('[MonsterDen audio]',message);this.toast('声音资源暂未准备好，可重新进入重试');
+      }});
+      this.ads=new RewardedAds({ledger:this.save,adUnitId:'',allowWebTestAds:false,onPhaseChange:phase=>{
+        this.adBusy=phase!=='idle';if(this.adBusy)this.audio.pause('ad');else void this.audio.resume('ad');
+      }});
+      this.drawLoading('准备乐队与音效…');await this.audio.prepare();
       this.env=new ModelLibrary(environment);this.characters=new ModelLibrary(characters);
       this.createEffects();this.ready=true;this.restoreRun();this.renderRoom();this.showHome();
       this.bindInput();
@@ -106,6 +111,8 @@ export class GameMain extends Component {
     this.matGold=makeMaterial(rgba('#ffdb7c'),false,true,true,.8);
     this.sparkMaterials=['#ffe1a0','#aaead0','#d39b61','#ef9b7d'].map(c=>makeMaterial(rgba(c),false,false,false,.8));
     for(let i=0;i<24;i++){const node=meshNode('AimMark',discMesh(.07,.95,.8,12),this.matAim,this.effectsWorld);node.active=false;this.aimNodes.push(node);}
+    this.aimEnd=meshNode('AimEndpoint',ringMesh(.38,.055),this.matAim,this.effectsWorld);this.aimEnd.active=false;
+    this.aimCaption=label(this.floating,'',20,0,0,180,35,PALETTE.mint,true);this.aimCaption.node.active=false;
   }
   private instantiate(key:string,parent:Node,x=0,y=0,scale=1):ModelInstance{
     const instance=this.env.instantiate(key,parent,scale);instance.root.setPosition(x,key==='floor'||key==='trim'?0:GROUND,-y);return instance;
@@ -139,7 +146,8 @@ export class GameMain extends Component {
 
   private showHome():void {
     if(this.adBusy||this.rewardPending)return;
-    this.page='home';this.clear(this.hud);this.clear(this.overlay);this.clearAim();this.overlayPhase='';
+    this.cancelDrag();this.page='home';this.clear(this.hud);this.clear(this.overlay);this.overlayPhase='';
+    this.updateMusicScene();
     for(const t of this.threatNodes.values())t.active=false;
     const top=this.height/2,bottom=-top;
     label(this.hud,'MONSTER DEN',17,0,top-77,640,32,PALETTE.muted,true);
@@ -161,6 +169,14 @@ export class GameMain extends Component {
     button(this.hud,muted?'静音':'声音',286,this.height/2-54,100,47,()=>{this.clickSound();this.audio.setMuted(!this.audio.settings.muted);this.save.updateSettings({muted:this.audio.settings.muted});if(this.page==='home')this.showHome();else this.drawHud();},false);
   }
   private clickSound():void{void this.audio.unlock().then(()=>{this.audio.startMusic();this.audio.play('click');});}
+  private updateMusicScene():void {
+    const scene=this.page==='game'?(this.model.state.roomIndex===4?'boss':'explore'):'camp';
+    this.audio.setMusicScene(scene);
+    // Decoded music is bounded to the current and next scene; the mixer retires
+    // the previous buffer after its crossfade, including quick menu changes.
+    if(scene==='camp')void this.audio.preloadMusic('explore');
+    else if(this.model.state.roomIndex===3)void this.audio.preloadMusic('boss');
+  }
   private showHelp():void {
     this.clickSound();this.clear(this.overlay);const p=panel(this.overlay,650,490,0,0,PALETTE.deep);
     label(p,'带着宝物离开',36,0,173,590,65,PALETTE.gold,true);
@@ -174,7 +190,8 @@ export class GameMain extends Component {
   }
   private showTools():void {
     if(this.adBusy||this.rewardPending)return;
-    this.clickSound();this.page='tools';this.clear(this.hud);this.clear(this.overlay);const d=this.save.read();
+    this.cancelDrag();this.clickSound();this.page='tools';this.clear(this.hud);this.clear(this.overlay);const d=this.save.read();
+    this.updateMusicScene();
     label(this.hud,'探险工具柜',43,0,this.height/2-106,650,75,PALETTE.gold,true);
     label(this.hud,`金币 ${d.progress.coins||0} · 开局可携带一件`,22,0,this.height/2-163,650,44,PALETTE.muted);
     TOOLS.forEach((tool,i)=>{
@@ -191,12 +208,12 @@ export class GameMain extends Component {
   private startRun():void {
     if(!this.ready||this.adBusy||this.rewardPending)return;
     if(['victory','game_over'].includes(this.model.state.phase)&&!this.runMeta.settled&&!this.settle())return;
-    this.clickSound();this.model.restart();const tool=this.save.read().progress.startingTool as ToolId;
+    this.cancelDrag();this.clickSound();this.model.restart();const tool=this.save.read().progress.startingTool as ToolId;
     if(tool&&this.save.read().progress.unlockedTools.includes(tool))this.model.equipStartingTool(tool);
     this.runId=`den-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;this.runMeta={bonus:0,settled:false,bankedRooms:0};
-    this.save.update(d=>{d.progress.runsPlayed++;});this.page='game';this.renderRoom();this.drawHud();this.clear(this.overlay);this.persist();
+    this.save.update(d=>{d.progress.runsPlayed++;});this.page='game';this.updateMusicScene();this.renderRoom();this.drawHud();this.clear(this.overlay);this.persist();
   }
-  private continueRun():void{if(this.adBusy||this.rewardPending)return;this.clickSound();this.restoreRun();this.page='game';this.renderRoom();this.drawHud();this.clear(this.overlay);}
+  private continueRun():void{if(this.adBusy||this.rewardPending)return;this.clickSound();this.restoreRun();this.page='game';this.updateMusicScene();this.renderRoom();this.drawHud();this.clear(this.overlay);}
   private restoreRun():void {
     const saved=this.save.getSnapshot<LocalRun>();if(saved){try{this.model.restore(saved.state.model);this.runId=saved.runId;this.runMeta={bonus:saved.state.bonus||0,settled:!!saved.state.settled,bankedRooms:saved.state.bankedRooms||0};}catch(e){console.warn('Run restore failed',e);this.save.clearSnapshot();this.model.restart();this.runId='';this.runMeta={bonus:0,settled:false,bankedRooms:0};}}
     if(!this.runId)this.runId=`den-${Date.now()}`;
@@ -214,8 +231,15 @@ export class GameMain extends Component {
     const dock=panel(this.hud,672,180,0,bottom+138,PALETTE.deep,'#6e8c79',25,250);
     this.hintLabel=label(dock,'',24,0,48,620,64,PALETTE.cream);
     this.phaseLabel=label(dock,'',20,-145,-23,330,50,PALETTE.muted);
-    this.toolButton=button(dock,'使用工具',171,-27,275,62,()=>{this.clickSound();if(!this.model.activateTool())this.toast(this.model.state.player.tool==='none'?'下一间房可选择工具':this.model.state.player.tool==='heavy'?'重撞持续生效：撞击更强，推柜更远':'冲出去以后，再点击使用');else{this.clearAim();this.persist();}},false);
-    label(this.hud,'拖拽瞄准 · 松手出击',19,0,bottom+24,650,35,'#7c9c91');
+    this.toolButton=button(dock,'使用工具',171,-27,275,62,()=>{
+      this.clickSound();const p=this.model.state.player;
+      if(!this.model.activateTool())this.showTip(p.tool==='none'?'带出这间的宝物，就能选一件工具':p.tool==='heavy'?'重撞持续生效：撞击更强，推柜更远':!p.toolReady?'这回合已经用过，下一回合恢复':'冲出去以后，再点击工具',2);
+      else{this.cancelDrag();this.persist();}
+    },false);
+    this.toolButton.addComponent(UIOpacity);
+    this.toolGlow=uiNode('ToolReadyGlow',this.toolButton,275,62);
+    const glow=this.toolGlow.addComponent(Graphics);glow.lineWidth=3;glow.strokeColor=rgba(PALETTE.gold);glow.roundRect(-137,-31,274,62,20);glow.stroke();this.toolGlow.active=false;
+    this.tutorialText=label(this.hud,'拖拽瞄准 · 松手出击',20,0,bottom+24,650,35,PALETTE.muted);
     this.updateHud();
   }
   private updateHud():void {
@@ -225,12 +249,23 @@ export class GameMain extends Component {
     this.lootLabel.string=s.treasure.taken?'宝物已到手':'寻找宝物';
     this.stepDots.forEach((l,i)=>{l.color=rgba(i<=s.roomIndex?PALETTE.gold:'#486961');});
     this.hintLabel.string=this.tipTimer>0?this.tip:s.treasure.taken?'宝物到手，前往发光出口':HINTS[s.roomIndex];
-    this.phaseLabel.string=this.dragging?`力度 ${Math.round(this.dragPower*100)}%`:s.phase==='moving'?'正在冲撞':s.phase==='enemies'?'留意守卫动作':`第 ${s.turn+1} 次行动`;
+    this.phaseLabel.string=this.dragging?`力度 ${Math.round(this.dragPower*100)}%`:s.phase==='moving'?'正在冲撞':s.phase==='enemies'?'守卫即将行动':p.tool==='grip'&&!p.toolReady?'抓停成功 · 再次瞄准':`第 ${s.turn+1} 次行动`;
     const tool=TOOLS.find(t=>t.id===p.tool);const toolLabel=this.toolButton?.getComponentsInChildren(Label)[0];
-    if(toolLabel)toolLabel.string=tool?tool.actionLabel:'尚未携带工具';
+    const activeTool=p.tool==='grip'||p.tool==='return',available=activeTool&&p.toolReady&&s.phase==='moving';
+    if(toolLabel){
+      toolLabel.string=!tool?'下间房选工具':p.tool==='heavy'?'重撞 · 持续生效':!p.toolReady?'本回合已使用':s.phase==='moving'?tool.actionLabel:'冲撞时可用';
+      toolLabel.color=rgba(available?PALETTE.gold:PALETTE.cream);
+    }
+    if(this.toolGlow)this.toolGlow.active=available;
+    const opacity=this.toolButton?.getComponent(UIOpacity);if(opacity)opacity.opacity=available||p.tool==='heavy'?255:170;
+    if(this.tutorialText){
+      this.tutorialText.string=s.shots===0?(this.dragging?(this.dragPower>.1?'松手！撞开前面的木栏':'向后拖远一点，看看前方路线'):'按住场景，向后拉，再松手'):
+        s.phase==='enemies'?'红色区域是守卫的攻击方向':activeTool&&available?'工具亮起了，冲撞中可以点击使用':s.treasure.taken?'带宝物进出口，就能离开这一间':'拖拽瞄准 · 松手出击';
+      this.tutorialText.color=rgba(s.shots===0?PALETTE.gold:PALETTE.muted);
+    }
   }
   private showRoomClear():void {
-    this.clear(this.overlay);this.clickSound();const p=panel(this.overlay,665,720,0,0,PALETTE.deep,'#bfa46c',28,252);
+    this.clear(this.overlay);const p=panel(this.overlay,665,720,0,0,PALETTE.deep,'#bfa46c',28,252);
     label(p,'宝物带出来了',38,0,294,610,72,PALETTE.gold,true);label(p,'挑一件工具，进入下一间',24,0,231,600,50,PALETTE.muted);
     TOOLS.forEach((tool,i)=>{const y=115-i*160;const card=panel(p,602,139,0,y,'#294647','#829d7f',18);
       label(card,tool.name,28,0,37,560,45,PALETTE.cream,true);label(card,tool.description,21,0,-10,548,61,PALETTE.muted);
@@ -240,7 +275,7 @@ export class GameMain extends Component {
   advance(tool:ToolId):boolean {
     if(this.adBusy||this.rewardPending)return false;
     if(!this.model.nextRoom(tool))return false;this.clickSound();this.runMeta.bankedRooms=Math.max(this.runMeta.bankedRooms,this.model.state.roomIndex);
-    this.renderRoom();this.drawHud();this.clear(this.overlay);this.persist();return true;
+    this.updateMusicScene();this.renderRoom();this.drawHud();this.clear(this.overlay);this.persist();return true;
   }
   private settle():boolean {
     if(this.runMeta.settled)return true;const s=this.model.state;this.runMeta.settled=true;
@@ -298,9 +333,9 @@ export class GameMain extends Component {
     input.on(Input.EventType.MOUSE_DOWN,this.mouseDown,this);input.on(Input.EventType.MOUSE_MOVE,this.mouseMove,this);input.on(Input.EventType.MOUSE_UP,this.mouseUp,this);
     game.on(Game.EVENT_HIDE,this.onHide,this);game.on(Game.EVENT_SHOW,this.onShow,this);
   }
-  private validInput(location:Vec2):boolean{const sy=location.y/view.getScaleY();return this.ready&&this.page==='game'&&!this.adBusy&&!this.overlay.children.length&&sy>250&&sy<this.height-220;}
+  private validInput(location:Vec2):boolean{const sy=location.y/view.getScaleY();return this.ready&&this.page==='game'&&!this.background&&!this.adBusy&&!this.rewardPending&&!this.overlay.children.length&&sy>250&&sy<this.height-220;}
   private begin(location:Vec2):void {
-    if(!this.validInput(location)||this.model.state.phase!=='aiming')return;this.clickSound();this.dragging=true;this.dragStart.set(location);this.dragNow.set(location);this.dragPower=0;
+    if(this.dragging||!this.validInput(location)||this.model.state.phase!=='aiming')return;this.clickSound();this.dragging=true;this.dragStart.set(location);this.dragNow.set(location);this.dragPower=0;
   }
   private move(location:Vec2):void {
     if(!this.dragging)return;this.dragNow.set(location);const dx=(this.dragStart.x-location.x)/view.getScaleX(),dy=(this.dragStart.y-location.y)/view.getScaleY();
@@ -310,20 +345,31 @@ export class GameMain extends Component {
   private release():void {
     if(!this.dragging)return;this.dragging=false;this.clearAim();if(this.dragPower>.10&&this.model.shoot({x:this.lastAim.x,y:this.lastAim.y},this.dragPower))this.persist();
   }
-  private touchStart(e:EventTouch):void{this.begin(e.getLocation());}
-  private touchMove(e:EventTouch):void{this.move(e.getLocation());}
-  private touchEnd():void{this.release();}
-  private touchCancel():void{this.dragging=false;this.clearAim();}
-  private mouseDown(e:EventMouse):void{if(e.getButton()!==0)return;this.heldMouse=true;this.begin(e.getLocation());}
+  private touchStart(e:EventTouch):void{if(this.activeTouchId!==null||this.heldMouse)return;const id=e.getID();if(id===null)return;this.begin(e.getLocation());if(this.dragging)this.activeTouchId=id;}
+  private touchMove(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());}
+  private touchEnd(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.move(e.getLocation());this.activeTouchId=null;this.release();}
+  private touchCancel(e:EventTouch):void{if(this.activeTouchId===null||e.getID()!==this.activeTouchId)return;this.cancelDrag();}
+  private cancelDrag():void{this.activeTouchId=null;this.heldMouse=false;this.dragging=false;this.dragPower=0;this.clearAim();}
+  // Cocos synthesizes a touch before mouse events. Only use this fallback when
+  // no touch claimed the gesture, so the same mouse gesture cannot fire twice.
+  private mouseDown(e:EventMouse):void{if(e.getButton()!==0||this.activeTouchId!==null)return;this.begin(e.getLocation());this.heldMouse=this.dragging;}
   private mouseMove(e:EventMouse):void{if(this.heldMouse)this.move(e.getLocation());}
-  private mouseUp():void{this.heldMouse=false;this.release();}
-  private onHide():void{this.background=true;this.dragging=false;this.clearAim();this.persist();}
+  private mouseUp():void{if(!this.heldMouse)return;this.heldMouse=false;this.release();}
+  private onHide():void{this.background=true;this.cancelDrag();this.persist();}
   private onShow():void{this.background=false;}
   private showAim():void {
     this.clearAim();if(this.dragPower<.06)return;const preview=this.model.aim(this.lastAim.x,this.lastAim.y,this.dragPower);
     for(let i=0;i<Math.min(this.aimNodes.length,preview.points.length);i++){const at=Math.floor(i*(preview.points.length-1)/(Math.min(this.aimNodes.length,preview.points.length)-1||1)),p=preview.points[at];const n=this.aimNodes[i];n.active=true;n.setPosition(p.x,GROUND_EFFECT+.01,-p.y);n.setScale(i===0?1.3:1,1,i===0?1.3:1);}
+    const end=preview.points[preview.points.length-1];
+    if(end&&this.aimEnd&&this.aimCaption){
+      this.aimEnd.active=true;this.aimEnd.setPosition(end.x,GROUND_EFFECT+.016,-end.y);
+      this.aimEnd.getComponent(MeshRenderer)!.setMaterial(preview.blocked?this.matGold:this.matAim,0);
+      this.aimCaption.string=preview.blocked?'碰撞点':preview.endpoint==='exit'?'离开房间':'落点';this.aimCaption.color=rgba(preview.blocked?PALETTE.gold:PALETTE.mint);
+      const screen=this.worldCamera.worldToScreen(new Vec3(end.x,.3,-end.y));
+      this.aimCaption.node.setPosition(screen.x/view.getScaleX()-360,screen.y/view.getScaleY()-this.height/2+25,0);this.aimCaption.node.active=true;
+    }
   }
-  private clearAim():void{for(const node of this.aimNodes)node.active=false;}
+  private clearAim():void{for(const node of this.aimNodes)node.active=false;if(this.aimEnd)this.aimEnd.active=false;if(this.aimCaption)this.aimCaption.node.active=false;}
 
   update(dt:number):void {
     if(!this.ready)return;dt=Math.min(dt,.05);this.time+=dt;
@@ -367,9 +413,12 @@ export class GameMain extends Component {
     if(this.exitRing){const size=1+Math.sin(this.time*3)*.07;this.exitRing.setScale(size,1,size);}
     for(const o of s.obstacles){const visual=this.obstacles.get(o.id);if(visual){visual.root.active=!o.destroyed;visual.root.setPosition(o.x,GROUND,-o.y);}}
     for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;v.instance.root.active=e.alive;v.shadow.active=e.alive;
-      if(e.alive){this.animateActor(v,e.x,e.y,e.vx,e.vy,dt);if(Math.hypot(e.vx,e.vy)<.3)v.instance.root.setRotationFromEuler(0,Math.atan2(e.telegraph.dx,-e.telegraph.dy)*180/Math.PI,0);}
-      const threat=this.threatNodes.get(e.id);if(threat){threat.active=e.alive&&this.page==='game'&&['aiming','moving'].includes(s.phase);
-        const t=e.telegraph,range=this.threatLength(e);threat.setPosition(e.x+t.dx*range*.5,GROUND_EFFECT,-e.y-t.dy*range*.5);threat.setRotationFromEuler(0,Math.atan2(t.dx,-t.dy)*180/Math.PI,0);threat.setScale(t.width||.7,1,range);}}
+      if(e.alive){this.animateActor(v,e.x,e.y,e.vx,e.vy,dt);if(Math.hypot(e.vx,e.vy)<.3)v.instance.root.setRotationFromEuler(0,Math.atan2(e.telegraph.dx,-e.telegraph.dy)*180/Math.PI,0);
+        if(this.page==='game'&&s.phase==='enemies'&&e.action==='windup'){const charge=Math.min(1,s.enemyTime/.34);v.instance.root.setScale(v.scale*(1+charge*.08),v.scale*(1-charge*.16),v.scale*(1+charge*.08));}}
+      const threat=this.threatNodes.get(e.id);if(threat){
+        const winding=s.phase==='enemies'&&!e.actionStarted;
+        threat.active=e.alive&&this.page==='game'&&(['aiming','moving'].includes(s.phase)||winding);
+        const t=e.telegraph,range=this.threatLength(e);threat.setPosition(e.x+t.dx*range*.5,GROUND_EFFECT,-e.y-t.dy*range*.5);threat.setRotationFromEuler(0,Math.atan2(t.dx,-t.dy)*180/Math.PI,0);threat.setScale((t.width||.7)*(winding?1+Math.sin(this.time*24)*.08:1),1,range);}}
     const active=new Set<string>();for(const a of s.projectiles){active.add(a.id);let n=this.arrowNodes.get(a.id);if(!n){n=meshNode('Arrow',this.beamMesh(),this.matGold,this.effectsWorld);this.arrowNodes.set(a.id,n);}n.setPosition(a.x,.48,-a.y);n.setScale(.075,1,.65);n.setRotationFromEuler(0,Math.atan2(a.vx,-a.vy)*180/Math.PI,0);}
     for(const [id,n] of this.arrowNodes)if(!active.has(id)){n.destroy();this.arrowNodes.delete(id);}
   }
@@ -382,7 +431,7 @@ export class GameMain extends Component {
     }return Math.max(.2,best);
   }
   private handleEvent(e:GameEvent):void {
-    const sounds:Record<string,any>={shot:'launch',bounce:'impact',board_hit:'impact',board_break:'break',cabinet_push:'impact',enemy_hit:'impact',enemy_down:'break',damage:'danger',treasure:'loot',victory:'win',room_clear:'loot',arrow_blocked:'impact',tool_used:'launch'};
+    const sounds:Record<string,SoundCue>={shot:'launch',bounce:'stone_hit',board_hit:'wood_hit',board_break:'wood_break',cabinet_push:'cabinet_push',enemy_hit:'enemy_hit',enemy_down:'enemy_down',arrow:'arrow',arrow_blocked:'arrow_blocked',damage:'danger',treasure:'loot',victory:'win',game_over:'lose',room_clear:'loot',tool_used:'tool'};
     if(sounds[e.type])this.audio.play(sounds[e.type],e.type==='bounce'?.4:1);
     if(['board_break','enemy_hit','enemy_down','cabinet_push','arrow_blocked','treasure','damage'].includes(e.type))this.burst(e.x,e.y,e.type==='damage'?3:e.type==='treasure'?0:2,e.type==='board_break'?14:8);
     if(['enemy_hit','board_break','cabinet_push','damage'].includes(e.type)){this.shake=Math.max(this.shake,e.type==='damage'?.65:.28);if(e.id&&this.enemies.has(e.id))this.enemies.get(e.id)!.hit=.3;}
@@ -410,6 +459,7 @@ export class GameMain extends Component {
   }
   onDestroy():void {
     this.persist();this.audio?.dispose();this.ads?.dispose();
+    if((globalThis as any).__MONSTER_DEN__?.controller===this)delete (globalThis as any).__MONSTER_DEN__;
     this.env?.dispose();this.characters?.dispose();
     for(const mat of [this.matShadow,this.matAim,this.matDanger,this.matGold,...this.sparkMaterials])mat?.destroy();
     input.off(Input.EventType.TOUCH_START,this.touchStart,this);input.off(Input.EventType.TOUCH_MOVE,this.touchMove,this);input.off(Input.EventType.TOUCH_END,this.touchEnd,this);input.off(Input.EventType.TOUCH_CANCEL,this.touchCancel,this);

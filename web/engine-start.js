@@ -2,6 +2,14 @@ import {installPreviewEffects} from './engine-effects.js';
 
 /** Start the real Cocos runtime. createScene receives the imported cc namespace. */
 export async function startCocos(createScene, options = {}) {
+  const probe = document.createElement('canvas');
+  const gl = probe.getContext('webgl2') || probe.getContext('webgl') || probe.getContext('experimental-webgl');
+  if (!gl) {
+    const error = new Error('This browser could not create a WebGL graphics context.');
+    error.code = 'WEBGL_UNAVAILABLE';
+    throw error;
+  }
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
   const cc = await System.import('cc');
   globalThis.cc = cc;
   if (cc.VERSION !== '3.8.8') throw new Error(`Unexpected Cocos engine ${cc.VERSION}`);

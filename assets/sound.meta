@@ -1,0 +1,13 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "7922625a-e411-4a31-8b15-446bf101a6e0",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "isBundle": true,
+    "bundleName": "sound",
+    "bundleConfigID": "monster_den_sound"
+  }
+}

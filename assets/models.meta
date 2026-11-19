@@ -5,5 +5,9 @@
   "uuid": "449b9cbf-786e-4647-805e-2585451d70b1",
   "files": [],
   "subMetas": {},
-  "userData": {}
+  "userData": {
+    "isBundle": true,
+    "bundleName": "models",
+    "bundleConfigID": "monster_den_models"
+  }
 }

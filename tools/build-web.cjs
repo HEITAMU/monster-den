@@ -39,7 +39,12 @@ walk(input);
 const errors = diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
 if (errors.length) { for (const d of errors) console.error(ts.flattenDiagnosticMessageText(d.messageText, '\n')); process.exit(1); }
 fs.copyFileSync(path.join(root, 'assets/Boot.scene'), path.join(root, 'web/Boot.scene'));
+// Rebuild this generated directory so moved/deleted assets cannot linger in Pages.
+fs.rmSync(path.join(root, 'web/resources'), {recursive: true, force: true});
 copyAssets(path.join(root, 'assets/resources'), path.join(root, 'web/resources'));
+copyAssets(path.join(root, 'assets/models'), path.join(root, 'web/resources/models'));
+for (const bundle of ['sound','music-camp','music-explore','music-boss'])
+  copyAssets(path.join(root, 'assets', bundle), path.join(root, 'web/resources/audio'));
 const meta = JSON.parse(fs.readFileSync(path.join(root, 'assets/scripts/GameMain.ts.meta'), 'utf8'));
 const sceneMeta = JSON.parse(fs.readFileSync(path.join(root, 'assets/Boot.scene.meta'), 'utf8'));
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));

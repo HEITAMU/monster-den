@@ -48,7 +48,12 @@ export interface GameEvent {
   type: GameEventType; x: number; y: number; id?: string; amount?: number;
   tool?: ToolId; obstacleId?: string; text?: string;
 }
-export interface AimPreview { points: Vec2[]; direction: Vec2; power: number; blocked: boolean; }
+export interface AimPreview {
+  points: Vec2[]; direction: Vec2; power: number; blocked: boolean;
+  /** Only `stop` is a landing point; interactions deliberately end the prediction. */
+  endpoint: 'none' | 'stop' | 'interaction' | 'exit';
+  targetId?: string;
+}
 export interface RuntimeState {
   accumulator: number; flightTime: number; settledTime: number;
   lastShotStart: Vec2; hitEnemies: string[]; hitBoards: string[];

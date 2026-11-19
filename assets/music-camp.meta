@@ -1,0 +1,13 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "0a7dd41b-23a1-4064-879b-68059cb2c24f",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "isBundle": true,
+    "bundleName": "music-camp",
+    "bundleConfigID": "monster_den_music_camp"
+  }
+}

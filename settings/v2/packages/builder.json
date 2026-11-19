@@ -1,0 +1,137 @@
+{
+  "__version__": "1.3.5",
+  "bundleConfig": {
+    "custom": {
+      "monster_den_models": {
+        "displayName": "models",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "miniGame": {
+            "configMode": "overwrite",
+            "overwriteSettings": {
+              "wechatgame": {
+                "compressionType": "subpackage",
+                "isRemote": false
+              }
+            }
+          }
+        }
+      },
+      "monster_den_sound": {
+        "displayName": "sound",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "miniGame": {
+            "configMode": "overwrite",
+            "overwriteSettings": {
+              "wechatgame": {
+                "compressionType": "subpackage",
+                "isRemote": false
+              }
+            }
+          }
+        }
+      },
+      "monster_den_music_camp": {
+        "displayName": "music-camp",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "miniGame": {
+            "configMode": "overwrite",
+            "overwriteSettings": {
+              "wechatgame": {
+                "compressionType": "subpackage",
+                "isRemote": false
+              }
+            }
+          }
+        }
+      },
+      "monster_den_music_explore": {
+        "displayName": "music-explore",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "miniGame": {
+            "configMode": "overwrite",
+            "overwriteSettings": {
+              "wechatgame": {
+                "compressionType": "subpackage",
+                "isRemote": false
+              }
+            }
+          }
+        }
+      },
+      "monster_den_music_boss": {
+        "displayName": "music-boss",
+        "configs": {
+          "native": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "web": {
+            "preferredOptions": {
+              "compressionType": "merge_dep",
+              "isRemote": false
+            }
+          },
+          "miniGame": {
+            "configMode": "overwrite",
+            "overwriteSettings": {
+              "wechatgame": {
+                "compressionType": "subpackage",
+                "isRemote": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

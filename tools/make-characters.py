@@ -16,6 +16,7 @@ PREVIEW = PROJECT.parent / 'art-preview'
 PREVIEW.mkdir(exist_ok=True, parents=True)
 sys.path.insert(0, str(PROJECT / 'tools'))
 from export_mesh_library import export_library
+from pack_mesh_library import pack_library
 
 HERO_ONLY = '--hero-only' in sys.argv
 bpy.ops.object.select_all(action='SELECT')
@@ -599,8 +600,12 @@ for key,root in actors.items():
             mod.ratio=.61 if key=='hero' else .67
             mod.use_collapse_triangulate=True
 bpy.context.view_layer.update()
-output=PROJECT/'assets/resources/models/characters.json'
-result=export_library(actors,output)
+raw_output=PROJECT/'.build/raw-models/characters.json'
+result=export_library(actors,raw_output)
+output=PROJECT/'assets/models/characters.json'
+output.parent.mkdir(parents=True,exist_ok=True)
+output.write_text(json.dumps(pack_library(result),separators=(',',':')),encoding='utf-8')
+print('Packed q16-n8-c8-v1',output,output.stat().st_size,'bytes; all exported triangles and joints retained')
 
 # Real model preview: studio lighting and camera are not exported into gameplay assets.
 ground=material('Preview only | desaturated moss floor','#394941',.9)
@@ -612,7 +617,8 @@ bpy.context.scene.render.filepath=str(PREVIEW/'hero-preview.png')
 for key,root in actors.items():
     if key!='hero':
         for obj in root.children_recursive:obj.hide_render=True
-bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'))
+bpy.context.preferences.filepaths.save_version=0
+bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'),compress=True)
 bpy.ops.render.render(write_still=True)
 print('CHARACTER_PREVIEW',PREVIEW/'hero-preview.png')
 if not HERO_ONLY:
@@ -626,6 +632,6 @@ if not HERO_ONLY:
     camera.data.ortho_scale=7.85
     bpy.context.scene.render.resolution_x=1600;bpy.context.scene.render.resolution_y=800
     bpy.context.scene.render.filepath=str(PREVIEW/'character-lineup.png')
-    bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'))
+    bpy.ops.wm.save_as_mainfile(filepath=str(PROJECT/'art-source/characters.blend'),compress=True)
     bpy.ops.render.render(write_still=True)
     print('CHARACTER_LINEUP',PREVIEW/'character-lineup.png')

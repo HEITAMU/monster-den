@@ -265,8 +265,8 @@ process.on('unhandledRejection', onUnhandled);
   assert.equal(api.model.state.phase, 'game_over');
   assert.ok(sceneAsset.scene.getComponentsInChildren(cc.Label).some(label => label.string === '看视频 · 救援一次'));
   result.boundaries.terminalRestore.unsettledFailureReopened = true;
-  const malformed = controller.save.saveSnapshot('diagnostic-bad-model',
-    { model: { version: 1, state: { version: 1, roomIndex: 999 }, runtime: {} }, bonus: 0, settled: false, bankedRooms: 0 });
+  const malformed = controller.save.saveSnapshot('diagnostic-bad-model', win.JSON.parse(JSON.stringify(
+    { model: { version: 1, state: { version: 1, roomIndex: 999 }, runtime: {} }, bonus: 0, settled: false, bankedRooms: 0 })));
   assert.equal(malformed.ok, true, 'Malformed inner game data is deliberately stored in a valid save envelope.');
   const warningCount = result.warnings.length;
   controller.restoreRun(); controller.showHome(); await tick(1);

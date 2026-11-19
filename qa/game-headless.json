@@ -1,0 +1,362 @@
+{
+  "backend": "Cocos EmptyDevice",
+  "engineVersion": "3.8.8",
+  "pixelValidation": false,
+  "gpuShaderCompilation": false,
+  "audibleOutputValidation": false,
+  "testMethod": "Unmodified GameMain/core/platform/model code; Cocos lifecycle ticks; DOM/canvas host fixture. EmptyDevice is the only compiled graphics backend, selected by the official WebGL fallback so screen adaptation remains testable (HEADLESS mode intentionally reports 1x1). Five rooms use the documented 21-shot route through real DOM mouse input. Only the separate game-over UI branch uses a controlled snapshot.",
+  "errors": [],
+  "warnings": [],
+  "checkpoints": [
+    {
+      "label": "home loaded by actual async start lifecycle",
+      "page": "home",
+      "room": 1,
+      "phase": "aiming",
+      "nodeMeshRenderers": 58,
+      "uniqueMeshes": 53,
+      "labels": 9,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 53,
+      "totalCocosFrames": 1
+    },
+    {
+      "label": "home button entered first room",
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "nodeMeshRenderers": 58,
+      "uniqueMeshes": 53,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 53,
+      "totalCocosFrames": 4
+    },
+    {
+      "label": "controller mouse aim, launch, board break, and return to aiming",
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "nodeMeshRenderers": 58,
+      "uniqueMeshes": 53,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 53,
+      "totalCocosFrames": 235
+    },
+    {
+      "label": "room 1 actual scene, enemy prefabs and animation update",
+      "page": "game",
+      "room": 1,
+      "phase": "aiming",
+      "nodeMeshRenderers": 58,
+      "uniqueMeshes": 53,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 53,
+      "totalCocosFrames": 235
+    },
+    {
+      "label": "room 2 actual scene, enemy prefabs and animation update",
+      "page": "game",
+      "room": 2,
+      "phase": "aiming",
+      "nodeMeshRenderers": 69,
+      "uniqueMeshes": 64,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 65,
+      "totalCocosFrames": 281
+    },
+    {
+      "label": "room 3 actual scene, enemy prefabs and animation update",
+      "page": "game",
+      "room": 3,
+      "phase": "aiming",
+      "nodeMeshRenderers": 70,
+      "uniqueMeshes": 65,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 72,
+      "totalCocosFrames": 947
+    },
+    {
+      "label": "room 4 actual scene, enemy prefabs and animation update",
+      "page": "game",
+      "room": 4,
+      "phase": "aiming",
+      "nodeMeshRenderers": 68,
+      "uniqueMeshes": 64,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 72,
+      "totalCocosFrames": 1606
+    },
+    {
+      "label": "room 5 actual scene, enemy prefabs and animation update",
+      "page": "game",
+      "room": 5,
+      "phase": "aiming",
+      "nodeMeshRenderers": 69,
+      "uniqueMeshes": 64,
+      "labels": 14,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 72,
+      "totalCocosFrames": 2448
+    },
+    {
+      "label": "victory settlement UI reached by 21 actual controller shots",
+      "page": "game",
+      "room": 5,
+      "phase": "victory",
+      "nodeMeshRenderers": 69,
+      "uniqueMeshes": 64,
+      "labels": 20,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 72,
+      "totalCocosFrames": 3271
+    },
+    {
+      "label": "tool cabinet UI rendered",
+      "page": "tools",
+      "room": 5,
+      "phase": "victory",
+      "nodeMeshRenderers": 69,
+      "uniqueMeshes": 64,
+      "labels": 13,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 72,
+      "totalCocosFrames": 3282
+    },
+    {
+      "label": "game-over UI via explicit terminal-state fixture",
+      "page": "game",
+      "room": 1,
+      "phase": "game_over",
+      "nodeMeshRenderers": 58,
+      "uniqueMeshes": 53,
+      "labels": 21,
+      "cameras": 2,
+      "loadedGameModules": 9,
+      "liveMeshes": 70,
+      "totalCocosFrames": 3288
+    }
+  ],
+  "sourceFiles": {
+    "web/engine-effects.js": {
+      "bytes": 9858,
+      "sha256": "36e1e2eb558d523496ff4c64c5f8e4bc24f63ac576aa671ff2e28859e6014a01"
+    },
+    "web/vendor/uniform-chunks.json": {
+      "bytes": 3047,
+      "sha256": "37feb73b7a7f58608b926c3bbc0247a129eb4823fd18aa062c0458d21212cebf"
+    },
+    "assets/scripts/GameMain.ts": {
+      "bytes": 36336,
+      "sha256": "a329c291ee8607b227e9fe6e5e46b6cfd69965b90487b2c8b8f222eeadca5570"
+    },
+    "assets/scripts/core/index.ts": {
+      "bytes": 367,
+      "sha256": "eb8dd6cabcc914a461d7c50d71a08267c1c4e8c1c812da6665c77922d20da477"
+    },
+    "assets/scripts/core/model.ts": {
+      "bytes": 28229,
+      "sha256": "7f2c548ff1cf06cccfaa71bca0c260f08765cc52e1ea9051b53f9e16fa2165e7"
+    },
+    "assets/scripts/core/rooms.ts": {
+      "bytes": 4707,
+      "sha256": "9eabb7a3ef3a5be3c0d61a72773d6e740523047bf88a14d54df30f9641c32e00"
+    },
+    "assets/scripts/platform/SaveStore.ts": {
+      "bytes": 16946,
+      "sha256": "e6025387b02f6c048bf6c8f9f65d7f16d2663dc284f88902856fcefe65658d05"
+    },
+    "assets/scripts/platform/RewardedAds.ts": {
+      "bytes": 15987,
+      "sha256": "717079c8673a16091fc633981f5b4001027baee6c8770d9d83b9810c300148ee"
+    },
+    "assets/scripts/platform/GameAudio.ts": {
+      "bytes": 18871,
+      "sha256": "bea99dab922c08f298644b43351f855b1a2c1d018a1e50283dc9b2146a104580"
+    },
+    "assets/scripts/ModelLibrary.ts": {
+      "bytes": 6076,
+      "sha256": "728a6c9120a5d66c9d8755b6736eb3499ff140e42506732439384437d8c7424b"
+    },
+    "assets/scripts/GameUI.ts": {
+      "bytes": 2870,
+      "sha256": "0292ed44cbf0a4f3492bb2a8a0bbde4e44b40add80a69101fbae98e153408237"
+    },
+    "assets/Boot.scene": {
+      "bytes": 1470,
+      "sha256": "25dce343aaaf49ceae455e0f9fe16d566135dd4e46bed120a1577aa9dc4a10f6"
+    },
+    "web/resources/models/environment.json": {
+      "bytes": 3015808,
+      "sha256": "656265e9904d5aa6249609be8ce75a560101ac84ae8de79f8f3742c7401254fa"
+    },
+    "web/resources/models/characters.json": {
+      "bytes": 1586549,
+      "sha256": "12aed38d389a85222a34287b20c721c1138d08616a4520f0768ad733219565c8"
+    }
+  },
+  "assetRequests": [
+    "/vendor/uniform-chunks.json",
+    "/resources/models/environment.json",
+    "/resources/models/characters.json"
+  ],
+  "actualDevice": "EmptyDevice",
+  "prefabs": {
+    "environment": [
+      "floor",
+      "cabinet",
+      "board",
+      "pillar",
+      "wall",
+      "treasure",
+      "exit",
+      "fern",
+      "mushroom",
+      "lantern",
+      "trim"
+    ],
+    "characters": [
+      "hero",
+      "guard",
+      "archer",
+      "boss"
+    ]
+  },
+  "inputFixture": {
+    "dragging": true,
+    "dragPower": 1,
+    "height": 1280,
+    "scaleX": 1,
+    "scaleY": 1,
+    "visibleSize": {
+      "width": 720,
+      "height": 1280
+    },
+    "mouseSupported": true,
+    "overlayChildren": 0,
+    "dragStart": {
+      "x": 360,
+      "y": 560
+    },
+    "dragNow": {
+      "x": 360,
+      "y": 395
+    }
+  },
+  "realInputShot": {
+    "accepted": true,
+    "observedPhases": [
+      "moving",
+      "enemies",
+      "aiming"
+    ],
+    "shots": 1,
+    "movedDistance": 8.794205454024134,
+    "boardDestroyed": true
+  },
+  "route": {
+    "source": "Documented 21-shot core regression route; all drag powers at least 11%",
+    "rooms": [
+      {
+        "room": 1,
+        "phase": "room_clear",
+        "shots": 2,
+        "hp": 5,
+        "score": 165,
+        "livingEnemies": 1
+      },
+      {
+        "room": 2,
+        "phase": "room_clear",
+        "shots": 7,
+        "hp": 5,
+        "score": 315,
+        "livingEnemies": 2
+      },
+      {
+        "room": 3,
+        "phase": "room_clear",
+        "shots": 11,
+        "hp": 4,
+        "score": 480,
+        "livingEnemies": 2
+      },
+      {
+        "room": 4,
+        "phase": "room_clear",
+        "shots": 16,
+        "hp": 4,
+        "score": 665,
+        "livingEnemies": 1
+      },
+      {
+        "room": 5,
+        "phase": "victory",
+        "shots": 21,
+        "hp": 4,
+        "score": 1065,
+        "livingEnemies": 2
+      }
+    ]
+  },
+  "unavailableAd": {
+    "grantedNoReward": true,
+    "pauseReleased": true
+  },
+  "boundaries": {
+    "previousRunReceipt": {
+      "source": "test fixture, no actual advertisement",
+      "walletUnchanged": true,
+      "snapshotUnchanged": true,
+      "receiptNotApplied": true
+    },
+    "terminalRestore": {
+      "victoryReopened": true,
+      "baseScoreNotPaidTwice": true,
+      "unsettledFailureReopened": true
+    },
+    "corruptInnerSnapshot": {
+      "cleared": true,
+      "returnedToHome": true,
+      "newRunAccepted": true,
+      "assetFailureNotReported": true,
+      "expectedRecoveryWarning": true
+    }
+  },
+  "expectedWarnings": [
+    "Run restore failed Error: Invalid or unsupported Monster Den snapshot.\n    at GameModel.restore (assets/scripts/core/model.ts:270:19)\n    at GameMain.restoreRun (assets/scripts/GameMain.ts:352:28)\n    at tools/check-game-headless.cjs:272:14"
+  ],
+  "save": {
+    "backend": "web",
+    "stored": true
+  },
+  "visibilityLifecycle": {
+    "hidden": true,
+    "resumed": true
+  },
+  "teardown": {
+    "destroyed": true,
+    "frames": 3298
+  },
+  "meshLifecycle": {
+    "initialized": 296,
+    "liveAfterSceneDestroy": 0,
+    "instrumentation": "Counters wrap Mesh.initialize/destroy and call the original implementations without changing behavior."
+  },
+  "passed": true
+}

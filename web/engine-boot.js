@@ -5,7 +5,10 @@ const state = window.__monsterDenRuntime = {ready: false, engineReady: false, fi
 function fail(error) {
   const message = error?.stack || String(error);
   state.errors.push(message); console.error('[Monster Den]', error);
-  startup.hidden = false; startup.textContent = '进入失败，请刷新重试';
+  startup.hidden = false;
+  startup.textContent = error?.code === 'WEBGL_UNAVAILABLE'
+    ? '当前浏览器未提供 3D 图形支持，请用支持 WebGL 的浏览器打开。'
+    : '进入失败，请检查网络后重新进入';
 }
 addEventListener('error', event => fail(event.error || event.message));
 addEventListener('unhandledrejection', event => fail(event.reason));

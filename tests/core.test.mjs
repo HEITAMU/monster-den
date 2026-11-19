@@ -41,6 +41,102 @@ function fireAt(model, x, y, strength) {
   settle(model);
 }
 
+function assertPreviewMatchesFlight(model, direction, power, expectedEndpoint = 'stop') {
+  const preview = model.aim(direction.x, direction.y, power);
+  assert.equal(preview.endpoint, expectedEndpoint);
+  assert.equal(preview.blocked, false);
+  const predicted = preview.points.at(-1);
+  assert.equal(model.shoot(direction, power), true);
+  settle(model);
+  const error = Math.hypot(predicted.x - model.state.player.x, predicted.y - model.state.player.y);
+  assert.ok(error < 1e-10, `Preview differs from real flight by ${error} metres`);
+  return preview;
+}
+
+test('aim predicts the full stopping point at low/full power with ordinary and heavy movement', () => {
+  const config = room({ width: 100, height: 100, start: { x: 0, y: 0 },
+    treasure: { x: 40, y: 40 }, exit: { x: -40, y: 40 } });
+  for (const tool of ['none', 'heavy', 'grip', 'return']) {
+    for (const power of [0, 0.11, 0.3, 1]) {
+      const model = new GameModel({ rooms: [config] });
+      model.equipStartingTool(tool);
+      const preview = assertPreviewMatchesFlight(model, { x: 0.3, y: 1 }, power);
+      assert.ok(preview.points.length > 2);
+      if (power === 1 && tool !== 'heavy') {
+        assert.ok(Math.hypot(preview.points.at(-1).x, preview.points.at(-1).y) > 9,
+          'Full-power preview must include the slow tail beyond the former two-second limit');
+      }
+    }
+  }
+});
+
+test('aim follows static walls, corners and multiple boundary bounces to the real stopping point', () => {
+  const cases = [
+    { config: room({ width: 4, height: 20, treasure: { x: 1, y: 8 }, exit: { x: -1, y: 8 } }), direction: { x: 1, y: 0.1 }, minBounces: 2 },
+    { config: room({ obstacles: [{ id: 'cross-wall', kind: 'wall', x: 0, y: 0, w: 7, h: 0.45 }] }), direction: { x: 0.15, y: 1 }, minBounces: 1 },
+    { config: room({ start: { x: -3, y: -3 }, obstacles: [
+      { id: 'corner-pillar', kind: 'pillar', x: 0, y: 0, w: 2, h: 2 },
+      { id: 'side-wall', kind: 'wall', x: -4.1, y: -1, w: 0.4, h: 3 },
+    ] }), direction: { x: 1, y: 1 }, minBounces: 1 },
+  ];
+  for (const { config, direction, minBounces } of cases) {
+    const model = new GameModel({ rooms: [config] });
+    const preview = assertPreviewMatchesFlight(model, direction, 1);
+    assert.ok(model.drainEvents().filter(e => e.type === 'bounce').length >= minBounces);
+    assert.ok(preview.points.every(p => Math.abs(p.x) <= config.width / 2 - 0.38 + 1e-8
+      && Math.abs(p.y) <= config.height / 2 - 0.38 + 1e-8));
+  }
+});
+
+test('aim identifies a board, cabinet or enemy contact instead of promising a landing beyond it', () => {
+  const cases = [
+    { id: 'board', config: room({ obstacles: [{ id: 'board', kind: 'board', x: 0, y: 0, w: 2, h: 0.3 }] }), y: -0.5305 },
+    { id: 'cabinet', config: room({ obstacles: [{ id: 'cabinet', kind: 'cabinet', x: 0, y: 0, w: 2, h: 1,
+      rail: { axis: 'y', min: 0, max: 3 } }] }), y: -0.8805 },
+    { id: 'guard', config: room({ enemies: [{ id: 'guard', kind: 'guard', x: 0, y: 0 }] }), y: -0.81 },
+  ];
+  for (const { id, config, y } of cases) {
+    const model = new GameModel({ rooms: [config] });
+    model.equipStartingTool('heavy');
+    const before = model.snapshot();
+    const preview = model.aim(0, 1, 1);
+    assert.equal(preview.endpoint, 'interaction');
+    assert.equal(preview.blocked, true);
+    assert.equal(preview.targetId, id);
+    assert.ok(Math.abs(preview.points.at(-1).y - y) < 1e-10);
+    assert.deepEqual(model.snapshot(), before, 'Prediction must not damage or move interactive objects');
+  }
+});
+
+test('aim stops at an unlocked exit including collecting treasure earlier in the same shot', () => {
+  for (const alreadyTaken of [false, true]) {
+    const model = new GameModel({ rooms: [room({ width: 30, height: 30,
+      treasure: { x: 0, y: -1 }, exit: { x: 0, y: 3 } })] });
+    model.state.treasure.taken = alreadyTaken;
+    assertPreviewMatchesFlight(model, { x: 0, y: 1 }, 1, 'exit');
+    assert.equal(model.state.phase, 'victory');
+  }
+  const locked = new GameModel({ rooms: [room({ width: 30, height: 30,
+    treasure: { x: 10, y: 10 }, exit: { x: 0, y: 1 } })] });
+  assertPreviewMatchesFlight(locked, { x: 0, y: 1 }, 1);
+  assert.equal(locked.state.treasure.taken, false);
+});
+
+test('repeated and invalid aim requests preserve simulation state and pending events', () => {
+  const model = new GameModel(), untouched = new GameModel();
+  const before = model.snapshot(), expectedEvents = untouched.drainEvents();
+  for (const [x, y, power] of [[0, 1, 1], [1, 1, 0.11], [-1, 0.2, 0.7], [0, 0, 1], [NaN, 1, 1], [1, Infinity, 1], [1, 1, NaN]]) {
+    const preview = model.aim(x, y, power);
+    assert.ok(preview.points.every(p => Number.isFinite(p.x) && Number.isFinite(p.y)));
+    assert.ok(Number.isFinite(preview.direction.x) && Number.isFinite(preview.direction.y) && Number.isFinite(preview.power));
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(power) || (x === 0 && y === 0)) {
+      assert.equal(preview.endpoint, 'none'); assert.equal(preview.points.length, 1);
+    }
+    assert.deepEqual(model.snapshot(), before);
+  }
+  assert.deepEqual(model.drainEvents(), expectedEvents);
+});
+
 test('first launch breaks a visible board, collects the treasure, and leaves an enemy alive', () => {
   const model = new GameModel(); model.drainEvents();
   assert.equal(model.shoot({ x: 0, y: 1 }, 1), true); settle(model);

@@ -7,12 +7,14 @@ import bpy
 import math
 import random
 import sys
+import json
 from mathutils import Vector
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 from export_mesh_library import export_library
+from pack_mesh_library import pack_library
 
 random.seed(619)
 bpy.ops.object.select_all(action='SELECT')
@@ -405,7 +407,12 @@ positions={
 for name,obj in prefabs.items():obj.location=positions[name]
 bpy.context.view_layer.update()
 
-export_library(prefabs, str(ROOT/'assets/resources/models/environment.json'))
+raw_output=ROOT/'.build/raw-models/environment.json'
+result=export_library(prefabs, str(raw_output))
+output=ROOT/'assets/models/environment.json'
+output.parent.mkdir(parents=True,exist_ok=True)
+output.write_text(json.dumps(pack_library(result),separators=(',',':')),encoding='utf-8')
+print('Packed q16-n8-c8-v1',output,output.stat().st_size,'bytes; all exported triangles and joints retained')
 
 # Lighting and cameras are source-preview only, not part of the game asset library.
 scene=bpy.context.scene
@@ -438,6 +445,6 @@ preview=ROOT.parent/'art-preview';preview.mkdir(parents=True,exist_ok=True)
 scene.render.filepath=str(preview/'environment-review.png')
 (ROOT/'art-source').mkdir(exist_ok=True)
 bpy.context.preferences.filepaths.save_version=0
-bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'art-source/environment.blend'))
+bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'art-source/environment.blend'),compress=True)
 bpy.ops.render.render(write_still=True)
 print('Environment source and preview complete.')

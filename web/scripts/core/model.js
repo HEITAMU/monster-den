@@ -165,50 +165,94 @@ System.register(["./rooms"], function (exports_1, context_1) {
                     this.emit('tool_used', p.x, p.y, { tool: p.tool });
                     return true;
                 }
-                /** First two seconds of the ballistic path. Stops at interactive objects, whose results may change. */
+                /** Full static-geometry flight; interactive contacts are marked rather than guessed past. */
                 aim(dx, dy, power = 1) {
-                    const d = normal(dx, dy), p = this.state.player;
-                    const result = { points: [{ x: p.x, y: p.y }], direction: d, power: clamp(power, 0, 1), blocked: false };
-                    if (!Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(power) || length(dx, dy) < EPS)
+                    const valid = Number.isFinite(dx) && Number.isFinite(dy) && Number.isFinite(power) && length(dx, dy) >= EPS;
+                    const d = valid ? normal(dx, dy) : { x: 0, y: 1 }, p = this.state.player;
+                    const result = {
+                        points: [{ x: p.x, y: p.y }], direction: d,
+                        power: Number.isFinite(power) ? clamp(power, 0, 1) : 0, blocked: false, endpoint: 'none',
+                    };
+                    if (!valid)
                         return result;
                     const ghost = { x: p.x, y: p.y, vx: d.x * this.launchSpeed(power), vy: d.y * this.launchSpeed(power), radius: p.radius };
-                    let bounces = 0;
-                    for (let i = 0; i < 240; i++) {
-                        ghost.x += ghost.vx * rooms_1.TUNING.fixedStep;
-                        ghost.y += ghost.vy * rooms_1.TUNING.fixedStep;
-                        const edge = this.resolveBounds(ghost, this.restitution());
-                        if (edge)
-                            bounces++;
-                        for (const obstacle of this.state.obstacles) {
-                            if (obstacle.destroyed)
-                                continue;
-                            const contact = circleRect(ghost, obstacle);
-                            if (!contact)
-                                continue;
-                            if (obstacle.kind === 'board' || obstacle.kind === 'cabinet') {
-                                result.points.push({ x: ghost.x, y: ghost.y });
-                                result.blocked = true;
-                                return result;
+                    const dt = rooms_1.TUNING.fixedStep, restitution = this.restitution();
+                    const drag = Math.exp(-this.playerDrag() * dt);
+                    // The same cap as real flight bounds work to at most 661 fixed steps with current tuning.
+                    const maxSteps = Math.ceil(rooms_1.TUNING.maxFlightTime / dt) + 1;
+                    let flightTime = 0, settledTime = 0, treasureTaken = this.state.treasure.taken;
+                    const appendPoint = () => {
+                        const last = result.points[result.points.length - 1];
+                        if (last.x !== ghost.x || last.y !== ghost.y)
+                            result.points.push({ x: ghost.x, y: ghost.y });
+                    };
+                    const finish = (endpoint, targetId) => {
+                        appendPoint();
+                        result.endpoint = endpoint;
+                        result.blocked = endpoint === 'interaction';
+                        if (targetId !== undefined)
+                            result.targetId = targetId;
+                        return result;
+                    };
+                    for (let i = 0; i < maxSteps; i++) {
+                        flightTime += dt;
+                        ghost.x += ghost.vx * dt;
+                        ghost.y += ghost.vy * dt;
+                        let bounced = this.resolveBounds(ghost, restitution);
+                        // Match movePlayer/resolvePlayerObstacles: three ordered contact passes, then bounds.
+                        for (let pass = 0; pass < 3; pass++) {
+                            let overlap = false;
+                            for (const obstacle of this.state.obstacles) {
+                                if (obstacle.destroyed)
+                                    continue;
+                                const contact = circleRect(ghost, obstacle);
+                                if (!contact)
+                                    continue;
+                                overlap = true;
+                                if (obstacle.kind === 'board' || obstacle.kind === 'cabinet') {
+                                    // Show the centre at the contact surface, never a supposed landing beyond it.
+                                    ghost.x += contact.nx * (contact.depth + 0.0005);
+                                    ghost.y += contact.ny * (contact.depth + 0.0005);
+                                    return finish('interaction', obstacle.id);
+                                }
+                                this.resolveContact(ghost, contact, restitution);
+                                bounced = true;
                             }
-                            this.resolveContact(ghost, contact, this.restitution());
-                            bounces++;
+                            if (!overlap)
+                                break;
                         }
-                        for (const enemy of this.state.enemies) {
-                            if (enemy.alive && length(ghost.x - enemy.x, ghost.y - enemy.y) < ghost.radius + enemy.radius) {
-                                result.points.push({ x: ghost.x, y: ghost.y });
-                                result.blocked = true;
-                                return result;
-                            }
-                        }
-                        const drag = Math.exp(-this.playerDrag() * rooms_1.TUNING.fixedStep);
+                        bounced = this.resolveBounds(ghost, restitution) || bounced;
                         ghost.vx *= drag;
                         ghost.vy *= drag;
-                        if (i % 8 === 7)
-                            result.points.push({ x: ghost.x, y: ghost.y });
-                        if (length(ghost.vx, ghost.vy) < rooms_1.TUNING.stopSpeed || bounces > 1)
-                            break;
+                        if (length(ghost.vx, ghost.vy) < 0.08) {
+                            ghost.vx = 0;
+                            ghost.vy = 0;
+                        }
+                        for (const enemy of this.state.enemies) {
+                            if (!enemy.alive)
+                                continue;
+                            const ex = ghost.x - enemy.x, ey = ghost.y - enemy.y, distance = length(ex, ey);
+                            const radius = ghost.radius + enemy.radius;
+                            if (distance < radius) {
+                                const n = distance > EPS ? { x: ex / distance, y: ey / distance } : normal(-ghost.vx, -ghost.vy);
+                                ghost.x = enemy.x + n.x * radius;
+                                ghost.y = enemy.y + n.y * radius;
+                                return finish('interaction', enemy.id);
+                            }
+                        }
+                        // Objectives can stop a real shot before friction does, including treasure + exit in one shot.
+                        const treasure = this.state.treasure, exit = this.state.exit;
+                        if (!treasureTaken && length(ghost.x - treasure.x, ghost.y - treasure.y) < ghost.radius + rooms_1.TUNING.treasureRadius)
+                            treasureTaken = true;
+                        if (treasureTaken && length(ghost.x - exit.x, ghost.y - exit.y) < exit.radius)
+                            return finish('exit');
+                        settledTime = length(ghost.vx, ghost.vy) < rooms_1.TUNING.stopSpeed ? settledTime + dt : 0;
+                        if (settledTime >= 0.08 || flightTime >= rooms_1.TUNING.maxFlightTime)
+                            return finish('stop');
+                        if (i % 8 === 7 || bounced)
+                            appendPoint();
                     }
-                    return result;
+                    return finish('stop');
                 }
                 step(dt) {
                     if (!Number.isFinite(dt) || dt <= 0)

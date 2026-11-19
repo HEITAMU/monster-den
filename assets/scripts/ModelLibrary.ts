@@ -1,7 +1,9 @@
 import { _decorator, Component, Node, Mesh, MeshRenderer, Material, Color, Vec3, Vec4, Quat, utils, resources, JsonAsset, EffectAsset, gfx } from 'cc';
+import {decodeMesh,PackedMeshData} from './MeshCodec';
+import {loadGameBundle} from './ResourceBundles';
 
 export interface MeshData { positions:number[]; normals:number[]; colors:number[]; uvs:number[]; indices:number[]; }
-export interface ModelPart { name:string; parent:number; position:number[]; rotation:number[]; scale:number[]; mesh?:MeshData; }
+export interface ModelPart { name:string; parent:number; position:number[]; rotation:number[]; scale:number[]; mesh?:MeshData|PackedMeshData; }
 export interface ModelPrefab { nodes:ModelPart[]; bounds:{min:number[];max:number[]}; }
 export interface ModelInstance { root:Node; parts:Map<string,Node>; baseEuler:Map<string,Vec3>; basePosition:Map<string,Vec3>; }
 const editorEffects:Record<string,EffectAsset>={};
@@ -19,7 +21,9 @@ export async function loadGameJson(path:string):Promise<any> {
     if(!response.ok) throw new Error(`Resource unavailable: ${path}`);
     return response.json();
   }
-  return new Promise((resolve,reject)=>resources.load(path,JsonAsset,(err,asset)=>err?reject(err):resolve(asset.json)));
+  const [bundleName,...relative]=path.split('/');
+  const bundle=await loadGameBundle(bundleName);
+  return new Promise((resolve,reject)=>bundle.load(relative.join('/'),JsonAsset,(err,asset)=>err?reject(err):resolve(asset.json)));
 }
 
 export async function loadGameEffects():Promise<void> {
@@ -64,12 +68,12 @@ export class ModelLibrary {
     this.prefabs=data.prefabs;
     this.material=makeMaterial(new Color(255,255,255,255),true,false,true);
     for(const [key,prefab] of Object.entries(this.prefabs))
-      prefab.nodes.forEach((part,i)=>{if(part.mesh)this.meshes.set(`${key}:${i}`,utils.createMesh(part.mesh as any));});
+      prefab.nodes.forEach((part,i)=>{if(part.mesh)this.meshes.set(`${key}:${i}`,utils.createMesh(decodeMesh(part.mesh) as any));});
   }
   has(name:string):boolean{return !!this.prefabs[name];}
   dispose():void {
     for(const mesh of this.meshes.values())mesh.destroy();
-    this.meshes.clear();this.material.destroy();
+    this.meshes.clear();this.material.destroy();this.prefabs={};
   }
   instantiate(key:string,parent:Node,scale=1):ModelInstance {
     const prefab=this.prefabs[key];if(!prefab)throw new Error(`Missing 3D prefab: ${key}`);
