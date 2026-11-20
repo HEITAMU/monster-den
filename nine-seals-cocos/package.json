@@ -1,0 +1,9 @@
+{
+  "name": "crown-vault",
+  "uuid": "b28bf56c-7c06-4c9e-b29f-e91eef56a8ab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "九印王座：Cocos Creator 3.8.8 微信益智竞技小游戏",
+  "creator": { "version": "3.8.8" },
+  "scripts": { "test": "node tests/verify.mjs", "check:preview": "node --check preview/game.js" }
+}

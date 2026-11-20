@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2018", "module": "ES2015", "moduleResolution": "node", "strict": false, "skipLibCheck": true, "experimentalDecorators": true, "noEmit": true, "types": [] },
+  "include": ["../assets/scripts/**/*.ts", "./cocos-types.d.ts"]
+}

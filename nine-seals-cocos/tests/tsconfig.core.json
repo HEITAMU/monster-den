@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2020", "module": "CommonJS", "strict": true, "skipLibCheck": true, "outDir": ".compiled", "rootDir": "../assets/scripts/core" },
+  "include": ["../assets/scripts/core/*.ts"]
+}
