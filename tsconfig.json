@@ -1,8 +1,1 @@
-{
-  "extends": "./temp/tsconfig.cocos.json",
-  "compilerOptions": {
-    "strict": true,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false
-  }
-}
+{"extends":"./temp/tsconfig.cocos.json","compilerOptions":{"strict":false,"target":"ES2018","module":"ES2015","experimentalDecorators":true,"skipLibCheck":true,"types":[]}}
