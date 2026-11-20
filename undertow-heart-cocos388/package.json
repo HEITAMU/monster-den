@@ -1,0 +1,1 @@
+{"name":"undertow-heart","type":"3d","version":"0.1.0","private":true,"uuid":"6237a45c-7ed4-48e5-a61c-9a69b8e42f17","creator":{"version":"3.8.8"},"scripts":{"test":"tsc --strict --target ES2020 --module commonjs --outDir .check assets/Scripts/Rules.ts && node --test tests/rules.test.cjs"}}

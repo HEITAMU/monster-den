@@ -1,0 +1,9 @@
+node_modules/
+library/
+local/
+temp/
+profiles/
+build/
+.check/
+__pycache__/
+*.log
